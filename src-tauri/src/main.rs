@@ -73,7 +73,7 @@ async fn main() {
                     let mut ws = match LcuWebsocketClient::connect().await {
                         Ok(ws) => ws,
                         Err(_) => {
-                            //sleep(Duration::from_secs(2)).await;
+                            tokio::time::sleep(Duration::from_secs(2)).await;
                             LcuWebsocketClient::connect().await.unwrap()
                         }
                     };
