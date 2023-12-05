@@ -28,7 +28,8 @@ struct AppConfig(Mutex<Config>);
 
 struct Config {
     pub auto_open: bool,
-    pub auto_accept: bool
+    pub auto_accept: bool,
+    pub accept_delay: u32,
 }
 
 #[tokio::main]
@@ -42,10 +43,13 @@ async fn main() {
         })))
         .manage(AppConfig(Mutex::new(Config {
             auto_open: false,
-            auto_accept: false
+            auto_accept: false,
+            accept_delay: 0
         })))
         .setup(|app| {
             let app_handle = app.handle();
+            
+
             tokio::task::spawn(async move {
                 let mut connected = true;
 
