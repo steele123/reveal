@@ -7,11 +7,16 @@
   },
   "package": {
     "productName": "reveal",
-    "version": "0.0.0"
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
       "all": false,
+      "window": {
+        "startDragging": true,
+        "close": true,
+        "hide": true
+      },
       "shell": {
         "all": false,
         "open": true
@@ -35,10 +40,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "resizable": true,
+        "resizable": false,
         "title": "reveal",
-        "width": 800,
-        "height": 600
+        "width": 400,
+        "height": 300,
+        "decorations": false,
+        "transparent": true
       }
     ]
   }
