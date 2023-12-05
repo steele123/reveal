@@ -11,11 +11,17 @@
   },
   "tauri": {
     "allowlist": {
-      "all": true,
+      "all": false,
       "window": {
-        "startDragging": true,
+        "all": false,
         "close": true,
-        "hide": true
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
       },
       "shell": {
         "all": false,
