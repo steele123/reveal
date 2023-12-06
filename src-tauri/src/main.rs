@@ -8,12 +8,12 @@ use crate::lobby::Lobby;
 use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
-use shaco::{model::ws::LcuSubscriptionType::JsonApiEvent, rest::LCUClientInfo};
 use shaco::rest::RESTClient;
 use shaco::ws::LcuWebsocketClient;
-use std::{time::Duration, sync::Arc};
+use shaco::{model::ws::LcuSubscriptionType::JsonApiEvent, rest::LCUClientInfo};
+use std::{sync::Arc, time::Duration};
 use tauri::{AppHandle, Manager};
-use tokio::sync::{Mutex};
+use tokio::sync::Mutex;
 
 struct LCU(Mutex<LCUState>);
 
@@ -43,7 +43,7 @@ async fn app_ready(
     app_handle
         .emit_all("lcu_state_update", lcu.connected)
         .unwrap();
-    
+
     Ok(cfg.clone())
 }
 
@@ -135,8 +135,19 @@ fn main() {
                     let mut ws = match LcuWebsocketClient::connect().await {
                         Ok(ws) => ws,
                         Err(_) => {
-                            tokio::time::sleep(Duration::from_secs(2)).await;
-                            LcuWebsocketClient::connect().await.unwrap()
+                            let mut attempts = 0;
+                            loop {
+                                tokio::time::sleep(Duration::from_secs(3)).await;
+                                if attempts > 5 {
+                                    panic!("Failed to connect to League Client!");
+                                }
+
+                                attempts += 1;
+                                match LcuWebsocketClient::connect().await {
+                                    Ok(ws) => break ws,
+                                    Err(_) => continue,
+                                }
+                            }
                         }
                     };
 
@@ -146,8 +157,7 @@ fn main() {
 
                     println!("Connected to League Client!");
                     let team: Lobby = serde_json::from_value(
-                        arc
-                            .get("/chat/v5/participants/champ-select".to_string())
+                        arc.get("/chat/v5/participants/champ-select".to_string())
                             .await
                             .unwrap(),
                     )
@@ -164,15 +174,20 @@ fn main() {
 
                             tokio::time::sleep(Duration::from_secs(3)).await;
                             let team: Lobby = serde_json::from_value(
-                                arc
-                                    .get("/chat/v5/participants/champ-select".to_string())
+                                arc.get("/chat/v5/participants/champ-select".to_string())
                                     .await
                                     .unwrap(),
                             )
                             .unwrap();
 
-                            display_champ_select(team);
-                            app_handle.emit_all("champ_select_started", ()).unwrap();
+                            app_handle.emit_all("champ_select_started", &team).unwrap();
+
+                            let cfg = app_handle.state::<AppConfig>();
+                            let cfg = cfg.0.lock().await;
+                            if cfg.auto_open {
+                                display_champ_select(team);
+                            }
+
                             continue;
                         }
 
@@ -186,7 +201,13 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![app_ready, get_lcu_state, get_lcu_info, get_config, set_config])
+        .invoke_handler(tauri::generate_handler![
+            app_ready,
+            get_lcu_state,
+            get_lcu_info,
+            get_config,
+            set_config
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
