@@ -6,72 +6,130 @@ mod utils;
 
 use crate::lobby::Lobby;
 use crate::utils::display_champ_select;
+
 use futures_util::StreamExt;
-use shaco::model::ws::LcuSubscriptionType::JsonApiEvent;
+use shaco::{model::ws::LcuSubscriptionType::JsonApiEvent, rest::LCUClientInfo};
 use shaco::rest::RESTClient;
 use shaco::ws::LcuWebsocketClient;
-use std::time::Duration;
-use tauri::Manager;
-use tokio::sync::Mutex;
+use std::{time::Duration, sync::Arc};
+use tauri::{AppHandle, Manager};
+use tokio::sync::{Mutex};
 
 struct LCU(Mutex<LCUState>);
 
 pub struct LCUState {
     pub connected: bool,
-    pub data: Option<LCUData>,
-}
-pub struct LCUData {
-    pub client: RESTClient,
+    pub data: Option<LCUClientInfo>,
 }
 
 struct AppConfig(Mutex<Config>);
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct Config {
     pub auto_open: bool,
     pub auto_accept: bool,
     pub accept_delay: u32,
 }
 
-#[tokio::main]
-async fn main() {
-    tauri::async_runtime::set(tokio::runtime::Handle::current());
+#[tauri::command]
+async fn app_ready(
+    app_handle: AppHandle,
+    lcu: tauri::State<'_, LCU>,
+    cfg: tauri::State<'_, AppConfig>,
+) -> Result<Config, ()> {
+    let lcu = lcu.0.lock().await;
+    let cfg = cfg.0.lock().await;
 
+    app_handle
+        .emit_all("lcu_state_update", lcu.connected)
+        .unwrap();
+    
+    Ok(cfg.clone())
+}
+
+#[tauri::command]
+async fn get_lcu_state(lcu: tauri::State<'_, LCU>) -> Result<bool, ()> {
+    let lcu = lcu.0.lock().await;
+    Ok(lcu.connected)
+}
+
+#[tauri::command]
+async fn get_config(cfg: tauri::State<'_, AppConfig>) -> Result<Config, ()> {
+    let cfg = cfg.0.lock().await;
+    Ok(cfg.clone())
+}
+
+#[tauri::command]
+async fn set_config(cfg: tauri::State<'_, AppConfig>, new_cfg: Config) -> Result<(), ()> {
+    let mut cfg = cfg.0.lock().await;
+    *cfg = new_cfg;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_lcu_info(lcu: tauri::State<'_, LCU>) -> Result<LCUClientInfo, ()> {
+    let lcu = lcu.0.lock().await;
+    Ok(lcu.data.clone().unwrap())
+}
+
+fn main() {
     tauri::Builder::default()
         .manage(LCU(Mutex::new(LCUState {
             connected: false,
             data: None,
         })))
-        .manage(AppConfig(Mutex::new(Config {
-            auto_open: false,
-            auto_accept: false,
-            accept_delay: 0
-        })))
         .setup(|app| {
             let app_handle = app.handle();
-            
+            let cfg_folder = app.path_resolver().app_config_dir().unwrap();
+            if !cfg_folder.exists() {
+                std::fs::create_dir(&cfg_folder).unwrap();
+            }
 
-            tokio::task::spawn(async move {
+            let cfg_path = cfg_folder.join("config.json");
+            if !cfg_path.exists() {
+                let cfg = Config {
+                    auto_open: true,
+                    auto_accept: true,
+                    accept_delay: 2000,
+                };
+
+                let cfg_json = serde_json::to_string(&cfg).unwrap();
+                std::fs::write(&cfg_path, cfg_json).unwrap();
+            }
+
+            let cfg_json = std::fs::read_to_string(&cfg_path).unwrap();
+            let cfg: Config = serde_json::from_str(&cfg_json).unwrap();
+            app.manage(AppConfig(Mutex::new(cfg)));
+
+            tauri::async_runtime::spawn(async move {
                 let mut connected = true;
 
                 loop {
-                    let client = match RESTClient::new() {
-                        Ok(client) => {
-                            connected = true;
-                            app_handle.emit_all("lcu_state_update", true).unwrap();
-                            client
+                    let args = shaco::utils::process_info::get_league_process_args();
+                    if args.is_none() {
+                        if connected {
+                            println!("Waiting for League Client to open...");
+                            connected = false;
+                            app_handle.emit_all("lcu_state_update", false).unwrap();
                         }
-                        Err(_) => {
-                            if connected {
-                                println!(
-                                    "Lost connection to league client, trying to reconnect..."
-                                );
-                                connected = false;
-                                app_handle.emit_all("lcu_state_update", false).unwrap();
-                            }
 
-                            continue;
-                        }
-                    };
+                        tokio::time::sleep(Duration::from_secs(2)).await;
+                        continue;
+                    }
+
+                    let args = args.unwrap();
+                    let lcu_info = shaco::utils::process_info::get_auth_info(args).unwrap();
+                    let client = RESTClient::new(lcu_info.clone()).unwrap();
+                    connected = true;
+                    let lcu = app_handle.state::<LCU>();
+                    app_handle.emit_all("lcu_state_update", true).unwrap();
+
+                    let mut lcu = lcu.0.lock().await;
+                    let arc = Arc::new(client);
+                    lcu.connected = true;
+                    lcu.data = Some(lcu_info);
+
+                    drop(lcu);
 
                     // The websocket event API will not be opened until a few seconds after the client is opened.
                     let mut ws = match LcuWebsocketClient::connect().await {
@@ -88,7 +146,7 @@ async fn main() {
 
                     println!("Connected to League Client!");
                     let team: Lobby = serde_json::from_value(
-                        client
+                        arc
                             .get("/chat/v5/participants/champ-select".to_string())
                             .await
                             .unwrap(),
@@ -106,7 +164,7 @@ async fn main() {
 
                             tokio::time::sleep(Duration::from_secs(3)).await;
                             let team: Lobby = serde_json::from_value(
-                                client
+                                arc
                                     .get("/chat/v5/participants/champ-select".to_string())
                                     .await
                                     .unwrap(),
@@ -128,7 +186,7 @@ async fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![app_ready, get_lcu_state, get_lcu_info, get_config, set_config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
