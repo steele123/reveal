@@ -9,6 +9,7 @@ use crate::lobby::Lobby;
 use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
+use serde::{Serialize, Deserialize};
 use shaco::rest::RESTClient;
 use shaco::utils::process_info;
 use shaco::ws::LcuWebsocketClient;
@@ -26,7 +27,8 @@ pub struct LCUState {
 
 struct AppConfig(Mutex<Config>);
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 struct Config {
     pub auto_open: bool,
     pub auto_accept: bool,
