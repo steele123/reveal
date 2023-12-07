@@ -67,12 +67,13 @@ async fn get_config(cfg: tauri::State<'_, AppConfig>) -> Result<Config, ()> {
     Ok(cfg.clone())
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command]
 async fn set_config(
     cfg: tauri::State<'_, AppConfig>,
     new_cfg: Config,
     app_handle: AppHandle,
 ) -> Result<(), ()> {
+    println!("Setting config: {:?}", new_cfg);
     let mut cfg = cfg.0.lock().await;
     *cfg = new_cfg;
 
