@@ -6,23 +6,34 @@
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
-  import type { Config } from "./lib/config";
+  import { updateConfig, type Config } from "./lib/config";
+  import type { ChampSelect } from "./lib/champ_select";
 
   let state = "Unknown";
   let connected = false;
-  let config = {} as Config;
+  let champSelect: ChampSelect | null = null;
+  let config: Config | null = null;
 
   onMount(async () => {
-    await listen("client_state_update", (event) => {
-      state = event.payload as string;
+    await listen<string>("client_state_update", (event) => {
+      state = event.payload;
     });
 
-    await listen("lcu_state_update", (event) => {
-      connected = event.payload as boolean;
+    await listen<boolean>("lcu_state_update", (event) => {
+      connected = event.payload;
     });
 
-    const cfg: Config = await invoke("app_ready");
-    config = cfg;
+    await listen<ChampSelect>("champ_select_started", (event) => {
+      champSelect = event.payload;
+      console.log(champSelect);
+    });
+
+    setTimeout(() => {
+      invoke<Config>("app_ready").then((c) => {
+        console.log(c);
+        config = c;
+      });
+    }, 3000);
   });
 </script>
 
@@ -47,12 +58,33 @@
     </div>
   </div>
   <div class="h-[225px] p-4 flex flex-col gap-2">
+    {#if config}
+      <div>
+        {config.autoOpen}
+      </div>
+    {/if}
     <div class="flex items-center space-x-2">
-      <Switch checked={config.autoOpen} id="auto-open" />
+      <Switch
+        checked={config?.autoOpen}
+        id="auto-open"
+        onCheckedChange={(v) => {
+          if (!config) return;
+          config.autoOpen = v;
+          updateConfig(config);
+        }}
+      />
       <Label for="auto-open">Auto Open OP.GG Multi</Label>
     </div>
     <div class="flex items-center space-x-2">
-      <Switch checked={config.autoAccept} id="auto-accept" />
+      <Switch
+        checked={config?.autoAccept}
+        id="auto-accept"
+        onCheckedChange={(v) => {
+          if (!config) return;
+          config.autoAccept = v;
+          updateConfig(config);
+        }}
+      />
       <Label for="auto-accept">Auto Accept</Label>
     </div>
     <div>
@@ -60,6 +92,9 @@
         Client State: <span class="text-blue-500">{state}</span>
       </div>
     </div>
+    {#if champSelect && state === "ChampSelect"}
+      <div></div>
+    {/if}
   </div>
   <div class="px-4 items-center flex pt-1 border-t">
     {#if connected}

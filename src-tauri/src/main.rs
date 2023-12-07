@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod api;
 mod lobby;
 mod utils;
 
@@ -9,9 +10,10 @@ use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
 use shaco::rest::RESTClient;
+use shaco::utils::process_info;
 use shaco::ws::LcuWebsocketClient;
 use shaco::{model::ws::LcuSubscriptionType::JsonApiEvent, rest::LCUClientInfo};
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 
@@ -24,7 +26,7 @@ pub struct LCUState {
 
 struct AppConfig(Mutex<Config>);
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 struct Config {
     pub auto_open: bool,
     pub auto_accept: bool,
@@ -37,8 +39,12 @@ async fn app_ready(
     lcu: tauri::State<'_, LCU>,
     cfg: tauri::State<'_, AppConfig>,
 ) -> Result<Config, ()> {
+    println!("App Ready!");
     let lcu = lcu.0.lock().await;
     let cfg = cfg.0.lock().await;
+
+    println!("LCU State: {}", lcu.connected);
+    println!("Config: {:?}", cfg);
 
     app_handle
         .emit_all("lcu_state_update", lcu.connected)
@@ -59,10 +65,21 @@ async fn get_config(cfg: tauri::State<'_, AppConfig>) -> Result<Config, ()> {
     Ok(cfg.clone())
 }
 
-#[tauri::command]
-async fn set_config(cfg: tauri::State<'_, AppConfig>, new_cfg: Config) -> Result<(), ()> {
+#[tauri::command(rename_all = "snake_case")]
+async fn set_config(
+    cfg: tauri::State<'_, AppConfig>,
+    new_cfg: Config,
+    app_handle: AppHandle,
+) -> Result<(), ()> {
     let mut cfg = cfg.0.lock().await;
     *cfg = new_cfg;
+
+    // Save config to disk
+    let cfg_folder = app_handle.path_resolver().app_config_dir().unwrap();
+    let cfg_path = cfg_folder.join("config.json");
+    let cfg_json = serde_json::to_string(&cfg.clone()).unwrap();
+    tokio::fs::write(&cfg_path, cfg_json).await.unwrap();
+
     Ok(())
 }
 
@@ -105,7 +122,7 @@ fn main() {
                 let mut connected = true;
 
                 loop {
-                    let args = shaco::utils::process_info::get_league_process_args();
+                    let args = process_info::get_league_process_args();
                     if args.is_none() {
                         if connected {
                             println!("Waiting for League Client to open...");
@@ -118,14 +135,17 @@ fn main() {
                     }
 
                     let args = args.unwrap();
-                    let lcu_info = shaco::utils::process_info::get_auth_info(args).unwrap();
-                    let client = RESTClient::new(lcu_info.clone()).unwrap();
-                    connected = true;
+
+                    let lcu_info = process_info::get_auth_info(args).unwrap();
+                    let app_client = RESTClient::new(lcu_info.clone(), false).unwrap();
+                    let remoting_client = RESTClient::new(lcu_info.clone(), true).unwrap();
+
                     let lcu = app_handle.state::<LCU>();
+
+                    connected = true;
                     app_handle.emit_all("lcu_state_update", true).unwrap();
 
                     let mut lcu = lcu.0.lock().await;
-                    let arc = Arc::new(client);
                     lcu.connected = true;
                     lcu.data = Some(lcu_info);
 
@@ -157,7 +177,8 @@ fn main() {
 
                     println!("Connected to League Client!");
                     let team: Lobby = serde_json::from_value(
-                        arc.get("/chat/v5/participants/champ-select".to_string())
+                        app_client
+                            .get("/chat/v5/participants/champ-select".to_string())
                             .await
                             .unwrap(),
                     )
@@ -174,7 +195,8 @@ fn main() {
 
                             tokio::time::sleep(Duration::from_secs(3)).await;
                             let team: Lobby = serde_json::from_value(
-                                arc.get("/chat/v5/participants/champ-select".to_string())
+                                app_client
+                                    .get("/chat/v5/participants/champ-select".to_string())
                                     .await
                                     .unwrap(),
                             )
@@ -182,13 +204,24 @@ fn main() {
 
                             app_handle.emit_all("champ_select_started", &team).unwrap();
 
+                            let player_cid = &team.participants[0].cid;
+                            let _resp = remoting_client
+                                .post(
+                                    format!("/lol-chat/v1/conversations/{}/messages", player_cid),
+                                    serde_json::json!({
+                                        "body": "Champ select started!",
+                                        "type": "chat"
+                                    }),
+                                )
+                                .await
+                                .unwrap();
+
                             let cfg = app_handle.state::<AppConfig>();
                             let cfg = cfg.0.lock().await;
                             if cfg.auto_open {
+                                println!("{}", cfg.auto_open);
                                 display_champ_select(team);
                             }
-
-                            continue;
                         }
 
                         println!("Client State Update: {}", client_state);
