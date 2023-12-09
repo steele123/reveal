@@ -2,15 +2,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod api;
+mod champ_select;
 mod lobby;
 mod utils;
 
+use crate::champ_select::ChampSelectSession;
 use crate::lobby::Lobby;
 use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
 use lobby::Participant;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use shaco::model::ws::LcuEvent;
 use shaco::rest::RESTClient;
 use shaco::utils::process_info;
 use shaco::ws::LcuWebsocketClient;
@@ -153,7 +156,8 @@ fn main() {
                     let app_client = RESTClient::new(lcu_info.clone(), false).unwrap();
                     let remoting_client = RESTClient::new(lcu_info.clone(), true).unwrap();
 
-                    let lcu = app_handle.state::<LCU>();
+                    let cloned_app_handle = app_handle.clone();
+                    let lcu = cloned_app_handle.state::<LCU>();
 
                     connected = true;
                     app_handle.emit_all("lcu_state_update", true).unwrap();
@@ -188,6 +192,10 @@ fn main() {
                         .await
                         .unwrap();
 
+                    ws.subscribe(JsonApiEvent("/lol-champ-select/v1/session".to_string()))
+                        .await
+                        .unwrap();
+
                     println!("Connected to League Client!");
                     let team: Lobby = serde_json::from_value(
                         app_client
@@ -202,55 +210,7 @@ fn main() {
                     }
 
                     while let Some(msg) = ws.next().await {
-                        let client_state = msg.data.to_string().replace('\"', "");
-                        if client_state == "ReadyCheck" {
-                            let cfg = app_handle.state::<AppConfig>();
-                            let cfg = cfg.0.lock().await;
-                            if cfg.auto_accept {
-                                tokio::time::sleep(Duration::from_millis(cfg.accept_delay.into())).await;
-                                let _resp = remoting_client
-                                    .post("/lol-matchmaking/v1/ready-check/accept".to_string(), serde_json::json!({}))
-                                    .await
-                                    .unwrap();
-                            }
-                        }
-
-                        if client_state == "ChampSelect" {
-                            tokio::time::sleep(Duration::from_secs(3)).await;
-                            let team: Lobby = serde_json::from_value(
-                                app_client
-                                    .get("/chat/v5/participants/champ-select".to_string())
-                                    .await
-                                    .unwrap(),
-                            )
-                            .unwrap();
-
-                            app_handle.emit_all("champ_select_started", &team).unwrap();
-
-                            let player_cid = &team.participants[0].cid;
-                            let opgg_link = utils::create_opgg_link(&team.participants);
-                            let _resp = remoting_client
-                                .post(
-                                    format!("/lol-chat/v1/conversations/{}/messages", player_cid),
-                                    serde_json::json!({
-                                        "body": format!("OP.GG Link: {}", opgg_link),
-                                        "type": "chat"
-                                    }),
-                                )
-                                .await
-                                .unwrap();
-
-                            let cfg = app_handle.state::<AppConfig>();
-                            let cfg = cfg.0.lock().await;
-                            if cfg.auto_open {
-                                display_champ_select(team);
-                            }
-                        }
-
-                        println!("Client State Update: {}", client_state);
-                        app_handle
-                            .emit_all("client_state_update", client_state)
-                            .unwrap();
+                        handle_ws_message(msg, &app_handle, &remoting_client, &app_client).await;
                     }
                 }
             });
@@ -266,4 +226,106 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+async fn handle_ws_message(
+    msg: LcuEvent,
+    app_handle: &AppHandle,
+    remoting_client: &RESTClient,
+    app_client: &RESTClient,
+) {
+    let msg_type = msg.subscription_type.to_string();
+
+    match msg_type.as_str() {
+        "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase" => {
+            let client_state = msg.data.to_string().replace('\"', "");
+            handle_client_state(client_state, app_handle, remoting_client, app_client).await;
+        }
+        "OnJsonApiEvent_lol-champ-select_v1_session" => {
+            let champ_select: ChampSelectSession = serde_json::from_value(msg.data).unwrap();
+
+            if champ_select.timer.phase == "FINALIZATION" {
+                let time = champ_select.timer.adjusted_time_left_in_phase;
+                let cloned_remoting = remoting_client.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(time)).await;
+                    let _resp = cloned_remoting
+                        .post(
+                            "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
+                            serde_json::json!({}),
+                        )
+                        .await
+                        .unwrap();
+                });
+            }
+        }
+        _ => {
+            println!("Unhandled Message: {}", msg_type);
+        }
+    }
+}
+
+async fn handle_client_state(
+    client_state: String,
+    app_handle: &AppHandle,
+    remoting_client: &RESTClient,
+    app_client: &RESTClient,
+) {
+    match client_state.as_str() {
+        "ChampSelect" => {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            let team: Lobby = serde_json::from_value(
+                app_client
+                    .get("/chat/v5/participants/champ-select".to_string())
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+
+            app_handle.emit_all("champ_select_started", &team).unwrap();
+
+            /*
+            let player_cid = &team.participants[0].cid;
+            let opgg_link = utils::create_opgg_link(&team.participants);
+            let _resp = remoting_client
+                .post(
+                    format!("/lol-chat/v1/conversations/{}/messages", player_cid),
+                    serde_json::json!({
+                        "body": format!("OP.GG Link: {}", opgg_link),
+                        "type": "chat"
+                    }),
+                )
+                .await
+                .unwrap();
+            */
+
+            let cfg = app_handle.state::<AppConfig>();
+            let cfg = cfg.0.lock().await;
+            if cfg.auto_open {
+                display_champ_select(team);
+            }
+        }
+        "ReadyCheck" => {
+            let cfg = app_handle.state::<AppConfig>();
+            let cfg = cfg.0.lock().await;
+            if cfg.auto_accept {
+                tokio::time::sleep(Duration::from_millis(cfg.accept_delay.into())).await;
+                let _resp = remoting_client
+                    .post(
+                        "/lol-matchmaking/v1/ready-check/accept".to_string(),
+                        serde_json::json!({}),
+                    )
+                    .await
+                    .unwrap();
+            }
+        }
+        _ => {
+            println!("Unhandled Client State: {}", client_state);
+        }
+    }
+
+    println!("Client State Update: {}", client_state);
+    app_handle
+        .emit_all("client_state_update", client_state)
+        .unwrap();
 }
