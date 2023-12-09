@@ -9,6 +9,7 @@ use crate::lobby::Lobby;
 use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
+use lobby::Participant;
 use serde::{Serialize, Deserialize};
 use shaco::rest::RESTClient;
 use shaco::utils::process_info;
@@ -73,7 +74,7 @@ async fn set_config(
     new_cfg: Config,
     app_handle: AppHandle,
 ) -> Result<(), ()> {
-    println!("Setting config: {:?}", new_cfg);
+    println!("Setting Config: {:?}", new_cfg);
     let mut cfg = cfg.0.lock().await;
     *cfg = new_cfg;
 
@@ -84,6 +85,15 @@ async fn set_config(
     tokio::fs::write(&cfg_path, cfg_json).await.unwrap();
 
     Ok(())
+}
+
+#[tauri::command]
+fn open_opgg_link(summoners: Vec<Participant>) -> Result<(), ()> {
+    let link = utils::create_opgg_link(&summoners);
+    match open::that(&link) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(()),
+    }
 }
 
 #[tauri::command]
@@ -193,9 +203,19 @@ fn main() {
 
                     while let Some(msg) = ws.next().await {
                         let client_state = msg.data.to_string().replace('\"', "");
-                        if client_state == "ChampSelect" {
-                            println!("Champ select started, grabbing team mates...");
+                        if client_state == "ReadyCheck" {
+                            let cfg = app_handle.state::<AppConfig>();
+                            let cfg = cfg.0.lock().await;
+                            if cfg.auto_accept {
+                                tokio::time::sleep(Duration::from_millis(cfg.accept_delay.into())).await;
+                                let _resp = remoting_client
+                                    .post("/lol-matchmaking/v1/ready-check/accept".to_string(), serde_json::json!({}))
+                                    .await
+                                    .unwrap();
+                            }
+                        }
 
+                        if client_state == "ChampSelect" {
                             tokio::time::sleep(Duration::from_secs(3)).await;
                             let team: Lobby = serde_json::from_value(
                                 app_client
@@ -208,11 +228,12 @@ fn main() {
                             app_handle.emit_all("champ_select_started", &team).unwrap();
 
                             let player_cid = &team.participants[0].cid;
+                            let opgg_link = utils::create_opgg_link(&team.participants);
                             let _resp = remoting_client
                                 .post(
                                     format!("/lol-chat/v1/conversations/{}/messages", player_cid),
                                     serde_json::json!({
-                                        "body": "Champ select started!",
+                                        "body": format!("OP.GG Link: {}", opgg_link),
                                         "type": "chat"
                                     }),
                                 )
@@ -222,7 +243,6 @@ fn main() {
                             let cfg = app_handle.state::<AppConfig>();
                             let cfg = cfg.0.lock().await;
                             if cfg.auto_open {
-                                println!("{}", cfg.auto_open);
                                 display_champ_select(team);
                             }
                         }

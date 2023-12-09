@@ -1,7 +1,7 @@
 use urlencoding::encode;
 use crate::lobby::{Lobby, Participant};
 
-pub fn create_opgg_link(summoners: Vec<Participant>) -> String {
+pub fn create_opgg_link(summoners: &Vec<Participant>) -> String {
     let mut region = get_common_region(&summoners);
     // Remove any numbers from region
     region.retain(|c| !c.is_numeric());
@@ -41,7 +41,6 @@ fn get_common_region(summoners: &Vec<Participant>) -> String {
 
 pub fn display_champ_select(lobby: Lobby) {
     if lobby.participants.is_empty() {
-        println!("We couldn't find any team mates, try again later.");
         return;
     }
 
@@ -55,12 +54,11 @@ pub fn display_champ_select(lobby: Lobby) {
     }
 
     println!("Team: {}", team_string);
-    let link = create_opgg_link(lobby.participants);
+    let link = create_opgg_link(&lobby.participants);
     match open::that(&link) {
         Ok(_) => {}
         Err(_) => {
-            println!("Failed to open link in browser, the link to your lobby is below.");
+            println!("Failed to open link in browser");
         }
     }
-    println!("{}", link);
 }
