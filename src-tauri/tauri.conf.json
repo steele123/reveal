@@ -7,9 +7,21 @@
   },
   "package": {
     "productName": "reveal",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "tauri": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzNDlFMEFEOEMyMjQ0NApSV1JFSk1MWUNwNDBEdWI3cjFUNG9LcE1tT0QwSW5mSUFoQlJGRXdQVjlwOVJGcUdPNUhZNnJMaAo=",
+      "windows": {
+        "installMode": "passive",
+        "installerArgs": []
+      },
+      "endpoints": [
+        ""
+      ]
+    },
     "allowlist": {
       "all": false,
       "window": {
