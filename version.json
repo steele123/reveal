@@ -2,8 +2,8 @@
     "version": "1.0.0",
     "platforms": {
         "windows-x86_64": {
-            "signature": "Content of app-setup.nsis.sig or app.msi.sig, depending on the chosen format",
-            "url": "https://github.com/username/reponame/releases/download/v1.0.0/app-x64-setup.nsis.zip"
+            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRUpNTFlDcDQwRHZNTXZ3UkQydlJjd2xURFZ2bVRBeVBuWmJEZ0RueEpjb0ladGdsWit4M1Z1OUtSdTFwOHQvaTkwc2lxeS93QlZ5V1VjeUZIT1JpcTM3enZmRk5LZFFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzAyMzc3NTM2CWZpbGU6cmV2ZWFsXzEuMC4wX3g2NF9lbi1VUy5tc2kuemlwCk5yQnRVaXhHckFLUk9NM2FUUFdmSExmU3dQUDYwZWJKK050bFNMVnBPeVdGYTQ2cEpUZU40eWdOY0FraXVjdkk0WG5hSjBqbG02MHBPaFBvRysyeURnPT0K",
+            "url": "https://github.com/steele123/reveal/releases/download/v1.0.0/reveal_1.0.0_x64_en-US.msi.zip"
         }
     }
 }

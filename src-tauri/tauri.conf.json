@@ -19,7 +19,7 @@
         "installerArgs": []
       },
       "endpoints": [
-        ""
+        "https://raw.githubusercontent.com/steele123/reveal/main/version.json"
       ]
     },
     "allowlist": {
