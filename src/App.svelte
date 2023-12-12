@@ -90,9 +90,9 @@
     </div>
     {#if champSelect && state === "ChampSelect"}
       <div class="flex gap-5">
-        <div class="flex flex-col gap-2 text-sm">
+        <div class="grid grid-cols-2 gap-2 text-sm">
           {#each champSelect.participants as participant}
-            <div class="grid grid-cols-2 gap-2 justify-center text-center items-center text-xs">
+            <div class="flex flex-col justify-center items-center text-xs">
               <div>{participant.game_name}#{participant.game_tag}</div>
               <div class="text-blue-500">({participant.name})</div>
             </div>
