@@ -29,6 +29,13 @@ pub struct LCUState {
     pub data: Option<LCUClientInfo>,
 }
 
+struct ManagedDodgeState(Mutex<DodgeState>);
+
+pub struct DodgeState {
+    pub last_dodge: Option<u64>,
+    pub enabled: Option<u64>,
+}
+
 struct AppConfig(Mutex<Config>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -105,11 +112,52 @@ async fn get_lcu_info(lcu: tauri::State<'_, LCU>) -> Result<LCUClientInfo, ()> {
     Ok(lcu.data.clone().unwrap())
 }
 
+#[tauri::command]
+async fn dodge(app_handle: AppHandle) {
+    let lcu_state = app_handle.state::<LCU>();
+    let lcu_state = lcu_state.0.lock().await;
+    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
+
+    println!("Attempting to quit champ select...");
+    let _resp = remoting_client
+        .post(
+            "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
+            serde_json::json!({}),
+        )
+        .await
+        .unwrap();
+}
+
+#[tauri::command]
+async fn enable_dodge(app_handle: AppHandle) -> Result<(), ()> {
+    let lcu_state = app_handle.state::<LCU>();
+    let lcu_state = lcu_state.0.lock().await;
+    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
+
+    let dodge_state = app_handle.state::<ManagedDodgeState>();
+    let mut dodge_state = dodge_state.0.lock().await;
+
+    let champ_select = serde_json::from_value::<ChampSelectSession>(
+        remoting_client
+            .get("/lol-champ-select/v1/session".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    dodge_state.enabled = Some(champ_select.game_id);
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(LCU(Mutex::new(LCUState {
             connected: false,
             data: None,
+        })))
+        .manage(ManagedDodgeState(Mutex::new(DodgeState {
+            last_dodge: None,
+            enabled: None,
         })))
         .setup(|app| {
             let app_handle = app.handle();
@@ -222,7 +270,10 @@ fn main() {
             get_lcu_state,
             get_lcu_info,
             get_config,
-            set_config
+            set_config,
+            open_opgg_link,
+            dodge,
+            enable_dodge
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -242,13 +293,38 @@ async fn handle_ws_message(
             handle_client_state(client_state, app_handle, remoting_client, app_client).await;
         }
         "OnJsonApiEvent_lol-champ-select_v1_session" => {
-            let champ_select: ChampSelectSession = serde_json::from_value(msg.data).unwrap();
+            let champ_select = serde_json::from_value::<ChampSelectSession>(msg.data);
+            if champ_select.is_err() {
+                // champ select can be null on the start
+                return;
+            }
 
+            let champ_select = champ_select.unwrap();
             if champ_select.timer.phase == "FINALIZATION" {
                 let time = champ_select.timer.adjusted_time_left_in_phase;
                 let cloned_remoting = remoting_client.clone();
-                tokio::spawn(async move {
+                let game_id = champ_select.game_id;
+                let dodge_state = app_handle.state::<ManagedDodgeState>();
+                let mut dodge_state = dodge_state.0.lock().await;
+
+                if let Some(last_dodge) = dodge_state.last_dodge {
+                    if last_dodge == game_id {
+                        return;
+                    }
+                }
+
+                if (dodge_state.enabled.is_some() && dodge_state.enabled.unwrap() != game_id)
+                    || dodge_state.enabled.is_none()
+                {
+                    return;
+                }
+
+                dodge_state.last_dodge = Some(game_id);
+                drop(dodge_state);
+
+                tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(time)).await;
+                    println!("Attempting to quit champ select...");
                     let _resp = cloned_remoting
                         .post(
                             "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
@@ -273,37 +349,44 @@ async fn handle_client_state(
 ) {
     match client_state.as_str() {
         "ChampSelect" => {
-            tokio::time::sleep(Duration::from_secs(3)).await;
-            let team: Lobby = serde_json::from_value(
-                app_client
-                    .get("/chat/v5/participants/champ-select".to_string())
-                    .await
-                    .unwrap(),
-            )
-            .unwrap();
+            let cloned_app_handle = app_handle.clone();
+            let cloned_app_client = app_client.clone();
 
-            app_handle.emit_all("champ_select_started", &team).unwrap();
-
-            /*
-            let player_cid = &team.participants[0].cid;
-            let opgg_link = utils::create_opgg_link(&team.participants);
-            let _resp = remoting_client
-                .post(
-                    format!("/lol-chat/v1/conversations/{}/messages", player_cid),
-                    serde_json::json!({
-                        "body": format!("OP.GG Link: {}", opgg_link),
-                        "type": "chat"
-                    }),
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(3)).await;
+                let team: Lobby = serde_json::from_value(
+                    cloned_app_client
+                        .get("/chat/v5/participants/champ-select".to_string())
+                        .await
+                        .unwrap(),
                 )
-                .await
                 .unwrap();
-            */
 
-            let cfg = app_handle.state::<AppConfig>();
-            let cfg = cfg.0.lock().await;
-            if cfg.auto_open {
-                display_champ_select(team);
-            }
+                cloned_app_handle
+                    .emit_all("champ_select_started", &team)
+                    .unwrap();
+
+                /*
+                let player_cid = &team.participants[0].cid;
+                let opgg_link = utils::create_opgg_link(&team.participants);
+                let _resp = remoting_client
+                    .post(
+                        format!("/lol-chat/v1/conversations/{}/messages", player_cid),
+                        serde_json::json!({
+                            "body": format!("OP.GG Link: {}", opgg_link),
+                            "type": "chat"
+                        }),
+                    )
+                    .await
+                    .unwrap();
+                */
+
+                let cfg = cloned_app_handle.state::<AppConfig>();
+                let cfg = cfg.0.lock().await;
+                if cfg.auto_open {
+                    display_champ_select(team);
+                }
+            });
         }
         "ReadyCheck" => {
             let cfg = app_handle.state::<AppConfig>();
@@ -315,13 +398,10 @@ async fn handle_client_state(
                         "/lol-matchmaking/v1/ready-check/accept".to_string(),
                         serde_json::json!({}),
                     )
-                    .await
-                    .unwrap();
+                    .await;
             }
         }
-        _ => {
-            println!("Unhandled Client State: {}", client_state);
-        }
+        _ => {}
     }
 
     println!("Client State Update: {}", client_state);

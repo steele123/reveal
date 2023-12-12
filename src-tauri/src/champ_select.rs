@@ -15,7 +15,7 @@ pub struct ChampSelectSession {
     pub boostable_skin_count: i64,
     pub chat_details: ChatDetails,
     pub counter: i64,
-    pub game_id: i64,
+    pub game_id: u64,
     pub has_simultaneous_bans: bool,
     pub has_simultaneous_picks: bool,
     pub is_custom_game: bool,

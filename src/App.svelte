@@ -10,22 +10,9 @@
   import type { ChampSelect } from "./lib/champ_select";
   import Button from "./components/button/button.svelte";
 
-  let state = "ChampSelect";
+  let state = "Unknown";
   let connected = false;
-  let champSelect: ChampSelect | null = {
-    participants: [
-      {
-        cid: "c1~67409a0fa505e99fcfa43ad71d9f57b7bf71a168@champ-select.na1.pvp.net",
-        game_name: "steele",
-        game_tag: "123",
-        muted: false,
-        name: "Bengal",
-        pid: "3118cfd6-440f-5590-9d9c-8743d7154a98@na1.pvp.net",
-        puuid: "3118cfd6-440f-5590-9d9c-8743d7154a98",
-        region: "na1",
-      },
-    ],
-  };
+  let champSelect: ChampSelect | null = null;
   let config: Config | null = null;
   let lcu_info;
 
@@ -70,29 +57,31 @@
     </div>
   </div>
   <div class="h-[225px] p-4 flex flex-col gap-2">
-    <div class="flex items-center space-x-2">
-      <Switch
-        checked={config?.autoOpen}
-        id="auto-open"
-        onCheckedChange={(v) => {
-          if (!config) return;
-          config.autoOpen = v;
-          updateConfig(config);
-        }}
-      />
-      <Label for="auto-open">Auto Open OP.GG Multi</Label>
-    </div>
-    <div class="flex items-center space-x-2">
-      <Switch
-        checked={config?.autoAccept}
-        id="auto-accept"
-        onCheckedChange={(v) => {
-          if (!config) return;
-          config.autoAccept = v;
-          updateConfig(config);
-        }}
-      />
-      <Label for="auto-accept">Auto Accept</Label>
+    <div class="flex gap-5">
+      <div class="flex items-center space-x-2">
+        <Switch
+          checked={config?.autoOpen}
+          id="auto-open"
+          onCheckedChange={(v) => {
+            if (!config) return;
+            config.autoOpen = v;
+            updateConfig(config);
+          }}
+        />
+        <Label for="auto-open">Auto Open OP.GG</Label>
+      </div>
+      <div class="flex items-center space-x-2">
+        <Switch
+          checked={config?.autoAccept}
+          id="auto-accept"
+          onCheckedChange={(v) => {
+            if (!config) return;
+            config.autoAccept = v;
+            updateConfig(config);
+          }}
+        />
+        <Label for="auto-accept">Auto Accept</Label>
+      </div>
     </div>
     <div>
       <div class="text-sm">
@@ -103,7 +92,7 @@
       <div class="flex gap-5">
         <div class="flex flex-col gap-2 text-sm">
           {#each champSelect.participants as participant}
-            <div class="flex items-center gap-2 text-xs">
+            <div class="grid grid-cols-2 gap-2 justify-center text-center items-center text-xs">
               <div>{participant.game_name}#{participant.game_tag}</div>
               <div class="text-blue-500">({participant.name})</div>
             </div>
@@ -115,12 +104,18 @@
             on:click={() =>
               invoke("open_opgg_link", {
                 summoners: champSelect?.participants,
-              })}>Open OP.GG Multi</Button
+              })}>Open OP.GG</Button
           >
-          <Button variant="destructive" size="sm" on:click={() => {}}
-            >Dodge</Button
+          <Button
+            variant="destructive"
+            size="sm"
+            on:click={() => {
+              invoke("dodge");
+            }}>Dodge</Button
           >
-          <Button variant="destructive" size="sm" on:click={() => {}}
+          <Button variant="destructive" size="sm" on:click={() => {
+            invoke("enable_dodge");
+          }}
             >Dodge Last Second</Button
           >
         </div>
