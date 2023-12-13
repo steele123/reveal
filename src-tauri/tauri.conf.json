@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "reveal",
+    "productName": "Reveal",
     "version": "1.0.1"
   },
   "tauri": {
