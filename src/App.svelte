@@ -36,7 +36,7 @@
   });
 </script>
 
-<main class="h-[300px] border bg-background rounded-md">
+<main class="h-[300px] border rounded-md bg-background">
   <div
     data-tauri-drag-region
     class="flex border-b w-full select-none px-4 py-2"

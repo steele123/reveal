@@ -13,7 +13,7 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "updater", "window-unmaximize", "window-show", "window-unminimize", "window-maximize", "window-minimize", "window-close", "window-hide", "window-start-dragging", "shell-open"] }
+tauri = { version = "1.5", features = [ "macos-private-api", "updater", "window-unmaximize", "window-show", "window-unminimize", "window-maximize", "window-minimize", "window-close", "window-hide", "window-start-dragging", "shell-open"] }
 tokio = { version = "1.34.0", features = ["full"] }
 shaco = { git = "https://github.com/steele123/Shaco" }
 futures-util = "0.3.29"
