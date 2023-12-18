@@ -27,7 +27,6 @@
 
     await listen<ChampSelect>("champ_select_started", (event) => {
       champSelect = event.payload;
-      console.log(champSelect);
     });
 
     invoke<Config>("app_ready").then((c) => {
@@ -36,10 +35,10 @@
   });
 </script>
 
-<main class="h-[300px] border rounded-md bg-background">
+<main class="h-[300px] bg-background border rounded-md">
   <div
     data-tauri-drag-region
-    class="flex border-b w-full select-none px-4 py-2"
+    class="flex border-b rounded-t-lg w-full select-none px-4 py-2"
   >
     <div class="flex gap-2">
       <div class="text-blue-500">reveal</div>
