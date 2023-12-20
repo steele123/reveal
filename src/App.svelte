@@ -9,6 +9,7 @@
   import { updateConfig, type Config } from "./lib/config";
   import type { ChampSelect } from "./lib/champ_select";
   import Button from "./components/button/button.svelte";
+  import { fade } from "svelte/transition";
 
   let state = "Unknown";
   let connected = false;
@@ -18,7 +19,12 @@
 
   onMount(async () => {
     await listen<string>("client_state_update", (event) => {
-      state = event.payload;
+      const newState = event.payload;
+      if (newState === "ChampSelect") {
+        champSelect = null;
+      }
+
+      state = newState;
     });
 
     await listen<boolean>("lcu_state_update", (event) => {
@@ -88,7 +94,7 @@
       </div>
     </div>
     {#if champSelect && state === "ChampSelect"}
-      <div class="flex gap-5">
+      <div in:fade class="flex gap-5">
         <div class="grid grid-cols-2 gap-2 text-sm">
           {#each champSelect.participants as participant}
             <div class="flex flex-col justify-center items-center text-xs">
@@ -112,12 +118,18 @@
               invoke("dodge");
             }}>Dodge</Button
           >
-          <Button variant="destructive" size="sm" on:click={() => {
-            invoke("enable_dodge");
-          }}
-            >Dodge Last Second</Button
+          <Button
+            variant="destructive"
+            size="sm"
+            on:click={() => {
+              invoke("enable_dodge");
+            }}>Dodge Last Second</Button
           >
         </div>
+      </div>
+    {:else}
+      <div in:fade class="flex gap-2 items-center animate-pulse">
+        Waiting for Lobby...
       </div>
     {/if}
   </div>
