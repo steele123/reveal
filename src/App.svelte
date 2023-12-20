@@ -94,7 +94,7 @@
       </div>
     </div>
     {#if champSelect && state === "ChampSelect"}
-      <div in:fade class="flex gap-5">
+      <div in:fade class="flex gap-5 w-full">
         <div class="grid grid-cols-2 gap-2 text-sm">
           {#each champSelect.participants as participant}
             <div class="flex flex-col justify-center items-center text-xs">
