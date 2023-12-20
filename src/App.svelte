@@ -118,13 +118,14 @@
               invoke("dodge");
             }}>Dodge</Button
           >
+          <!--
           <Button
             variant="destructive"
             size="sm"
             on:click={() => {
               invoke("enable_dodge");
             }}>Dodge Last Second</Button
-          >
+          -->
         </div>
       </div>
     {:else}
