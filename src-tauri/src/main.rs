@@ -170,7 +170,7 @@ fn main() {
             if !cfg_path.exists() {
                 let cfg = Config {
                     auto_open: true,
-                    auto_accept: true,
+                    auto_accept: false,
                     accept_delay: 2000,
                 };
 
