@@ -48,7 +48,7 @@
   >
     <div class="flex items-center gap-2">
       <div>
-        <img alt="" src="/icon.png" class="w-5 h-5 invert" />
+        <img alt="" src="/icon.png" class="w-5 h-5" />
       </div>
       <div class="text-blue-500">reveal</div>
       {#await getVersion()}
@@ -102,7 +102,7 @@
           {#if champSelect}
             {#each champSelect.participants as participant}
               <div class="flex flex-col justify-center items-center text-xs">
-                <div>{participant.game_name}#{participant.game_tag}</div>
+                <div class="line-clamp-1">{participant.game_name}#{participant.game_tag}</div>
                 <div class="text-blue-500">({participant.name})</div>
               </div>
             {/each}
