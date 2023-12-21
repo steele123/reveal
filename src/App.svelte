@@ -44,7 +44,7 @@
 <main class="h-[300px] bg-background border rounded-md">
   <div
     data-tauri-drag-region
-    class="flex border-b rounded-t-lg w-full select-none px-4 py-2"
+    class="flex border-b rounded-t-lg w-full select-none px-4 py-2 bg-accent"
   >
     <div class="flex gap-2">
       <div class="text-blue-500">reveal</div>
