@@ -140,9 +140,7 @@
         </div>
       </div>
     {:else if state === "InProgress"}
-    <div in:fade class="flex gap-2 items-center animate-pulse">
-      In Game
-    </div>
+      <div in:fade class="flex gap-2 items-center animate-pulse">In Game</div>
     {:else}
       <div in:fade class="flex gap-2 items-center animate-pulse">
         Waiting for Lobby...
