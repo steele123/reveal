@@ -102,7 +102,9 @@
           {#if champSelect}
             {#each champSelect.participants as participant}
               <div class="flex flex-col justify-center items-center text-xs">
-                <div class="line-clamp-1">{participant.game_name}#{participant.game_tag}</div>
+                <div class="line-clamp-1">
+                  {participant.game_name}#{participant.game_tag}
+                </div>
                 <div class="text-blue-500">({participant.name})</div>
               </div>
             {/each}
@@ -137,6 +139,10 @@
           -->
         </div>
       </div>
+    {:else if state === "InProgress"}
+    <div in:fade class="flex gap-2 items-center animate-pulse">
+      In Game
+    </div>
     {:else}
       <div in:fade class="flex gap-2 items-center animate-pulse">
         Waiting for Lobby...
