@@ -293,9 +293,9 @@ async fn handle_ws_message(
             handle_client_state(client_state, app_handle, remoting_client, app_client).await;
         }
         "OnJsonApiEvent_lol-champ-select_v1_session" => {
-            let champ_select = serde_json::from_value::<ChampSelectSession>(msg.data);
+            let champ_select = serde_json::from_value::<ChampSelectSession>(msg.data.clone());
             if champ_select.is_err() {
-                // champ select can be null on the start
+                println!("Failed to parse champ select session!, {:?}", champ_select);
                 return;
             }
 
@@ -318,7 +318,7 @@ async fn handle_ws_message(
                     let client = reqwest::Client::new();
                     let resp = client
                         .post("https://api.hyperboost.gg/reveal/lobby")
-                        .json(&champ_select)
+                        .json(&msg.data)
                         .send()
                         .await;
 
@@ -326,8 +326,6 @@ async fn handle_ws_message(
                         println!("Failed to send analytics event!");
                         return;
                     }
-
-                    println!("Sent analytics event!");
                 });
 
                 if (dodge_state.enabled.is_some() && dodge_state.enabled.unwrap() != game_id)
