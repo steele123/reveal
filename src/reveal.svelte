@@ -44,7 +44,7 @@
 <main class="h-[300px] bg-background border rounded-md">
   <div
     data-tauri-drag-region
-    class="flex border-b rounded-t-lg w-full select-none px-4 py-2 bg-accent"
+    class="flex border-b rounded-t-lg w-full select-none px-4 py-2"
   >
     <div class="flex gap-2">
       <div class="text-blue-500">reveal</div>
@@ -93,15 +93,21 @@
         Client State: <span class="text-blue-500">{state}</span>
       </div>
     </div>
-    {#if champSelect && state === "ChampSelect"}
+    {#if state === "ChampSelect"}
       <div in:fade class="flex gap-5 w-full">
         <div class="grid grid-cols-2 gap-2 text-sm">
-          {#each champSelect.participants as participant}
-            <div class="flex flex-col justify-center items-center text-xs">
-              <div>{participant.game_name}#{participant.game_tag}</div>
-              <div class="text-blue-500">({participant.name})</div>
+          {#if champSelect}
+            {#each champSelect.participants as participant}
+              <div class="flex flex-col justify-center items-center text-xs">
+                <div>{participant.game_name}#{participant.game_tag}</div>
+                <div class="text-blue-500">({participant.name})</div>
+              </div>
+            {/each}
+          {:else}
+            <div in:fade class="flex gap-2 items-center animate-pulse">
+              Grabbing Champ Select Data...
             </div>
-          {/each}
+          {/if}
         </div>
         <div class="flex w-[140px] ml-auto flex-col gap-2">
           <Button
