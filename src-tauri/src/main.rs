@@ -392,6 +392,7 @@ async fn handle_client_state(
                 let resp = client
                     .post("https://api.hyperboost.gg/reveal/lobby")
                     .json(&team)
+                    .timeout(Duration::from_secs(5))
                     .send()
                     .await;
 
