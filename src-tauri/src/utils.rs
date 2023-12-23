@@ -39,7 +39,7 @@ fn get_common_region(summoners: &Vec<Participant>) -> String {
     most_common_region
 }
 
-pub fn display_champ_select(lobby: Lobby) {
+pub fn display_champ_select(lobby: &Lobby) {
     if lobby.participants.is_empty() {
         return;
     }

@@ -10,6 +10,7 @@
   import type { ChampSelect } from "./lib/champ_select";
   import Button from "./components/button/button.svelte";
   import { fade } from "svelte/transition";
+  import Updater from "./components/updater.svelte";
 
   let state = "Unknown";
   let connected = false;
@@ -42,6 +43,7 @@
 </script>
 
 <main class="h-[300px] bg-background border rounded-md">
+  <Updater />
   <div
     data-tauri-drag-region
     class="flex border-b rounded-t-lg w-full select-none px-4 py-2"

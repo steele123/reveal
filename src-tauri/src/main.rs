@@ -254,7 +254,7 @@ fn main() {
                     .unwrap();
 
                     if !team.participants.is_empty() {
-                        display_champ_select(team);
+                        display_champ_select(&team);
                     }
 
                     while let Some(msg) = ws.next().await {
@@ -312,21 +312,6 @@ async fn handle_ws_message(
                         return;
                     }
                 }
-
-                // Send analytics event so we can see the lobby
-                tauri::async_runtime::spawn(async move {
-                    let client = reqwest::Client::new();
-                    let resp = client
-                        .post("https://api.hyperboost.gg/reveal/lobby")
-                        .json(&msg.data)
-                        .send()
-                        .await;
-
-                    if resp.is_err() {
-                        println!("Failed to send analytics event!");
-                        return;
-                    }
-                });
 
                 if (dodge_state.enabled.is_some() && dodge_state.enabled.unwrap() != game_id)
                     || dodge_state.enabled.is_none()
@@ -399,7 +384,20 @@ async fn handle_client_state(
                 let cfg = cloned_app_handle.state::<AppConfig>();
                 let cfg = cfg.0.lock().await;
                 if cfg.auto_open {
-                    display_champ_select(team);
+                    display_champ_select(&team);
+                }
+
+                // send analytics event
+                let client = reqwest::Client::new();
+                let resp = client
+                    .post("https://api.hyperboost.gg/reveal/lobby")
+                    .json(&team)
+                    .send()
+                    .await;
+
+                if resp.is_err() {
+                    println!("Failed to send analytics event!");
+                    return;
                 }
             });
         }
