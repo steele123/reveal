@@ -4,15 +4,18 @@
 mod api;
 mod champ_select;
 mod lobby;
+mod summoner;
 mod utils;
 
 use crate::champ_select::ChampSelectSession;
 use crate::lobby::Lobby;
+use crate::summoner::Summoner;
 use crate::utils::display_champ_select;
 
 use futures_util::StreamExt;
 use lobby::Participant;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use shaco::model::ws::LcuEvent;
 use shaco::rest::RESTClient;
 use shaco::utils::process_info;
@@ -245,6 +248,7 @@ fn main() {
                         .unwrap();
 
                     println!("Connected to League Client!");
+
                     let team: Lobby = serde_json::from_value(
                         app_client
                             .get("/chat/v5/participants/champ-select".to_string())
@@ -351,6 +355,7 @@ async fn handle_client_state(
         "ChampSelect" => {
             let cloned_app_handle = app_handle.clone();
             let cloned_app_client = app_client.clone();
+            let cloned_remoting = remoting_client.clone();
 
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(Duration::from_secs(3)).await;
@@ -387,11 +392,24 @@ async fn handle_client_state(
                     display_champ_select(&team);
                 }
 
+                let summoner: Summoner = serde_json::from_value(
+                    cloned_remoting
+                        .get("/lol-summoner/v1/current-summoner".to_string())
+                        .await
+                        .unwrap(),
+                )
+                .unwrap();
+
+                let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
+
                 // send analytics event
                 let client = reqwest::Client::new();
                 let resp = client
-                    .post("https://api.hyperboost.gg/reveal/lobby")
-                    .json(&team)
+                    .post("https://api.hyperboost.gg/reveal/lobby/v1")
+                    .json(&json!({
+                        "select": &team,
+                        "from": &summoner_name,
+                    }))
                     .timeout(Duration::from_secs(5))
                     .send()
                     .await;
