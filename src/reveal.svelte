@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { getVersion } from "@tauri-apps/api/app";
-  import { appWindow } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
-  import { updateConfig, type Config } from "./lib/config";
+  import { type Config } from "./lib/config";
   import type { ChampSelect } from "./lib/champ_select";
-  import { fade } from "svelte/transition";
-  import Updater from "./components/updater.svelte";
   import Tool from "./components/tool.svelte";
   import Navbar from "./components/navbar.svelte";
   import Footer from "./components/footer.svelte";
-  import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
+  import {
+    checkUpdate,
+    installUpdate,
+  } from "@tauri-apps/api/updater";
   import { relaunch } from "@tauri-apps/api/process";
 
   let state = "Unknown";
@@ -50,7 +49,12 @@
     let update = await checkUpdate();
     if (update.shouldUpdate) {
       updateStatus = "Downloading";
-      await installUpdate();
+      try {
+        await installUpdate();
+      } catch (error) {
+        console.error(error);
+        updateStatus = "UpToDate";
+      }
       updateStatus = "Installing";
       await relaunch();
     } else {
@@ -61,7 +65,7 @@
 
 <main class="h-[300px] bg-background border rounded-md">
   <Navbar />
-  <div class="h-[225px] p-2">
+  <div class="h-[225px] p-4">
     {#if updateStatus === "Checking"}
       <div>Checking for updates...</div>
     {:else if updateStatus === "Downloading"}
