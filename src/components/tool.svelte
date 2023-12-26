@@ -12,7 +12,7 @@
     export let champSelect: ChampSelect | null = null;
 </script>
 
-<div class="p-4 flex flex-col gap-2">
+<div class="flex flex-col gap-2">
     <div class="flex gap-5">
         <div class="flex items-center space-x-2">
             <Switch
