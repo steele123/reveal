@@ -7,22 +7,15 @@
   import Tool from "./components/tool.svelte";
   import Navbar from "./components/navbar.svelte";
   import Footer from "./components/footer.svelte";
-  import {
-    checkUpdate,
-    installUpdate,
-  } from "@tauri-apps/api/updater";
+  import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
   import { relaunch } from "@tauri-apps/api/process";
 
   let state = "Unknown";
   let connected = false;
   let champSelect: ChampSelect | null = null;
   let config: Config | null = null;
-  let updateStatus:
-    | "Checking"
-    | "Downloading"
-    | "Installing"
-    | "Restarting"
-    | "UpToDate" = "Checking";
+  let updateStatus: "Checking" | "Installing" | "Restarting" | "UpToDate" =
+    "Checking";
 
   onMount(async () => {
     await listen<string>("client_state_update", (event) => {
@@ -48,14 +41,14 @@
 
     let update = await checkUpdate();
     if (update.shouldUpdate) {
-      updateStatus = "Downloading";
+      updateStatus = "Installing";
       try {
         await installUpdate();
       } catch (error) {
         console.error(error);
         updateStatus = "UpToDate";
       }
-      updateStatus = "Installing";
+      updateStatus = "Restarting";
       await relaunch();
     } else {
       updateStatus = "UpToDate";
@@ -68,8 +61,6 @@
   <div class="h-[225px] p-4">
     {#if updateStatus === "Checking"}
       <div>Checking for updates...</div>
-    {:else if updateStatus === "Downloading"}
-      <div>Downloading update...</div>
     {:else if updateStatus === "Installing"}
       <div>Installing update...</div>
     {:else if updateStatus === "Restarting"}
