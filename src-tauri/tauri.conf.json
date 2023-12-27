@@ -7,12 +7,12 @@
   },
   "package": {
     "productName": "Reveal",
-    "version": "1.1.3"
+    "version": "1.1.2"
   },
   "tauri": {
     "updater": {
       "active": true,
-      "dialog": true,
+      "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzNDlFMEFEOEMyMjQ0NApSV1JFSk1MWUNwNDBEdWI3cjFUNG9LcE1tT0QwSW5mSUFoQlJGRXdQVjlwOVJGcUdPNUhZNnJMaAo=",
       "windows": {
         "installMode": "passive",

@@ -7,11 +7,15 @@
   import Tool from "./components/tool.svelte";
   import Navbar from "./components/navbar.svelte";
   import Footer from "./components/footer.svelte";
+  import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
+  import { relaunch } from "@tauri-apps/api/process";
 
   let state = "Unknown";
   let connected = false;
   let champSelect: ChampSelect | null = null;
   let config: Config | null = null;
+  let updateStatus: "Checking" | "Installing" | "Restarting" | "UpToDate" =
+    "Checking";
 
   onMount(async () => {
     await listen<string>("client_state_update", (event) => {
@@ -34,13 +38,40 @@
     invoke<Config>("app_ready").then((c) => {
       config = c;
     });
+
+    let update = await checkUpdate();
+    if (update.shouldUpdate) {
+      updateStatus = "Installing";
+      setTimeout(async () => {
+        try {
+          await installUpdate();
+        } catch (error) {
+          console.error(error);
+          updateStatus = "UpToDate";
+          return;
+        }
+
+        updateStatus = "Restarting";
+        await relaunch();
+      }, 5000);
+    } else {
+      updateStatus = "UpToDate";
+    }
   });
 </script>
 
 <main class="h-[300px] bg-background border rounded-md">
   <Navbar />
   <div class="h-[225px] p-4">
-    <Tool {config} {state} {champSelect} />
+    {#if updateStatus === "Checking"}
+      <div>Checking for updates...</div>
+    {:else if updateStatus === "Installing"}
+      <div>Found update, installing latest update...</div>
+    {:else if updateStatus === "Restarting"}
+      <div>Restarting...</div>
+    {:else if updateStatus === "UpToDate"}
+      <Tool {config} {state} {champSelect} />
+    {/if}
   </div>
   <Footer {connected} />
 </main>
