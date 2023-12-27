@@ -12,7 +12,7 @@
   "tauri": {
     "updater": {
       "active": true,
-      "dialog": false,
+      "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzNDlFMEFEOEMyMjQ0NApSV1JFSk1MWUNwNDBEdWI3cjFUNG9LcE1tT0QwSW5mSUFoQlJGRXdQVjlwOVJGcUdPNUhZNnJMaAo=",
       "windows": {
         "installMode": "passive",
