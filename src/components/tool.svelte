@@ -62,9 +62,11 @@
               <div class="line-clamp-1">
                 {participant.game_name}#{participant.game_tag}
               </div>
-              <div class="text-blue-500">
-                ({participant.name})
-              </div>
+              {#if participant.name}
+                <div class="text-blue-500">
+                  ({participant.name})
+                </div>
+              {/if}
             </div>
           {/each}
         {:else}

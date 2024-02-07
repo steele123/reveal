@@ -7,7 +7,7 @@ export interface Participant {
   game_name: String;
   game_tag: String;
   muted: boolean;
-  name: String;
+  name?: String;
   pid: String;
   puuid: String;
   region: String;
