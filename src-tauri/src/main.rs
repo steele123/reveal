@@ -251,7 +251,7 @@ fn main() {
 
                     let team: Lobby = serde_json::from_value(
                         app_client
-                            .get("/chat/v5/participants/champ-select".to_string())
+                            .get("/chat/v5/participants".to_string())
                             .await
                             .unwrap(),
                     )
@@ -358,7 +358,7 @@ async fn handle_client_state(
             let cloned_remoting = remoting_client.clone();
 
             tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(Duration::from_secs(3)).await;
+                tokio::time::sleep(Duration::from_secs(5)).await;
                 let team: Lobby = serde_json::from_value(
                     cloned_app_client
                         .get("/chat/v5/participants".to_string())

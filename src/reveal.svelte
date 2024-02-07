@@ -70,7 +70,7 @@
     {:else if updateStatus === "Restarting"}
       <div>Restarting...</div>
     {:else if updateStatus === "UpToDate"}
-      <Tool {config} {state} {champSelect} />
+      <Tool {config} {state} {champSelect} connected />
     {/if}
   </div>
   <Footer {connected} />
