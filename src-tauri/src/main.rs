@@ -4,14 +4,15 @@
 mod api;
 mod champ_select;
 mod lobby;
+mod region;
 mod summoner;
 mod utils;
 
 use crate::champ_select::ChampSelectSession;
 use crate::lobby::Lobby;
+use crate::region::RegionInfo;
 use crate::summoner::Summoner;
 use crate::utils::display_champ_select;
-
 use futures_util::StreamExt;
 use lobby::Participant;
 use serde::{Deserialize, Serialize};
@@ -101,8 +102,22 @@ async fn set_config(
 }
 
 #[tauri::command]
-fn open_opgg_link(summoners: Vec<Participant>) -> Result<(), ()> {
-    let link = utils::create_opgg_link(&summoners);
+async fn open_opgg_link(summoners: Vec<Participant>, app_handle: AppHandle) -> Result<(), ()> {
+    let lcu_state = app_handle.state::<LCU>();
+    let lcu_state = lcu_state.0.lock().await;
+    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
+    let app_client = RESTClient::new(lcu_state.data.clone().unwrap(), false).unwrap();
+
+    let team = get_lobby_info(&app_client).await;
+    let region_info: RegionInfo = serde_json::from_value(
+        app_client
+            .get("/riotclient/region-locale".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    let link = utils::create_opgg_link(&team.participants, region_info.web_region);
     match open::that(&link) {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
@@ -150,6 +165,75 @@ async fn enable_dodge(app_handle: AppHandle) -> Result<(), ()> {
 
     dodge_state.enabled = Some(champ_select.game_id);
     Ok(())
+}
+
+async fn get_lobby_info(app_client: &RESTClient) -> Lobby {
+    let team: Lobby = serde_json::from_value(
+        app_client
+            .get("/chat/v5/participants".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    team
+}
+
+async fn send_analytics_event(team: &Lobby, summoner: &Summoner) {
+    let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
+
+    // send analytics event
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("https://api.hyperboost.gg/reveal/lobby/v1")
+        .json(&json!({
+            "select": &team,
+            "from": &summoner_name,
+        }))
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await;
+
+    if resp.is_err() {
+        println!("Failed to send analytics event!");
+    }
+}
+
+async fn get_current_summoner(remoting_client: &RESTClient) -> Summoner {
+    let summoner: Summoner = serde_json::from_value(
+        remoting_client
+            .get("/lol-summoner/v1/current-summoner".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    summoner
+}
+
+async fn handle_champ_select_start(
+    app_client: &RESTClient,
+    remoting_client: &RESTClient,
+    open_link: bool,
+    app_handle: &AppHandle,
+) {
+    let team = get_lobby_info(app_client).await;
+    let region_info: RegionInfo = serde_json::from_value(
+        app_client
+            .get("/riotclient/region-locale".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    app_handle.emit_all("champ_select_started", &team).unwrap();
+
+    if open_link {
+        display_champ_select(&team, region_info.web_region);
+    }
+
+    let summoner = get_current_summoner(remoting_client).await;
+    send_analytics_event(&team, &summoner).await;
 }
 
 fn main() {
@@ -257,8 +341,8 @@ fn main() {
                     )
                     .unwrap();
 
-                    if !team.participants.is_empty() {
-                        display_champ_select(&team);
+                    if !team.participants.len() > 2 {
+                        handle_champ_select_start(&app_client, &remoting_client, true, &app_handle);
                     }
 
                     while let Some(msg) = ws.next().await {
@@ -359,65 +443,11 @@ async fn handle_client_state(
 
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(Duration::from_secs(5)).await;
-                let team: Lobby = serde_json::from_value(
-                    cloned_app_client
-                        .get("/chat/v5/participants".to_string())
-                        .await
-                        .unwrap(),
-                )
-                .unwrap();
-
-                cloned_app_handle
-                    .emit_all("champ_select_started", &team)
-                    .unwrap();
-
-                /*
-                let player_cid = &team.participants[0].cid;
-                let opgg_link = utils::create_opgg_link(&team.participants);
-                let _resp = remoting_client
-                    .post(
-                        format!("/lol-chat/v1/conversations/{}/messages", player_cid),
-                        serde_json::json!({
-                            "body": format!("OP.GG Link: {}", opgg_link),
-                            "type": "chat"
-                        }),
-                    )
-                    .await
-                    .unwrap();
-                */
 
                 let cfg = cloned_app_handle.state::<AppConfig>();
                 let cfg = cfg.0.lock().await;
-                if cfg.auto_open {
-                    display_champ_select(&team);
-                }
-
-                let summoner: Summoner = serde_json::from_value(
-                    cloned_remoting
-                        .get("/lol-summoner/v1/current-summoner".to_string())
-                        .await
-                        .unwrap(),
-                )
-                .unwrap();
-
-                let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
-
-                // send analytics event
-                let client = reqwest::Client::new();
-                let resp = client
-                    .post("https://api.hyperboost.gg/reveal/lobby/v1")
-                    .json(&json!({
-                        "select": &team,
-                        "from": &summoner_name,
-                    }))
-                    .timeout(Duration::from_secs(5))
-                    .send()
+                handle_champ_select_start(&cloned_app_client, &cloned_remoting, cfg.auto_open, &cloned_app_handle)
                     .await;
-
-                if resp.is_err() {
-                    println!("Failed to send analytics event!");
-                    return;
-                }
             });
         }
         "ReadyCheck" => {

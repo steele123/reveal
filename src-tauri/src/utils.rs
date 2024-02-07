@@ -1,11 +1,7 @@
 use urlencoding::encode;
 use crate::lobby::{Lobby, Participant};
 
-pub fn create_opgg_link(summoners: &Vec<Participant>) -> String {
-    let mut region = get_common_region(&summoners);
-    // Remove any numbers from region
-    region.retain(|c| !c.is_numeric());
-
+pub fn create_opgg_link(summoners: &Vec<Participant>, region: String) -> String {
     let base_url = format!("https://www.op.gg/multisearch/{}?summoners=", region);
     let mut link_path = String::new();
     for summoner in summoners {
@@ -19,27 +15,7 @@ pub fn create_opgg_link(summoners: &Vec<Participant>) -> String {
     format!("{}{}", base_url, encoded_path)
 }
 
-fn get_common_region(summoners: &Vec<Participant>) -> String {
-    // Go through each summoner and find the most common region
-    let mut regions = Vec::new();
-    for summoner in summoners {
-        regions.push(&summoner.region);
-    }
-
-    let mut most_common_region = String::new();
-    let mut highest_count = 0;
-    for region in regions.clone() {
-        let count = regions.iter().filter(|&r| r == &region).count();
-        if count > highest_count {
-            highest_count = count;
-            most_common_region = region.clone();
-        }
-    }
-
-    most_common_region
-}
-
-pub fn display_champ_select(lobby: &Lobby) {
+pub fn display_champ_select(lobby: &Lobby, region: String) {
     if lobby.participants.is_empty() {
         return;
     }
@@ -54,7 +30,7 @@ pub fn display_champ_select(lobby: &Lobby) {
     }
 
     println!("Team: {}", team_string);
-    let link = create_opgg_link(&lobby.participants);
+    let link = create_opgg_link(&lobby.participants, region);
     match open::that(&link) {
         Ok(_) => {}
         Err(_) => {
