@@ -55,8 +55,8 @@
   </div>
   {#if state === "ChampSelect"}
     <div in:fade class="flex gap-5 w-full">
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        {#if champSelect}
+      {#if champSelect}
+        <div class="grid grid-cols-2 gap-2 text-sm">
           {#each champSelect.participants as participant}
             <div class="flex flex-col justify-center items-center text-xs">
               <div class="line-clamp-1">
@@ -69,12 +69,12 @@
               {/if}
             </div>
           {/each}
-        {:else}
-          <div in:fade class="flex gap-2 items-center animate-pulse">
-            Grabbing Champ Select Data...
-          </div>
-        {/if}
-      </div>
+        </div>
+      {:else}
+        <div in:fade class="flex mb-auto gap-2 items-center animate-pulse">
+          Grabbing Players...
+        </div>
+      {/if}
       <div class="flex w-[140px] ml-auto flex-col gap-2">
         <Button
           size="sm"
