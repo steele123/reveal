@@ -101,6 +101,9 @@
   {:else if state === "InProgress"}
     <div in:fade class="flex gap-2 items-center animate-pulse">In Game</div>
   {:else if !connected}
+    <div in:fade class="flex gap-2 items-center animate-pulse">
+      Trying to connect to League Client...
+    </div>
     <div
       class="text-xs p-2 rounded mt-10 bg-accent border flex gap-2 text-muted-foreground"
     >
@@ -121,9 +124,6 @@
       >
       Issues Connecting? <br /> Try restarting the League Client and running as Reveal
       as Administrator.
-    </div>
-    <div in:fade class="flex gap-2 items-center animate-pulse">
-      Waiting for Lobby...
     </div>
   {:else}
     <div in:fade class="flex gap-2 items-center animate-pulse">
