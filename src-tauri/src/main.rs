@@ -361,7 +361,7 @@ async fn handle_client_state(
                 tokio::time::sleep(Duration::from_secs(3)).await;
                 let team: Lobby = serde_json::from_value(
                     cloned_app_client
-                        .get("/chat/v5/participants/champ-select".to_string())
+                        .get("/chat/v5/participants".to_string())
                         .await
                         .unwrap(),
                 )
