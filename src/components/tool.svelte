@@ -104,10 +104,10 @@
     <div in:fade class="flex gap-2 items-center animate-pulse">In Game</div>
   {:else if !connected}
     <div in:fade class="flex gap-2 items-center animate-pulse">
-      Trying to connect to League Client...
+      Trying to find League Client...
     </div>
     <div
-      class="text-xs p-2 rounded mt-10 bg-accent border flex gap-2 text-muted-foreground"
+      class="text-xs p-2 rounded mt-6 bg-accent border flex gap-2 text-muted-foreground"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

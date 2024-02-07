@@ -62,7 +62,7 @@
 
 <main class="h-[300px] bg-background border rounded-md">
   <Navbar />
-  <div class="h-[225px] p-4">
+  <div class="h-[205px] p-4">
     {#if updateStatus === "Checking"}
       <div>Checking for updates...</div>
     {:else if updateStatus === "Installing"}
@@ -70,7 +70,7 @@
     {:else if updateStatus === "Restarting"}
       <div>Restarting...</div>
     {:else if updateStatus === "UpToDate"}
-      <Tool {config} {state} {champSelect} connected />
+      <Tool {config} {state} {champSelect} connected={connected} />
     {/if}
   </div>
   <Footer {connected} />
