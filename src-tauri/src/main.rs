@@ -176,6 +176,17 @@ async fn get_lobby_info(app_client: &RESTClient) -> Lobby {
     )
     .unwrap();
 
+    // filter out all cids that contain champ-select
+    let team_participants = team
+        .participants
+        .into_iter()
+        .filter(|p| p.cid.contains("champ-select"))
+        .collect::<Vec<Participant>>();
+
+    let team = Lobby {
+        participants: team_participants,
+    };
+
     team
 }
 
@@ -446,8 +457,13 @@ async fn handle_client_state(
 
                 let cfg = cloned_app_handle.state::<AppConfig>();
                 let cfg = cfg.0.lock().await;
-                handle_champ_select_start(&cloned_app_client, &cloned_remoting, cfg.auto_open, &cloned_app_handle)
-                    .await;
+                handle_champ_select_start(
+                    &cloned_app_client,
+                    &cloned_remoting,
+                    cfg.auto_open,
+                    &cloned_app_handle,
+                )
+                .await;
             });
         }
         "ReadyCheck" => {
