@@ -253,7 +253,8 @@ async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
         .await
         .unwrap().to_string();
 
-    gameflow_state
+    let cleaned_state = gameflow_state.replace('\"', "");
+    cleaned_state
 }
 
 fn main() {
