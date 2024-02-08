@@ -247,6 +247,15 @@ async fn handle_champ_select_start(
     send_analytics_event(&team, &summoner).await;
 }
 
+async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
+    let gameflow_state = remoting_client
+        .get("/lol-gameflow/v1/gameflow-phase".to_string())
+        .await
+        .unwrap().to_string();
+
+    gameflow_state
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(LCU(Mutex::new(LCUState {
@@ -344,17 +353,8 @@ fn main() {
 
                     println!("Connected to League Client!");
 
-                    let team: Lobby = serde_json::from_value(
-                        app_client
-                            .get("/chat/v5/participants".to_string())
-                            .await
-                            .unwrap(),
-                    )
-                    .unwrap();
-
-                    if !team.participants.len() > 2 {
-                        handle_champ_select_start(&app_client, &remoting_client, true, &app_handle);
-                    }
+                    let state = get_gameflow_state(&remoting_client).await;
+                    handle_client_state(state, &app_handle, &remoting_client, &app_client).await;
 
                     while let Some(msg) = ws.next().await {
                         handle_ws_message(msg, &app_handle, &remoting_client, &app_client).await;
