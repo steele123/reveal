@@ -101,10 +101,9 @@ async fn set_config(
 }
 
 #[tauri::command]
-async fn open_opgg_link(summoners: Vec<Participant>, app_handle: AppHandle) -> Result<(), ()> {
+async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
     let lcu_state = app_handle.state::<LCU>();
     let lcu_state = lcu_state.0.lock().await;
-    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
     let app_client = RESTClient::new(lcu_state.data.clone().unwrap(), false).unwrap();
 
     let team = get_lobby_info(&app_client).await;
@@ -431,7 +430,7 @@ async fn handle_ws_message(
 
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(time)).await;
-                    println!("Attempting to quit champ select...");
+                    println!("Last second dodge calling quit endpoint...");
                     let _resp = cloned_remoting
                         .post(
                             "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
@@ -478,8 +477,8 @@ async fn handle_client_state(
             let cfg = app_handle.state::<AppConfig>();
             let cfg = cfg.0.lock().await;
             if cfg.auto_accept {
-                tokio::time::sleep(Duration::from_millis(cfg.accept_delay.into())).await;
-                let _resp = remoting_client
+                tokio::time::sleep(Duration::from_millis((cfg.accept_delay as u64) - 1000)).await;
+                let _resp = remoting_client 
                     .post(
                         "/lol-matchmaking/v1/ready-check/accept".to_string(),
                         serde_json::json!({}),

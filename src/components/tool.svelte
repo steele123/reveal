@@ -81,13 +81,9 @@
           Grabbing Players...
         </div>
       {/if}
-      <div class="flex w-[140px] ml-auto flex-col gap-2">
-        <Button
-          size="sm"
-          on:click={() =>
-            invoke("open_opgg_link", {
-              summoners: champSelect?.participants,
-            })}>Open OP.GG</Button
+      <div class="flex w-[120px] ml-auto flex-col gap-2">
+        <Button size="sm" on:click={() => invoke("open_opgg_link")}
+          >Open OP.GG</Button
         >
         <Button
           variant="destructive"
@@ -96,7 +92,8 @@
             invoke("dodge");
           }}>Dodge</Button
         >
-        <div class="flex items-center space-x-2">
+        <!--
+        <div class="flex py-2 items-center gap-2">
           <Switch
             checked={lastSecondDodgeEnabled}
             id="last-second-dodge"
@@ -105,10 +102,11 @@
               lastSecondDodgeEnabled = v;
             }}
           />
-          <Label class="text-center" for="last-second-dodge"
+          <Label class="text-center text-xs" for="last-second-dodge"
             >Last Second Dodge</Label
           >
         </div>
+      -->
       </div>
     </div>
   {:else if state === "InProgress"}

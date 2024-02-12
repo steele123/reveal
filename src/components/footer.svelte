@@ -4,7 +4,7 @@
   export let connected = false;
 </script>
 
-<div class="px-2 pt-1 items-center flex border-t">
+<div class="px-4 pt-1 items-center flex border-t">
   {#if connected}
     <div
       in:fade={{ duration: 2000 }}
@@ -26,7 +26,7 @@
     <a
       href="https://hyeb.gg/reveal"
       target="_blank"
-      class="flex items-center border pl-4 pr-2 bg-primary-foreground rounded gap-2"
+      class="flex items-center border px-4 bg-primary-foreground rounded gap-2"
     >
       <div class="text-blue-500 hover:underline">hyeb.gg/reveal</div>
     </a>
