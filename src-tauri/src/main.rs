@@ -155,6 +155,11 @@ async fn enable_dodge(app_handle: AppHandle) -> Result<(), ()> {
     let dodge_state = app_handle.state::<ManagedDodgeState>();
     let mut dodge_state = dodge_state.0.lock().await;
 
+    if dodge_state.enabled.is_some() {
+        dodge_state.enabled = None;
+        return Ok(());
+    }
+
     let champ_select = serde_json::from_value::<ChampSelectSession>(
         remoting_client
             .get("/lol-champ-select/v1/session".to_string())
@@ -251,7 +256,8 @@ async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
     let gameflow_state = remoting_client
         .get("/lol-gameflow/v1/gameflow-phase".to_string())
         .await
-        .unwrap().to_string();
+        .unwrap()
+        .to_string();
 
     let cleaned_state = gameflow_state.replace('\"', "");
     cleaned_state
@@ -421,6 +427,8 @@ async fn handle_ws_message(
 
                 dodge_state.last_dodge = Some(game_id);
                 drop(dodge_state);
+
+                println!("Spawned task to dodge at finalization timer: {}", time);
 
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(time)).await;

@@ -7,11 +7,18 @@
   import Button from "../components/button/button.svelte";
   import { fade } from "svelte/transition";
   import RevealCount from "./reveal-count.svelte";
+  import Toggle from "./toggle/toggle.svelte";
 
   export let config: Config | null = null;
   export let state = "Unknown";
   export let champSelect: ChampSelect | null = null;
   export let connected = false;
+
+  let lastSecondDodgeEnabled = false;
+  $: if (state !== "ChampSelect" && lastSecondDodgeEnabled) {
+    // lobby is prob dodged or started, can reset state now
+    lastSecondDodgeEnabled = false;
+  }
 </script>
 
 <div class="flex flex-col gap-2">
@@ -90,14 +97,19 @@
             invoke("dodge");
           }}>Dodge</Button
         >
-        <!--
-          <Button
-            variant="destructive"
-            size="sm"
-            on:click={() => {
-              invoke("enable_dodge");
-            }}>Dodge Last Second</Button
-          -->
+        <div class="flex items-center space-x-2">
+          <Switch
+            checked={lastSecondDodgeEnabled}
+            id="last-second-dodge"
+            onCheckedChange={async (v) => {
+              await invoke("enable_dodge");
+              lastSecondDodgeEnabled = v;
+            }}
+          />
+          <Label class="text-center" for="last-second-dodge"
+            >Last Second Dodge</Label
+          >
+        </div>
       </div>
     </div>
   {:else if state === "InProgress"}
