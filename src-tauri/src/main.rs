@@ -427,7 +427,7 @@ async fn handle_ws_message(
                 dodge_state.last_dodge = Some(game_id);
                 drop(dodge_state);
 
-                println!("Spawned task to dodge at finalization timer: {}", time);
+                println!("Spawned task to dodge in finalization timer: {}ms", time);
 
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(time)).await;
