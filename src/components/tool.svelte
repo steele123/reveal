@@ -7,7 +7,6 @@
   import Button from "../components/button/button.svelte";
   import { fade } from "svelte/transition";
   import RevealCount from "./reveal-count.svelte";
-  import Toggle from "./toggle/toggle.svelte";
 
   export let config: Config | null = null;
   export let state = "Unknown";
