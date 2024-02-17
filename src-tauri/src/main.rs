@@ -199,7 +199,7 @@ async fn send_analytics_event(team: &Lobby, summoner: &Summoner) {
     // send analytics event
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://api.hyperboost.gg/reveal/lobby/v1")
+        .post("https://hyperboost.gg/api/reveal/collect")
         .json(&json!({
             "select": &team,
             "from": &summoner_name,
