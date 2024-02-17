@@ -116,7 +116,7 @@
       Trying to find League Client...
     </div>
     <div
-      class="text-xs p-2 rounded mt-6 bg-accent border flex gap-2 text-muted-foreground"
+      class="text-xs p-2 rounded mt-10 bg-accent border flex gap-2 text-muted-foreground"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -133,7 +133,7 @@
           d="M12 8h.01"
         /></svg
       >
-      Issues Connecting? <br /> Try restarting the League Client and running as Reveal
+      Issues Connecting? <br /> Try restarting the League Client and running Reveal
       as Administrator.
     </div>
   {:else}
