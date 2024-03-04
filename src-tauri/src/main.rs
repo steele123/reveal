@@ -193,7 +193,7 @@ async fn get_lobby_info(app_client: &RESTClient) -> Lobby {
     team
 }
 
-async fn send_analytics_event(team: &Lobby, summoner: &Summoner) {
+async fn send_analytics_event(team: &Lobby, summoner: &Summoner, region: &RegionInfo) {
     let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
 
     // send analytics event
@@ -203,6 +203,7 @@ async fn send_analytics_event(team: &Lobby, summoner: &Summoner) {
         .json(&json!({
             "select": &team,
             "from": &summoner_name,
+            "region": &region.web_region
         }))
         .timeout(Duration::from_secs(5))
         .send()
@@ -243,11 +244,11 @@ async fn handle_champ_select_start(
     app_handle.emit_all("champ_select_started", &team).unwrap();
 
     if open_link {
-        display_champ_select(&team, region_info.web_region);
+        display_champ_select(&team, region_info.web_region.clone());
     }
 
     let summoner = get_current_summoner(remoting_client).await;
-    send_analytics_event(&team, &summoner).await;
+    send_analytics_event(&team, &summoner, &region_info).await;
 }
 
 async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
@@ -478,7 +479,7 @@ async fn handle_client_state(
             let cfg = cfg.0.lock().await;
             if cfg.auto_accept {
                 tokio::time::sleep(Duration::from_millis((cfg.accept_delay as u64) - 1000)).await;
-                let _resp = remoting_client 
+                let _resp = remoting_client
                     .post(
                         "/lol-matchmaking/v1/ready-check/accept".to_string(),
                         serde_json::json!({}),
