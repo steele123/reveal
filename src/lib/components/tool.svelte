@@ -7,6 +7,7 @@
   import { Switch } from "./ui/switch";
   import { Label } from "./ui/label";
   import { Button } from "./ui/button";
+  import * as Select from "$lib/components/ui/select";
 
   export let config: Config | null = null;
   export let state = "Unknown";
@@ -18,11 +19,60 @@
     // lobby is prob dodged or started, can reset state now
     lastSecondDodgeEnabled = false;
   }
+
+  const multiProviders = [
+    {
+      label: "OP.GG",
+      value: "opgg"
+    },
+    {
+      label: "DeepLoL",
+      value: "deeplol"
+    },
+    {
+      label: "U.GG",
+      value: "ugg"
+    },
+    {
+      label: "Poro.gg",
+      value: "poro"
+    },
+    {
+      label: "Tracker.gg",
+      value: "tracker"
+    }
+  ];
 </script>
 
 <div class="flex flex-col gap-2">
-  <div>
-    <div class="flex gap-5">
+  <div class="flex gap-5 items-center">
+    <div>
+      <Label for="favoriteFruit">Multi Website</Label>
+      <Select.Root
+        onSelectedChange={(v) => {
+          if (!config) return;
+          if (v) {
+            config.multiProvider = v.value;
+          }
+          updateConfig(config);
+        }}
+        selected={multiProviders.find((p) => p.value === config?.multiProvider)}
+      >
+        <Select.Trigger class="w-[180px]">
+          <Select.Value />
+        </Select.Trigger>
+        <Select.Content>
+          <Select.Group>
+            {#each multiProviders as multi}
+              <Select.Item value={multi.value} label={multi.label}
+                >{multi.label}</Select.Item
+              >
+            {/each}
+          </Select.Group>
+        </Select.Content>
+      </Select.Root>
+    </div>
+    <div class="flex flex-col gap-2">
       <div class="flex items-center space-x-2">
         <Switch
           checked={config?.autoOpen}
@@ -47,9 +97,6 @@
         />
         <Label for="auto-accept">Auto Accept</Label>
       </div>
-    </div>
-    <div>
-      
     </div>
   </div>
   <div class="grid grid-cols-2">
@@ -121,7 +168,7 @@
       Trying to find League Client...
     </div>
     <div
-      class="text-xs p-2 rounded mt-10 bg-accent border flex gap-2 text-muted-foreground"
+      class="text-xs p-2 rounded bg-accent border flex gap-2 text-muted-foreground"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

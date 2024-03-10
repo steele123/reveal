@@ -47,6 +47,12 @@ struct Config {
     pub auto_open: bool,
     pub auto_accept: bool,
     pub accept_delay: u32,
+    #[serde(default = "default_provider")]
+    pub multi_provider: String,
+}
+
+fn default_provider() -> String {
+    "opgg".to_string()
 }
 
 #[tauri::command]
@@ -106,6 +112,9 @@ async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
     let lcu_state = lcu_state.0.lock().await;
     let app_client = RESTClient::new(lcu_state.data.clone().unwrap(), false).unwrap();
 
+    let config = app_handle.state::<AppConfig>();
+    let config = config.0.lock().await;
+
     let team = get_lobby_info(&app_client).await;
     let region_info: RegionInfo = serde_json::from_value(
         app_client
@@ -115,11 +124,13 @@ async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
     )
     .unwrap();
 
-    let link = utils::create_opgg_link(&team.participants, region_info.web_region);
-    match open::that(&link) {
-        Ok(_) => Ok(()),
-        Err(_) => Err(()),
-    }
+    display_champ_select(
+        &team,
+        region_info.web_region.clone(),
+        &config.multi_provider,
+    );
+    
+    Ok(())
 }
 
 #[tauri::command]
@@ -229,7 +240,7 @@ async fn get_current_summoner(remoting_client: &RESTClient) -> Summoner {
 async fn handle_champ_select_start(
     app_client: &RESTClient,
     remoting_client: &RESTClient,
-    open_link: bool,
+    config: &Config,
     app_handle: &AppHandle,
 ) {
     let team = get_lobby_info(app_client).await;
@@ -243,8 +254,12 @@ async fn handle_champ_select_start(
 
     app_handle.emit_all("champ_select_started", &team).unwrap();
 
-    if open_link {
-        display_champ_select(&team, region_info.web_region.clone());
+    if config.auto_open {
+        display_champ_select(
+            &team,
+            region_info.web_region.clone(),
+            &config.multi_provider,
+        );
     }
 
     let summoner = get_current_summoner(remoting_client).await;
@@ -285,6 +300,7 @@ fn main() {
                     auto_open: true,
                     auto_accept: false,
                     accept_delay: 2000,
+                    multi_provider: "opgg".to_string(),
                 };
 
                 let cfg_json = serde_json::to_string(&cfg).unwrap();
@@ -468,7 +484,7 @@ async fn handle_client_state(
                 handle_champ_select_start(
                     &cloned_app_client,
                     &cloned_remoting,
-                    cfg.auto_open,
+                    &cfg,
                     &cloned_app_handle,
                 )
                 .await;
