@@ -114,14 +114,14 @@
   {#if state === "ChampSelect"}
     <div in:fade class="flex gap-5 w-full">
       {#if champSelect}
-        <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="grid grid-cols-2 items-start gap-2 text-sm">
           {#each champSelect.participants as participant}
             <div class="flex flex-col justify-center items-center text-xs">
               <div class="line-clamp-1">
                 {participant.game_name}#{participant.game_tag}
               </div>
               {#if participant.name}
-                <div class="text-blue-500">
+                <div class="text-blue-500 line-clamp-1">
                   ({participant.name})
                 </div>
               {/if}
