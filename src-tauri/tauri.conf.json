@@ -67,7 +67,7 @@
         "resizable": false,
         "title": "reveal",
         "width": 400,
-        "height": 300,
+        "height": 325,
         "decorations": false,
         "transparent": true
       }
