@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fetch } from "@tauri-apps/api/http";
-  import { IS_DEV } from "../lib/constants";
+  import { IS_DEV } from "$lib/constants";
 
   let revealCount = 0;
 

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Switch from "../components/switch.svelte";
-  import Label from "../components/label.svelte";
   import { invoke } from "@tauri-apps/api/tauri";
-  import { updateConfig, type Config } from "../lib/config";
-  import type { ChampSelect } from "../lib/champ_select";
-  import Button from "../components/button/button.svelte";
+  import { updateConfig, type Config } from "$lib/config";
   import { fade } from "svelte/transition";
   import RevealCount from "./reveal-count.svelte";
+  import type { ChampSelect } from "$lib/champ_select";
+  import { Switch } from "./ui/switch";
+  import { Label } from "./ui/label";
+  import { Button } from "./ui/button";
 
   export let config: Config | null = null;
   export let state = "Unknown";
@@ -21,30 +21,35 @@
 </script>
 
 <div class="flex flex-col gap-2">
-  <div class="flex gap-5">
-    <div class="flex items-center space-x-2">
-      <Switch
-        checked={config?.autoOpen}
-        id="auto-open"
-        onCheckedChange={(v) => {
-          if (!config) return;
-          config.autoOpen = v;
-          updateConfig(config);
-        }}
-      />
-      <Label for="auto-open">Auto Open OP.GG</Label>
+  <div>
+    <div class="flex gap-5">
+      <div class="flex items-center space-x-2">
+        <Switch
+          checked={config?.autoOpen}
+          id="auto-open"
+          onCheckedChange={(v) => {
+            if (!config) return;
+            config.autoOpen = v;
+            updateConfig(config);
+          }}
+        />
+        <Label for="auto-open">Auto Open Link</Label>
+      </div>
+      <div class="flex items-center space-x-2">
+        <Switch
+          checked={config?.autoAccept}
+          id="auto-accept"
+          onCheckedChange={(v) => {
+            if (!config) return;
+            config.autoAccept = v;
+            updateConfig(config);
+          }}
+        />
+        <Label for="auto-accept">Auto Accept</Label>
+      </div>
     </div>
-    <div class="flex items-center space-x-2">
-      <Switch
-        checked={config?.autoAccept}
-        id="auto-accept"
-        onCheckedChange={(v) => {
-          if (!config) return;
-          config.autoAccept = v;
-          updateConfig(config);
-        }}
-      />
-      <Label for="auto-accept">Auto Accept</Label>
+    <div>
+      
     </div>
   </div>
   <div class="grid grid-cols-2">

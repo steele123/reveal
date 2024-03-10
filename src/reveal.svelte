@@ -2,11 +2,12 @@
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
-  import { type Config } from "./lib/config";
-  import type { ChampSelect } from "./lib/champ_select";
-  import Tool from "./components/tool.svelte";
-  import Navbar from "./components/navbar.svelte";
-  import Footer from "./components/footer.svelte";
+  import { type Config } from "$lib/config";
+  import "@fontsource-variable/inter";
+  import type { ChampSelect } from "$lib/champ_select";
+  import Tool from "$lib/components/tool.svelte";
+  import Navbar from "$lib/components/navbar.svelte";
+  import Footer from "$lib/components/footer.svelte";
   import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
   import { relaunch } from "@tauri-apps/api/process";
 
@@ -70,7 +71,7 @@
     {:else if updateStatus === "Restarting"}
       <div>Restarting...</div>
     {:else if updateStatus === "UpToDate"}
-      <Tool {config} {state} {champSelect} connected={connected} />
+      <Tool {config} {state} {champSelect} {connected} />
     {/if}
   </div>
   <Footer {connected} />
