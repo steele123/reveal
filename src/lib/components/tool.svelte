@@ -68,7 +68,7 @@
         </Select.Content>
       </Select.Root>
     </div>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-3">
       <div class="flex items-center space-x-2">
         <Switch
           checked={config?.autoOpen}
@@ -79,7 +79,7 @@
             updateConfig(config);
           }}
         />
-        <Label for="auto-open">Auto Open Link</Label>
+        <Label for="auto-open">Auto Open Multi</Label>
       </div>
       <div class="flex items-center space-x-2">
         <Switch
@@ -95,7 +95,7 @@
       </div>
     </div>
   </div>
-  <div class="grid grid-cols-2">
+  <div class="grid grid-cols-2 text-sm">
     <div class="flex gap-2">
       <div class="text-muted-foreground">State:</div>
       <div>{state}</div>
@@ -110,9 +110,9 @@
   {#if state === "ChampSelect"}
     <div in:fade class="flex gap-5 w-full">
       {#if champSelect}
-        <div class="grid grid-cols-2 items-start gap-2 text-sm">
+        <div class="grid grid-cols-2 items-start gap-y-1 gap-x-2 text-sm">
           {#each champSelect.participants as participant}
-            <div class="flex flex-col justify-center items-center text-xs">
+            <div class="flex flex-col justify-center items-center border bg-primary-foreground rounded text-xs">
               <div class="line-clamp-1">
                 {participant.game_name}#{participant.game_tag}
               </div>

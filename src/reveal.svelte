@@ -63,7 +63,7 @@
 
 <main class="h-[325px] bg-background border rounded-md">
   <Navbar />
-  <div class="h-[215px] px-4">
+  <div class="h-[215px] px-4 pt-1">
     {#if updateStatus === "Checking"}
       <div>Checking for updates...</div>
     {:else if updateStatus === "Installing"}
