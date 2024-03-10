@@ -190,7 +190,7 @@
     </div>
   {:else}
     <div in:fade class="flex gap-2 items-center animate-pulse">
-      Waiting for Lobby...
+      Waiting for Champ Select...
     </div>
   {/if}
 </div>
