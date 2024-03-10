@@ -43,19 +43,6 @@ pub fn create_ugg_link(summoners: &Vec<Participant>, region: String) -> String {
     format!("{}&summoners={}", base_url, encoded_path)
 }
 
-pub fn create_poro_link(summoners: &Vec<Participant>, region: String) -> String {
-    let base_url = format!("https://poro.gg/multi?region={}", region);
-    let mut link_path = String::new();
-    for summoner in summoners {
-        let full_tag = format!("{}#{}", summoner.game_name, summoner.game_tag);
-        link_path.push_str(&full_tag);
-        link_path.push(',');
-    }
-    link_path.pop();
-
-    format!("{}&q={}", base_url, link_path)
-}
-
 pub fn create_tracker_link(summoners: &Vec<Participant>, region: String) -> String {
     let base_url = format!("https://tracker.gg/lol/multisearch/{}/", region);
     let mut link_path = String::new();
@@ -92,7 +79,6 @@ pub fn display_champ_select(lobby: &Lobby, region: String, site: &String) {
         "opgg" => create_opgg_link(&lobby.participants, region),
         "deeplol" => create_deeplol_link(&lobby.participants, region),
         "ugg" => create_ugg_link(&lobby.participants, format!("{}1", region)),
-        "poro" => create_poro_link(&lobby.participants, region),
         "tracker" => create_tracker_link(&lobby.participants, region),
         _ => panic!("Invalid site"),
     };

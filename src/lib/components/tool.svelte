@@ -34,10 +34,6 @@
       value: "ugg"
     },
     {
-      label: "Poro.gg",
-      value: "poro"
-    },
-    {
       label: "Tracker.gg",
       value: "tracker"
     }
