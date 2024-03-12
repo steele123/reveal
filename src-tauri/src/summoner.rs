@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use shaco::rest::RESTClient;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,4 +30,16 @@ pub struct RerollPoints {
     pub number_of_rolls: i64,
     pub points_cost_to_roll: i64,
     pub points_to_reroll: i64,
+}
+
+pub async fn get_current_summoner(remoting_client: &RESTClient) -> Summoner {
+    let summoner: Summoner = serde_json::from_value(
+        remoting_client
+            .get("/lol-summoner/v1/current-summoner".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    summoner
 }

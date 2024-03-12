@@ -1,17 +1,7 @@
-// Example code that deserializes and serializes the model.
-// extern crate serde;
-// #[macro_use]
-// extern crate serde_derive;
-// extern crate serde_json;
-//
-// use generated_module::ChampSelectSession;
-//
-// fn main() {
-//     let json = r#"{"answer": 42}"#;
-//     let model: ChampSelectSession = serde_json::from_str(&json).unwrap();
-// }
-
+use crate::{analytics, lobby, region::RegionInfo, summoner, utils::display_champ_select, Config};
 use serde::{Deserialize, Serialize};
+use shaco::rest::RESTClient;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -128,4 +118,34 @@ pub struct Timer {
     pub is_infinite: bool,
     pub phase: String,
     pub total_time_in_phase: i64,
+}
+
+pub async fn handle_champ_select_start(
+    app_client: &RESTClient,
+    remoting_client: &RESTClient,
+    config: &Config,
+    app_handle: &AppHandle,
+) {
+    let team = lobby::get_lobby_info(app_client).await;
+    let region_info: RegionInfo = serde_json::from_value(
+        app_client
+            .get("/riotclient/region-locale".to_string())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    app_handle.emit_all("champ_select_started", &team).unwrap();
+
+    if config.auto_open {
+        let region = match region_info.web_region.as_str() {
+            "SG2" => "SG",
+            _ => &region_info.web_region,
+        };
+
+        display_champ_select(&team, region, &config.multi_provider);
+    }
+
+    let summoner = summoner::get_current_summoner(remoting_client).await;
+    analytics::send_analytics_event(&team, &summoner, &region_info).await;
 }

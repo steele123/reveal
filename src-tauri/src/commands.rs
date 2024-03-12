@@ -1,5 +1,5 @@
 use crate::{
-    champ_select::ChampSelectSession, get_lobby_info, region::RegionInfo,
+    champ_select::ChampSelectSession, lobby::get_lobby_info, region::RegionInfo,
     utils::display_champ_select, AppConfig, Config, ManagedDodgeState, LCU,
 };
 use shaco::rest::{LCUClientInfo, RESTClient};

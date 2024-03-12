@@ -1,10 +1,12 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod analytics;
 mod champ_select;
 mod commands;
 mod lobby;
 mod region;
+mod state;
 mod summoner;
 mod utils;
 
@@ -58,103 +60,6 @@ struct Config {
 
 fn default_provider() -> String {
     "opgg".to_string()
-}
-
-async fn get_lobby_info(app_client: &RESTClient) -> Lobby {
-    let team: Lobby = serde_json::from_value(
-        app_client
-            .get("/chat/v5/participants".to_string())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    // filter out all cids that contain champ-select
-    let team_participants = team
-        .participants
-        .into_iter()
-        .filter(|p| p.cid.contains("champ-select"))
-        .collect::<Vec<Participant>>();
-
-    let team = Lobby {
-        participants: team_participants,
-    };
-
-    team
-}
-
-async fn send_analytics_event(team: &Lobby, summoner: &Summoner, region: &RegionInfo) {
-    let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
-
-    // send analytics event
-    let client = reqwest::Client::new();
-    let resp = client
-        .post("https://hyperboost.gg/api/reveal/collect")
-        .json(&json!({
-            "select": &team,
-            "from": &summoner_name,
-            "region": &region.web_region
-        }))
-        .timeout(Duration::from_secs(5))
-        .send()
-        .await;
-
-    if resp.is_err() {
-        println!("Failed to send analytics event!");
-    }
-}
-
-async fn get_current_summoner(remoting_client: &RESTClient) -> Summoner {
-    let summoner: Summoner = serde_json::from_value(
-        remoting_client
-            .get("/lol-summoner/v1/current-summoner".to_string())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    summoner
-}
-
-async fn handle_champ_select_start(
-    app_client: &RESTClient,
-    remoting_client: &RESTClient,
-    config: &Config,
-    app_handle: &AppHandle,
-) {
-    let team = get_lobby_info(app_client).await;
-    let region_info: RegionInfo = serde_json::from_value(
-        app_client
-            .get("/riotclient/region-locale".to_string())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    app_handle.emit_all("champ_select_started", &team).unwrap();
-
-    if config.auto_open {
-        let region = match region_info.web_region.as_str() {
-            "SG2" => "SG",
-            _ => &region_info.web_region,
-        };
-
-        display_champ_select(&team, region, &config.multi_provider);
-    }
-
-    let summoner = get_current_summoner(remoting_client).await;
-    send_analytics_event(&team, &summoner, &region_info).await;
-}
-
-async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
-    let gameflow_state = remoting_client
-        .get("/lol-gameflow/v1/gameflow-phase".to_string())
-        .await
-        .unwrap()
-        .to_string();
-
-    let cleaned_state = gameflow_state.replace('\"', "");
-    cleaned_state
 }
 
 fn main() {
@@ -255,8 +160,9 @@ fn main() {
 
                     println!("Connected to League Client!");
 
-                    let state = get_gameflow_state(&remoting_client).await;
-                    handle_client_state(state, &app_handle, &remoting_client, &app_client).await;
+                    let state = state::get_gameflow_state(&remoting_client).await;
+                    state::handle_client_state(state, &app_handle, &remoting_client, &app_client)
+                        .await;
 
                     while let Some(msg) = ws.next().await {
                         handle_ws_message(msg, &app_handle, &remoting_client, &app_client).await;
@@ -291,7 +197,7 @@ async fn handle_ws_message(
     match msg_type.as_str() {
         "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase" => {
             let client_state = msg.data.to_string().replace('\"', "");
-            handle_client_state(client_state, app_handle, remoting_client, app_client).await;
+            state::handle_client_state(client_state, app_handle, remoting_client, app_client).await;
         }
         "OnJsonApiEvent_lol-champ-select_v1_session" => {
             let champ_select = serde_json::from_value::<ChampSelectSession>(msg.data.clone());
@@ -342,52 +248,4 @@ async fn handle_ws_message(
             println!("Unhandled Message: {}", msg_type);
         }
     }
-}
-
-async fn handle_client_state(
-    client_state: String,
-    app_handle: &AppHandle,
-    remoting_client: &RESTClient,
-    app_client: &RESTClient,
-) {
-    match client_state.as_str() {
-        "ChampSelect" => {
-            let cloned_app_handle = app_handle.clone();
-            let cloned_app_client = app_client.clone();
-            let cloned_remoting = remoting_client.clone();
-
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(Duration::from_secs(5)).await;
-
-                let cfg = cloned_app_handle.state::<AppConfig>();
-                let cfg = cfg.0.lock().await;
-                handle_champ_select_start(
-                    &cloned_app_client,
-                    &cloned_remoting,
-                    &cfg,
-                    &cloned_app_handle,
-                )
-                .await;
-            });
-        }
-        "ReadyCheck" => {
-            let cfg = app_handle.state::<AppConfig>();
-            let cfg = cfg.0.lock().await;
-            if cfg.auto_accept {
-                tokio::time::sleep(Duration::from_millis((cfg.accept_delay as u64) - 1000)).await;
-                let _resp = remoting_client
-                    .post(
-                        "/lol-matchmaking/v1/ready-check/accept".to_string(),
-                        serde_json::json!({}),
-                    )
-                    .await;
-            }
-        }
-        _ => {}
-    }
-
-    println!("Client State Update: {}", client_state);
-    app_handle
-        .emit_all("client_state_update", client_state)
-        .unwrap();
 }
