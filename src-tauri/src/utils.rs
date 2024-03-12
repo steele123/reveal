@@ -1,7 +1,7 @@
 use crate::lobby::{Lobby, Participant};
 use urlencoding::encode;
 
-pub fn create_opgg_link(summoners: &Vec<Participant>, region: String) -> String {
+pub fn create_opgg_link(summoners: &Vec<Participant>, region: &str) -> String {
     let base_url = format!("https://www.op.gg/multisearch/{}?summoners=", region);
     let mut link_path = String::new();
     for summoner in summoners {
@@ -15,7 +15,7 @@ pub fn create_opgg_link(summoners: &Vec<Participant>, region: String) -> String 
     format!("{}{}", base_url, encoded_path)
 }
 
-pub fn create_deeplol_link(summoners: &Vec<Participant>, region: String) -> String {
+pub fn create_deeplol_link(summoners: &Vec<Participant>, region: &str) -> String {
     let base_url = format!("https://deeplol.gg/multi/{}/", region);
     let mut link_path = String::new();
     for summoner in summoners {
@@ -43,7 +43,7 @@ pub fn create_ugg_link(summoners: &Vec<Participant>, region: String) -> String {
     format!("{}&summoners={}", base_url, encoded_path)
 }
 
-pub fn create_tracker_link(summoners: &Vec<Participant>, region: String) -> String {
+pub fn create_tracker_link(summoners: &Vec<Participant>, region: &str) -> String {
     let base_url = format!("https://tracker.gg/lol/multisearch/{}/", region);
     let mut link_path = String::new();
     for summoner in summoners {
@@ -57,7 +57,7 @@ pub fn create_tracker_link(summoners: &Vec<Participant>, region: String) -> Stri
     format!("{}{}", base_url, encoded_path)
 }
 
-pub fn display_champ_select(lobby: &Lobby, region: String, site: &String) {
+pub fn display_champ_select(lobby: &Lobby, region: &str, site: &String) {
     if lobby.participants.is_empty() {
         return;
     }

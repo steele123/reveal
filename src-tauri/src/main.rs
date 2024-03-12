@@ -124,12 +124,13 @@ async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
     )
     .unwrap();
 
-    display_champ_select(
-        &team,
-        region_info.web_region.clone(),
-        &config.multi_provider,
-    );
-    
+    let region = match region_info.web_region.as_str() {
+        "SG2" => "SG",
+        _ => &region_info.web_region,
+    };
+
+    display_champ_select(&team, region, &config.multi_provider);
+
     Ok(())
 }
 
@@ -255,11 +256,12 @@ async fn handle_champ_select_start(
     app_handle.emit_all("champ_select_started", &team).unwrap();
 
     if config.auto_open {
-        display_champ_select(
-            &team,
-            region_info.web_region.clone(),
-            &config.multi_provider,
-        );
+        let region = match region_info.web_region.as_str() {
+            "SG2" => "SG",
+            _ => &region_info.web_region,
+        };
+
+        display_champ_select(&team, region, &config.multi_provider);
     }
 
     let summoner = get_current_summoner(remoting_client).await;
