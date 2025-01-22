@@ -2,7 +2,7 @@
     "version": "1.2.6",
     "platforms": {
         "windows-x86_64": {
-            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRUpNTFlDcDQwRG9ZaC9FOC85Qk1UNmhyWmdpY1hBUmphQWdPSldTZkY3M0xhSG93YzlGZmxMMTZvM1VPQ1hDcytFVDVTNEZSWkNsdHJtMmxncW5zR1ZtNDArVk14WlFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzEwMDQ0NTI5CWZpbGU6UmV2ZWFsXzEuMi40X3g2NF9lbi1VUy5tc2kuemlwCnVUOHVHdFkyNFYzTGJzUHE0WS9vSCtaTkpoYlBjOUNranlNUW0vK3NZRkJDcDN1Q1JiZnB2L3gxYWo3V0FhNCtCeWc5cXJLNnlYTkNLcmZoanVic0N3PT0K",
+            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRUpNTFlDcDQwRGpDdmNwSEYwY2lSQXEzajJaZGdQa0xOUTVWcUgyTUU3MnBUMGE5VmVzTEx2cEVIZlI3VndxcXJRR3Vqd0JiRzgySld6ZEFXTWpyc21zeWtxQ1hDaXdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3NTE4OTkyCWZpbGU6UmV2ZWFsXzEuMi42X3g2NF9lbi1VUy5tc2kuemlwClVhZDJyS1JBVUx0ZzJNR214bGlJMERFWmowT3J0WkkwOHdlUTZRRnkxZCs2cHQrcEVVdXJwdHgxL3Z4QU1zN2VnNzVOOG8zempwQ2U3aDhhVjI5UkRnPT0K",
             "url": "https://github.com/steele123/reveal/releases/download/v1.2.6/Reveal_1.2.6_x64_en-US.msi.zip"
         }
     }
