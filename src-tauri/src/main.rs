@@ -13,7 +13,6 @@ mod utils;
 use crate::champ_select::ChampSelectSession;
 use crate::lobby::Lobby;
 use crate::region::RegionInfo;
-use crate::summoner::Summoner;
 use crate::utils::display_champ_select;
 use commands::{
     app_ready, dodge, enable_dodge, get_config, get_lcu_info, get_lcu_state, open_opgg_link,

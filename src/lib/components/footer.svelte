@@ -4,9 +4,8 @@
   export let connected = false;
 </script>
 
-<div class="flex flex-col">
-  <div class="text-xs border-t px-4 bg-primary-foreground py-2 text-muted-foreground">Need League of Legends smurfs? <a target="_blank" class="text-blue-500 hover:underline" href="https://mao.market">mao.market</a></div>
-  <div class="px-4 pt-1.5 items-center flex border-t">
+<div class="px-4 justify-center items-center flex border-t h-[40px]">
+  <div>
     {#if connected}
       <div
         in:fade={{ duration: 2000 }}
@@ -24,14 +23,28 @@
         <div>Can't Connect to League Client</div>
       </div>
     {/if}
-    <div class="flex gap-1 text-xs ml-auto flex-col">
-      <a
-        href="https://hyeb.gg/reveal"
-        target="_blank"
-        class="flex items-center border px-4 bg-primary-foreground rounded gap-2"
+  </div>
+  <div class="flex gap-2 text-xs ml-auto">
+    <a
+      href="https://hyperboost.gg/reveal"
+      target="_blank"
+      class="flex items-center group border px-1 py-1 bg-primary-foreground rounded gap-2"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-external-link group-hover:text-blue-500 transition ease-in-out duration-300"
+        ><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path
+          d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+        /></svg
       >
-        <div class="text-blue-500 hover:underline">hyeb.gg/reveal</div>
-      </a>
-    </div>
+    </a>
   </div>
 </div>

@@ -23,20 +23,20 @@
   const multiProviders = [
     {
       label: "OP.GG",
-      value: "opgg"
+      value: "opgg",
     },
     {
       label: "DeepLoL",
-      value: "deeplol"
+      value: "deeplol",
     },
     {
       label: "U.GG",
-      value: "ugg"
+      value: "ugg",
     },
     {
       label: "Tracker.gg",
-      value: "tracker"
-    }
+      value: "tracker",
+    },
   ];
 </script>
 
@@ -96,66 +96,59 @@
     </div>
   </div>
   <div class="grid grid-cols-2 text-sm">
-    <div class="flex gap-2">
-      <div class="text-muted-foreground">State:</div>
+    <div class="flex flex-col">
+      <div class="text-muted-foreground text-xs">State</div>
       <div>{state}</div>
     </div>
-    <div class="flex gap-2">
-      <div class="text-muted-foreground">Reveals:</div>
+    <div class="flex flex-col">
+      <div class="text-muted-foreground text-xs">Revealed Champ Selects</div>
       <div>
         <RevealCount />
       </div>
     </div>
   </div>
   {#if state === "ChampSelect"}
-    <div in:fade class="flex gap-5 w-full">
+    <div in:fade class="flex flex-col gap-5 w-full">
       {#if champSelect}
         <div class="grid grid-cols-2 items-start gap-y-1 gap-x-2 text-sm">
           {#each champSelect.participants as participant}
-            <div class="flex flex-col justify-center items-center border bg-primary-foreground rounded text-xs">
+            <div
+              class="flex flex-col items-center border bg-primary-foreground rounded-md text-xs h-9"
+            >
               <div class="line-clamp-1">
                 {participant.game_name}#{participant.game_tag}
               </div>
               {#if participant.name}
-                <div class="text-blue-500 line-clamp-1">
+                <div class="flex text-muted-foreground">
                   ({participant.name})
                 </div>
               {/if}
             </div>
           {/each}
         </div>
-      {:else}
-        <div in:fade class="flex mb-auto gap-2 items-center animate-pulse">
-          Grabbing Players...
-        </div>
-      {/if}
-      <div class="flex w-[120px] ml-auto flex-col gap-2">
-        <Button size="sm" on:click={() => invoke("open_opgg_link")}
-          >Open OP.GG</Button
-        >
         <Button
-          variant="destructive"
+          class="h-9 absolute right-4 w-[180px] bottom-[52px]"
           size="sm"
-          on:click={() => {
-            invoke("dodge");
-          }}>Dodge</Button
+          on:click={() => invoke("open_opgg_link")}
         >
-        <!--
-        <div class="flex py-2 items-center gap-2">
-          <Switch
-            checked={lastSecondDodgeEnabled}
-            id="last-second-dodge"
-            onCheckedChange={async (v) => {
-              await invoke("enable_dodge");
-              lastSecondDodgeEnabled = v;
-            }}
-          />
-          <Label class="text-center text-xs" for="last-second-dodge"
-            >Last Second Dodge</Label
-          >
+          Open Multi Link
+        </Button>
+      {:else}
+        <div class="grid grid-cols-2 items-start gap-y-1 gap-x-2 text-sm">
+          {#each new Array(5) as _}
+            <div
+              class="bg-primary-foreground border animate-pulse h-9 w-full rounded-md"
+            />
+          {/each}
         </div>
-      -->
-      </div>
+        <Button
+          class="h-9 hover:cursor-not-allowed absolute right-4 w-[180px] bottom-[52px]"
+          size="sm"
+          on:click={() => invoke("open_opgg_link")}
+        >
+          Open Multi Link
+        </Button>
+      {/if}
     </div>
   {:else if state === "InProgress"}
     <div in:fade class="flex gap-2 items-center animate-pulse">In Game</div>

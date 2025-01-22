@@ -18,16 +18,29 @@
   });
 
   async function updateRevealCount() {
-    const resp = await fetch("https://hyperboost.gg/api/reveal/stats");
+    try {
+      const resp = await fetch("https://hyperboost.gg/api/reveal/stats");
+      if (!resp.ok) {
+        throw new Error("Failed to fetch reveal stats");
+      }
 
-    const data = resp.data as {
-      version: string;
-      revealedLobbies: number;
-      downloads: number;
-    };
+      const data = resp.data as {
+        version: string;
+        revealedLobbies: number;
+        downloads: number;
+      };
 
-    revealCount = data.revealedLobbies;
+      revealCount = data.revealedLobbies;
+    } catch (e) {
+      console.error(e);
+
+      revealCount = -1;
+    }
   }
 </script>
 
-{revealCount}
+{#if revealCount === -1}
+  <div class="text-red-500">Failed to fetch analytics</div>
+{:else}
+  {revealCount}
+{/if}
