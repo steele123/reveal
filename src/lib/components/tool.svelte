@@ -113,16 +113,11 @@
         <div class="grid grid-cols-2 items-start gap-y-1 gap-x-2 text-sm">
           {#each champSelect.participants as participant}
             <div
-              class="flex flex-col items-center border bg-primary-foreground rounded-md text-xs h-9"
+              class="flex flex-col items-center justify-center border bg-primary-foreground rounded-md text-xs h-9"
             >
               <div class="line-clamp-1">
                 {participant.game_name}#{participant.game_tag}
               </div>
-              {#if participant.name}
-                <div class="flex text-muted-foreground">
-                  ({participant.name})
-                </div>
-              {/if}
             </div>
           {/each}
         </div>
