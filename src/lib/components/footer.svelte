@@ -26,7 +26,7 @@
   </div>
   <div class="flex gap-2 text-xs ml-auto">
     <a
-      href="https://hyperboost.gg/reveal"
+      href="https://lobbyreveal.app/reveal"
       target="_blank"
       class="flex items-center group border px-1 py-1 bg-primary-foreground rounded gap-2"
     >

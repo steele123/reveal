@@ -43,7 +43,7 @@
 <div class="flex flex-col gap-2">
   <div class="flex gap-5 items-center">
     <div>
-      <Label for="favoriteFruit">Multi Website</Label>
+      <Label for="favoriteFruit">Multi Link Website</Label>
       <Select.Root
         onSelectedChange={(v) => {
           if (!config) return;

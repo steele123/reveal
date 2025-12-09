@@ -19,7 +19,7 @@
 
   async function updateRevealCount() {
     try {
-      const resp = await fetch("https://hyperboost.gg/api/reveal/stats");
+      const resp = await fetch("https://lobbyreveal.app/api/reveal/stats");
       if (!resp.ok) {
         throw new Error("Failed to fetch reveal stats");
       }
