@@ -58,6 +58,7 @@ pub async fn set_config(
 
 #[tauri::command]
 pub async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
+    println!("Manually opening Multi Link...");
     let lcu_state = app_handle.state::<LCU>();
     let lcu_state = lcu_state.0.lock().await;
     let app_client = RESTClient::new(lcu_state.data.clone().unwrap(), false).unwrap();

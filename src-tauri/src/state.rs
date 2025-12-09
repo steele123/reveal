@@ -25,9 +25,11 @@ pub async fn handle_client_state(
             let cloned_app_client = app_client.clone();
             let cloned_remoting = remoting_client.clone();
 
+            // clone config and pass to async task
+            let cfg = app_handle.state::<AppConfig>();
+            let cfg = cfg.0.lock().await.clone();
+
             tauri::async_runtime::spawn(async move {
-                let cfg = cloned_app_handle.state::<AppConfig>();
-                let cfg = cfg.0.lock().await;
                 handle_champ_select_start(
                     &cloned_app_client,
                     &cloned_remoting,
