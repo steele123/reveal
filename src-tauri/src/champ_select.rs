@@ -161,7 +161,15 @@ pub async fn handle_champ_select_start(
             break;
         }
 
+        // This will return an error if we aren't connected to chat
         let team = lobby::get_lobby_info(app_client).await;
+        if team.is_err() {
+            println!("Lobby info not available yet, retrying...");
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            continue;
+        }
+        
+        let team = team.unwrap();
         let participant_count = team.participants.len();
 
         if participant_count > last_participant_count {

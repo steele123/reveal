@@ -79,6 +79,14 @@ pub async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
         _ => &region_info.web_region,
     };
 
+    let team = match team {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Error retrieving team info: {}", e);
+            return Err(());
+        }
+    };
+
     display_champ_select(&team, region, &config.multi_provider);
 
     Ok(())
