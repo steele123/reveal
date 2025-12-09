@@ -126,7 +126,6 @@ pub async fn handle_champ_select_start(
     config: &Config,
     app_handle: &AppHandle,
 ) {
-    let team = lobby::get_lobby_info(app_client).await;
     let region_info: RegionInfo = serde_json::from_value(
         app_client
             .get("/riotclient/region-locale".to_string())
@@ -135,17 +134,63 @@ pub async fn handle_champ_select_start(
     )
     .unwrap();
 
-    app_handle.emit_all("champ_select_started", &team).unwrap();
+    let region = match region_info.web_region.as_str() {
+        "SG2" => "SG",
+        _ => &region_info.web_region,
+    };
 
-    if config.auto_open {
-        let region = match region_info.web_region.as_str() {
-            "SG2" => "SG",
-            _ => &region_info.web_region,
-        };
+    let mut auto_opened = false;
+    let mut analytics_sent = false;
+    let mut last_participant_count = 0;
 
-        display_champ_select(&team, region, &config.multi_provider);
+    // Poll until we have all 5 teammates or champ select ends
+    loop {
+        // Champ select sanity check
+        let gameflow_state = remoting_client
+            .get("/lol-gameflow/v1/gameflow-phase".to_string())
+            .await;
+
+        if let Ok(state) = gameflow_state {
+            let state_str = state.to_string().replace('\"', "");
+            if state_str != "ChampSelect" {
+                println!("Left champ select, stopping poll");
+                break;
+            }
+        } else {
+            // Invalid gameflow state - assume we're not in champ select
+            break;
+        }
+
+        let team = lobby::get_lobby_info(app_client).await;
+        let participant_count = team.participants.len();
+
+        if participant_count > last_participant_count {
+            println!(
+                "Found {} participants (was {})",
+                participant_count, last_participant_count
+            );
+            last_participant_count = participant_count;
+
+            app_handle.emit_all("champ_select_started", &team).unwrap();
+
+            // Auto open multi link on first emission
+            if config.auto_open && !auto_opened && participant_count > 0 {
+                display_champ_select(&team, region, &config.multi_provider);
+                auto_opened = true;
+            }
+        }
+
+        // Only send analytics once we have all 5 teammates
+        if participant_count >= 5 {
+            if !analytics_sent {
+                let summoner = summoner::get_current_summoner(remoting_client).await;
+                analytics::send_analytics_event(&team, &summoner, &region_info).await;
+                analytics_sent = true;
+            }
+            println!("Found all 5 participants, stopping poll");
+            break;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     }
-
-    let summoner = summoner::get_current_summoner(remoting_client).await;
-    analytics::send_analytics_event(&team, &summoner, &region_info).await;
 }
