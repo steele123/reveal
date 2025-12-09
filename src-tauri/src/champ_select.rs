@@ -6,11 +6,11 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChampSelectSession {
-    pub allow_battle_boost: bool,
-    pub allow_duplicate_picks: bool,
-    pub allow_locked_events: bool,
-    pub allow_rerolling: bool,
-    pub allow_skin_selection: bool,
+    //pub allow_battle_boost: bool,
+    //pub allow_duplicate_picks: bool,
+    //pub allow_locked_events: bool,
+    //pub allow_rerolling: bool,
+    //pub allow_skin_selection: bool,
     pub bench_enabled: bool,
     pub boostable_skin_count: i64,
     pub counter: i64,
@@ -22,8 +22,8 @@ pub struct ChampSelectSession {
     pub local_player_cell_id: i64,
     pub locked_event_index: i64,
     //pub my_team: Vec<Team>,
-    pub recovery_counter: i64,
-    pub rerolls_remaining: i64,
+    //pub recovery_counter: i64,
+    //pub rerolls_remaining: i64,
     pub skip_champion_select: bool,
     pub timer: Timer,
 }
