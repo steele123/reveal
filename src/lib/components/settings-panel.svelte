@@ -14,9 +14,14 @@
   }
 </script>
 
-<div class="flex gap-5 items-center">
-  <div>
-    <Label for="multi-provider">Multi Link Website</Label>
+<section class="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3">
+  <div class="reveal-panel p-3">
+    <Label
+      for="multi-provider"
+      class="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+    >
+      Multi-search
+    </Label>
     <Select.Root
       onSelectedChange={(selected) => {
         const provider = MULTI_PROVIDERS.find(
@@ -28,7 +33,10 @@
         ({ value }) => value === config?.multiProvider,
       )}
     >
-      <Select.Trigger id="multi-provider" class="w-[180px]">
+      <Select.Trigger
+        id="multi-provider"
+        class="h-9 w-full border-white/10 bg-white/[0.035] shadow-none"
+      >
         <Select.Value />
       </Select.Trigger>
       <Select.Content>
@@ -43,24 +51,38 @@
     </Select.Root>
   </div>
 
-  <div class="flex flex-col gap-3">
-    <div class="flex items-center space-x-2">
+  <div class="reveal-panel divide-y divide-white/10 overflow-hidden p-1">
+    <div
+      class="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-white/[0.025]"
+    >
+      <Label for="auto-open" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Open lookup automatically</span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          When teammate names appear
+        </span>
+      </Label>
       <Switch
         checked={config?.autoOpen ?? false}
         disabled={!config}
         id="auto-open"
         onCheckedChange={(autoOpen) => updateConfig({ autoOpen })}
       />
-      <Label for="auto-open">Auto Open Multi</Label>
     </div>
-    <div class="flex items-center space-x-2">
+    <div
+      class="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-white/[0.025]"
+    >
+      <Label for="auto-accept" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Accept matches automatically</span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          When League shows a ready check
+        </span>
+      </Label>
       <Switch
         checked={config?.autoAccept ?? false}
         disabled={!config}
         id="auto-accept"
         onCheckedChange={(autoAccept) => updateConfig({ autoAccept })}
       />
-      <Label for="auto-accept">Auto Accept</Label>
     </div>
   </div>
-</div>
+</section>

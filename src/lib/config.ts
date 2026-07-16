@@ -19,6 +19,13 @@ export interface Config {
     multiProvider: MultiProvider;
 }
 
+export const DEFAULT_CONFIG: Config = {
+    autoOpen: true,
+    autoAccept: false,
+    acceptDelay: 2_000,
+    multiProvider: "opgg",
+};
+
 export async function updateConfig(config: Config): Promise<void> {
     await invoke<void>("set_config", {
         newCfg: config,

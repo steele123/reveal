@@ -66,8 +66,8 @@
         "fullscreen": false,
         "resizable": false,
         "title": "reveal",
-        "width": 400,
-        "height": 325,
+        "width": 560,
+        "height": 480,
         "decorations": false,
         "transparent": true
       }

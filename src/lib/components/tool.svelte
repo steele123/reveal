@@ -23,56 +23,97 @@
       if (previousConfig) onConfigChange(previousConfig);
     }
   }
+
+  function formatState(value: string): string {
+    if (value === "InProgress") return "In game";
+    if (value === "ChampSelect") return "Champ Select";
+    if (value === "Unknown") return "Not connected";
+    return value.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex h-full min-h-0 flex-col gap-3">
   <SettingsPanel {config} onChange={handleConfigChange} />
-  <div class="grid grid-cols-2 text-sm">
-    <div class="flex flex-col">
-      <div class="text-muted-foreground text-xs">State</div>
-      <div>{state}</div>
-    </div>
-    <div class="flex flex-col">
-      <div class="text-muted-foreground text-xs">Revealed Champ Selects</div>
-      <div>
-        <RevealCount />
-      </div>
-    </div>
-  </div>
+
   {#if state === "ChampSelect"}
-    <div in:fade>
+    <div in:fade class="flex min-h-0 flex-1 flex-col">
       <ChampSelectPanel {champSelect} />
     </div>
-  {:else if state === "InProgress"}
-    <div in:fade class="flex gap-2 items-center animate-pulse">In Game</div>
-  {:else if !connected}
-    <div in:fade class="flex gap-2 items-center animate-pulse">
-      Trying to find League Client...
-    </div>
-    <div
-      class="text-xs p-2 rounded bg-accent border flex gap-2 text-muted-foreground"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="lucide lucide-info"
-        ><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path
-          d="M12 8h.01"
-        /></svg
-      >
-      Issues Connecting? <br /> Try restarting the League Client and running Reveal
-      as Administrator.
-    </div>
   {:else}
-    <div in:fade class="flex gap-2 items-center animate-pulse">
-      Waiting for Champ Select...
+    <div class="grid grid-cols-2 gap-3">
+      <div class="reveal-panel px-3.5 py-3">
+        <div
+          class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          Client state
+        </div>
+        <div class="mt-1.5 flex items-center gap-2 text-sm font-semibold">
+          <span
+            class="h-1.5 w-1.5 rounded-full"
+            class:bg-blue-400={connected}
+            class:bg-amber-400={!connected}
+          />
+          {formatState(state)}
+        </div>
+      </div>
+      <div class="reveal-panel px-3.5 py-3">
+        <div
+          class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          Revealed lobbies
+        </div>
+        <div class="mt-1.5 text-sm font-semibold tabular-nums">
+          <RevealCount />
+        </div>
+      </div>
+    </div>
+
+    <div
+      in:fade
+      class="reveal-panel flex min-h-0 flex-1 items-center px-5 py-4"
+    >
+      <div class="flex items-center gap-4">
+        <div
+          class={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
+            connected
+              ? "border-blue-400/20 bg-blue-500/10 text-blue-300"
+              : "border-amber-400/20 bg-amber-500/10 text-amber-300"
+          }`}
+        >
+          {#if state === "InProgress"}
+            <svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
+              <path d="M7 5.5 13 10l-6 4.5v-9Z" fill="currentColor" />
+            </svg>
+          {:else}
+            <span class="relative flex h-3 w-3">
+              <span
+                class="absolute h-full w-full animate-ping rounded-full bg-current opacity-30"
+              />
+              <span class="relative h-3 w-3 rounded-full bg-current" />
+            </span>
+          {/if}
+        </div>
+        <div>
+          <div class="text-sm font-semibold">
+            {#if state === "InProgress"}
+              Game in progress
+            {:else if !connected}
+              Looking for League
+            {:else}
+              Ready for Champ Select
+            {/if}
+          </div>
+          <div class="mt-1 max-w-[360px] text-xs leading-relaxed text-muted-foreground">
+            {#if state === "InProgress"}
+              Reveal is standing by and will be ready for your next lobby.
+            {:else if !connected}
+              Start League, or restart it and run Reveal as administrator if it is already open.
+            {:else}
+              Join a lobby and queue normally. Teammate names will appear here automatically.
+            {/if}
+          </div>
+        </div>
+      </div>
     </div>
   {/if}
 </div>

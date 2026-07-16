@@ -2,13 +2,15 @@
   import { onMount } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
-  import { type Config } from "$lib/config";
+  import { DEFAULT_CONFIG, type Config } from "$lib/config";
   import "@fontsource-variable/inter";
   import type { ChampSelect } from "$lib/champ_select";
   import Tool from "$lib/components/tool.svelte";
   import Navbar from "$lib/components/navbar.svelte";
   import Footer from "$lib/components/footer.svelte";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
+  import { isTauriRuntime } from "$lib/runtime";
+  import { getPreviewState } from "$lib/preview";
 
   let state = "Unknown";
   let connected = false;
@@ -16,7 +18,28 @@
   let config: Config | null = null;
   let updateStatus: UpdateStatus = "Checking";
 
+  function setConfig(nextConfig: Config) {
+    config = nextConfig;
+  }
+
+  $: updateMessage = {
+    Checking: "Checking for updates",
+    Installing: "Installing the latest version",
+    Restarting: "Restarting Reveal",
+    UpToDate: "Ready",
+  }[updateStatus];
+
   onMount(() => {
+    if (!isTauriRuntime()) {
+      const preview = getPreviewState();
+      config = { ...DEFAULT_CONFIG };
+      connected = preview.connected;
+      state = preview.state;
+      champSelect = preview.champSelect;
+      updateStatus = "UpToDate";
+      return;
+    }
+
     let disposed = false;
     let unlisten: UnlistenFn[] = [];
 
@@ -77,23 +100,38 @@
   });
 </script>
 
-<main class="h-[325px] bg-background border rounded-md">
+<main
+  class="reveal-shell flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+>
   <Navbar />
-  <div class="h-[240px] px-4 pt-1">
-    {#if updateStatus === "Checking"}
-      <div>Checking for updates...</div>
-    {:else if updateStatus === "Installing"}
-      <div>Found update, installing latest update...</div>
-    {:else if updateStatus === "Restarting"}
-      <div>Restarting...</div>
-    {:else if updateStatus === "UpToDate"}
+  <div class="min-h-0 flex-1 px-5 py-4">
+    {#if updateStatus === "UpToDate"}
       <Tool
         {config}
         {state}
         {champSelect}
         {connected}
-        onConfigChange={(nextConfig) => (config = nextConfig)}
+        onConfigChange={setConfig}
       />
+    {:else}
+      <div class="flex h-full items-center justify-center">
+        <div class="flex flex-col items-center gap-4 text-center">
+          <div
+            class="grid h-12 w-12 place-items-center rounded-2xl border border-blue-400/20 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.15)]"
+          >
+            <img alt="" src="/icon.png" class="h-7 w-7" />
+          </div>
+          <div>
+            <div class="text-sm font-medium">{updateMessage}</div>
+            <div class="mt-1 text-xs text-muted-foreground">
+              This should only take a moment.
+            </div>
+          </div>
+          <div class="h-1 w-28 overflow-hidden rounded-full bg-muted">
+            <div class="h-full w-1/2 animate-pulse rounded-full bg-blue-500" />
+          </div>
+        </div>
+      </div>
     {/if}
   </div>
   <Footer {connected} />
