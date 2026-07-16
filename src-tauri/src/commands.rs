@@ -1,16 +1,22 @@
 use crate::{
-    champ_select::ChampSelectSession, lobby::get_lobby_info, region::RegionInfo,
-    utils::display_champ_select, AppConfig, Config, ManagedDodgeState, LCU,
+    app_state::{Dodge, Lcu},
+    champ_select::ChampSelectSession,
+    config::{self, AppConfig, Config},
+    lobby::get_lobby_info,
+    region::RegionInfo,
+    utils::display_champ_select,
 };
 use shaco::rest::{LCUClientInfo, RESTClient};
 use tauri::{AppHandle, Manager};
 
+type CommandResult<T> = Result<T, String>;
+
 #[tauri::command]
 pub async fn app_ready(
     app_handle: AppHandle,
-    lcu: tauri::State<'_, LCU>,
+    lcu: tauri::State<'_, Lcu>,
     cfg: tauri::State<'_, AppConfig>,
-) -> Result<Config, ()> {
+) -> CommandResult<Config> {
     println!("App Ready!");
     let lcu = lcu.0.lock().await;
     let cfg = cfg.0.lock().await;
@@ -20,19 +26,19 @@ pub async fn app_ready(
 
     app_handle
         .emit_all("lcu_state_update", lcu.connected)
-        .unwrap();
+        .map_err(|error| error.to_string())?;
 
     Ok(cfg.clone())
 }
 
 #[tauri::command]
-pub async fn get_lcu_state(lcu: tauri::State<'_, LCU>) -> Result<bool, ()> {
+pub async fn get_lcu_state(lcu: tauri::State<'_, Lcu>) -> CommandResult<bool> {
     let lcu = lcu.0.lock().await;
     Ok(lcu.connected)
 }
 
 #[tauri::command]
-pub async fn get_config(cfg: tauri::State<'_, AppConfig>) -> Result<Config, ()> {
+pub async fn get_config(cfg: tauri::State<'_, AppConfig>) -> CommandResult<Config> {
     let cfg = cfg.0.lock().await;
     Ok(cfg.clone())
 }
@@ -42,86 +48,82 @@ pub async fn set_config(
     cfg: tauri::State<'_, AppConfig>,
     new_cfg: Config,
     app_handle: AppHandle,
-) -> Result<(), ()> {
+) -> CommandResult<()> {
     println!("Setting Config: {:?}", new_cfg);
-    let mut cfg = cfg.0.lock().await;
-    *cfg = new_cfg;
-
-    // Save config to disk
-    let cfg_folder = app_handle.path_resolver().app_config_dir().unwrap();
-    let cfg_path = cfg_folder.join("config.json");
-    let cfg_json = serde_json::to_string(&cfg.clone()).unwrap();
-    tokio::fs::write(&cfg_path, cfg_json).await.unwrap();
+    let mut stored_config = cfg.0.lock().await;
+    config::save(&app_handle, &new_cfg)
+        .await
+        .map_err(|error| error.to_string())?;
+    *stored_config = new_cfg;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn open_opgg_link(app_handle: AppHandle) -> Result<(), ()> {
+pub async fn open_opgg_link(app_handle: AppHandle) -> CommandResult<()> {
     println!("Manually opening Multi Link...");
-    let lcu_state = app_handle.state::<LCU>();
-    let lcu_state = lcu_state.0.lock().await;
-    let app_client = RESTClient::new(lcu_state.data.clone().unwrap(), false).unwrap();
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let app_client = RESTClient::new(lcu_info, false).map_err(|error| error.to_string())?;
 
-    let config = app_handle.state::<AppConfig>();
-    let config = config.0.lock().await;
+    let config = {
+        let config = app_handle.state::<AppConfig>();
+        let value = config.0.lock().await.clone();
+        value
+    };
 
-    let team = get_lobby_info(&app_client).await;
+    let team = get_lobby_info(&app_client)
+        .await
+        .map_err(|error| error.to_string())?;
     let region_info: RegionInfo = serde_json::from_value(
         app_client
             .get("/riotclient/region-locale".to_string())
             .await
-            .unwrap(),
+            .map_err(|error| error.to_string())?,
     )
-    .unwrap();
+    .map_err(|error| error.to_string())?;
 
     let region = match region_info.web_region.as_str() {
         "SG2" => "SG",
         _ => &region_info.web_region,
     };
 
-    let team = match team {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Error retrieving team info: {}", e);
-            return Err(());
-        }
-    };
-
-    display_champ_select(&team, region, &config.multi_provider);
+    display_champ_select(&team, region, &config.multi_provider)
+        .map_err(|error| error.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_lcu_info(lcu: tauri::State<'_, LCU>) -> Result<LCUClientInfo, ()> {
+pub async fn get_lcu_info(lcu: tauri::State<'_, Lcu>) -> CommandResult<LCUClientInfo> {
     let lcu = lcu.0.lock().await;
-    Ok(lcu.data.clone().unwrap())
+    lcu.data
+        .clone()
+        .ok_or_else(|| "League Client is not connected".to_string())
 }
 
 #[tauri::command]
-pub async fn dodge(app_handle: AppHandle) {
-    let lcu_state = app_handle.state::<LCU>();
-    let lcu_state = lcu_state.0.lock().await;
-    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
+pub async fn dodge(app_handle: AppHandle) -> CommandResult<()> {
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
 
     println!("Attempting to quit champ select...");
-    let _resp = remoting_client
+    remoting_client
         .post(
             "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
             serde_json::json!({}),
         )
         .await
-        .unwrap();
+        .map_err(|error| error.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
-pub async fn enable_dodge(app_handle: AppHandle) -> Result<(), ()> {
-    let lcu_state = app_handle.state::<LCU>();
-    let lcu_state = lcu_state.0.lock().await;
-    let remoting_client = RESTClient::new(lcu_state.data.clone().unwrap(), true).unwrap();
+pub async fn enable_dodge(app_handle: AppHandle) -> CommandResult<()> {
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
 
-    let dodge_state = app_handle.state::<ManagedDodgeState>();
+    let dodge_state = app_handle.state::<Dodge>();
     let mut dodge_state = dodge_state.0.lock().await;
 
     if dodge_state.enabled.is_some() {
@@ -133,10 +135,18 @@ pub async fn enable_dodge(app_handle: AppHandle) -> Result<(), ()> {
         remoting_client
             .get("/lol-champ-select/v1/session".to_string())
             .await
-            .unwrap(),
+            .map_err(|error| error.to_string())?,
     )
-    .unwrap();
+    .map_err(|error| error.to_string())?;
 
     dodge_state.enabled = Some(champ_select.game_id);
     Ok(())
+}
+
+async fn current_lcu_info(app_handle: &AppHandle) -> CommandResult<LCUClientInfo> {
+    let lcu = app_handle.state::<Lcu>();
+    let lcu = lcu.0.lock().await;
+    lcu.data
+        .clone()
+        .ok_or_else(|| "League Client is not connected".to_string())
 }

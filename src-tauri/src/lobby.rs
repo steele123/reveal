@@ -19,13 +19,8 @@ pub struct Lobby {
 }
 
 pub async fn get_lobby_info(app_client: &RESTClient) -> anyhow::Result<Lobby> {
-    let team: Lobby = serde_json::from_value(
-        app_client
-            .get("/chat/v5/participants".to_string())
-            .await
-            ?,
-    )
-    ?;
+    let team: Lobby =
+        serde_json::from_value(app_client.get("/chat/v5/participants".to_string()).await?)?;
 
     // filter out all cids that contain champ-select
     let team_participants = team

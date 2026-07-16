@@ -1,16 +1,13 @@
-use crate::{champ_select::handle_champ_select_start, AppConfig};
+use crate::{champ_select::handle_champ_select_start, config::AppConfig};
 use shaco::rest::RESTClient;
 use tauri::{AppHandle, Manager};
 
-pub async fn get_gameflow_state(remoting_client: &RESTClient) -> String {
+pub async fn get_gameflow_state(remoting_client: &RESTClient) -> anyhow::Result<String> {
     let gameflow_state = remoting_client
         .get("/lol-gameflow/v1/gameflow-phase".to_string())
-        .await
-        .unwrap()
-        .to_string();
+        .await?;
 
-    let cleaned_state = gameflow_state.replace('\"', "");
-    cleaned_state
+    Ok(gameflow_state.to_string().replace('\"', ""))
 }
 
 pub async fn handle_client_state(
@@ -40,11 +37,14 @@ pub async fn handle_client_state(
             });
         }
         "ReadyCheck" => {
-            let cfg = app_handle.state::<AppConfig>();
-            let cfg = cfg.0.lock().await;
+            let cfg = {
+                let cfg = app_handle.state::<AppConfig>();
+                let value = cfg.0.lock().await.clone();
+                value
+            };
             if cfg.auto_accept {
                 tokio::time::sleep(std::time::Duration::from_millis(
-                    (cfg.accept_delay as u64) - 1000,
+                    u64::from(cfg.accept_delay).saturating_sub(1_000),
                 ))
                 .await;
                 let _resp = remoting_client
@@ -61,5 +61,5 @@ pub async fn handle_client_state(
     println!("Client State Update: {}", client_state);
     app_handle
         .emit_all("client_state_update", client_state)
-        .unwrap();
+        .unwrap_or_else(|error| eprintln!("Failed to emit client state: {error}"));
 }

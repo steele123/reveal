@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { listen } from "@tauri-apps/api/event";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
   import { type Config } from "$lib/config";
   import "@fontsource-variable/inter";
@@ -8,56 +8,72 @@
   import Tool from "$lib/components/tool.svelte";
   import Navbar from "$lib/components/navbar.svelte";
   import Footer from "$lib/components/footer.svelte";
-  import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
-  import { relaunch } from "@tauri-apps/api/process";
+  import { runUpdater, type UpdateStatus } from "$lib/updater";
 
   let state = "Unknown";
   let connected = false;
   let champSelect: ChampSelect | null = null;
   let config: Config | null = null;
-  let updateStatus: "Checking" | "Installing" | "Restarting" | "UpToDate" =
-    "Checking";
+  let updateStatus: UpdateStatus = "Checking";
 
-  onMount(async () => {
-    await listen<string>("client_state_update", (event) => {
-      const newState = event.payload;
-      if (newState === "ChampSelect") {
-        champSelect = null;
-      }
+  onMount(() => {
+    let disposed = false;
+    let unlisten: UnlistenFn[] = [];
 
-      state = newState;
-    });
+    async function initialize() {
+      const listeners: UnlistenFn[] = [];
+      try {
+        listeners.push(
+          await listen<string>(
+            "client_state_update",
+            ({ payload: newState }) => {
+              if (newState === "ChampSelect") champSelect = null;
+              state = newState;
+            },
+          ),
+        );
+        listeners.push(
+          await listen<boolean>("lcu_state_update", ({ payload }) => {
+            connected = payload;
+          }),
+        );
+        listeners.push(
+          await listen<ChampSelect>("champ_select_started", ({ payload }) => {
+            champSelect = payload;
+          }),
+        );
 
-    await listen<boolean>("lcu_state_update", (event) => {
-      connected = event.payload;
-    });
-
-    await listen<ChampSelect>("champ_select_started", (event) => {
-      champSelect = event.payload;
-    });
-
-    invoke<Config>("app_ready").then((c) => {
-      config = c;
-    });
-
-    let update = await checkUpdate();
-    if (update.shouldUpdate) {
-      updateStatus = "Installing";
-      setTimeout(async () => {
-        try {
-          await installUpdate();
-        } catch (error) {
-          console.error(error);
-          updateStatus = "UpToDate";
+        if (disposed) {
+          listeners.forEach((stopListening) => stopListening());
           return;
         }
 
-        updateStatus = "Restarting";
-        await relaunch();
-      }, 5000);
-    } else {
-      updateStatus = "UpToDate";
+        const loadedConfig = await invoke<Config>("app_ready");
+        if (disposed) {
+          listeners.forEach((stopListening) => stopListening());
+          return;
+        }
+
+        unlisten = listeners;
+        config = loadedConfig;
+      } catch (error) {
+        listeners.forEach((stopListening) => stopListening());
+        console.error("Failed to initialize Reveal", error);
+      }
+
+      if (!disposed) {
+        await runUpdater((status) => {
+          if (!disposed) updateStatus = status;
+        });
+      }
     }
+
+    void initialize();
+
+    return () => {
+      disposed = true;
+      unlisten.forEach((stopListening) => stopListening());
+    };
   });
 </script>
 
@@ -71,7 +87,13 @@
     {:else if updateStatus === "Restarting"}
       <div>Restarting...</div>
     {:else if updateStatus === "UpToDate"}
-      <Tool {config} {state} {champSelect} {connected} />
+      <Tool
+        {config}
+        {state}
+        {champSelect}
+        {connected}
+        onConfigChange={(nextConfig) => (config = nextConfig)}
+      />
     {/if}
   </div>
   <Footer {connected} />

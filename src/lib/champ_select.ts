@@ -3,12 +3,12 @@ export interface ChampSelect {
 }
 
 export interface Participant {
-  cid: String;
-  game_name: String;
-  game_tag: String;
+  cid: string;
+  game_name: string;
+  game_tag: string;
   muted: boolean;
-  name?: String;
-  pid: String;
-  puuid: String;
-  region: String;
+  name?: string;
+  pid: string;
+  puuid: string;
+  region: string;
 }
