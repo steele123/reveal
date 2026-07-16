@@ -3,10 +3,14 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tokio::sync::Mutex;
 
+pub const DEFAULT_AUTO_OPEN_DELAY_SECONDS: u32 = 6;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub auto_open: bool,
+    #[serde(default = "default_auto_open_delay_seconds")]
+    pub auto_open_delay_seconds: u32,
     pub auto_accept: bool,
     pub accept_delay: u32,
     #[serde(default = "default_provider")]
@@ -17,11 +21,16 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             auto_open: true,
+            auto_open_delay_seconds: DEFAULT_AUTO_OPEN_DELAY_SECONDS,
             auto_accept: false,
             accept_delay: 2_000,
             multi_provider: default_provider(),
         }
     }
+}
+
+fn default_auto_open_delay_seconds() -> u32 {
+    DEFAULT_AUTO_OPEN_DELAY_SECONDS
 }
 
 fn default_provider() -> String {
@@ -66,4 +75,27 @@ pub async fn save(app_handle: &AppHandle, config: &Config) -> Result<()> {
     tokio::fs::write(config_path, json)
         .await
         .context("failed to write config")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn old_configs_receive_the_default_auto_open_delay() {
+        let config: Config = serde_json::from_str(
+            r#"{
+                "autoOpen": true,
+                "autoAccept": false,
+                "acceptDelay": 2000,
+                "multiProvider": "opgg"
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.auto_open_delay_seconds,
+            DEFAULT_AUTO_OPEN_DELAY_SECONDS
+        );
+    }
 }

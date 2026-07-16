@@ -14,6 +14,7 @@ export const MULTI_PROVIDERS: ReadonlyArray<{
 
 export interface Config {
     autoOpen: boolean;
+    autoOpenDelaySeconds: number;
     autoAccept: boolean;
     acceptDelay: number;
     multiProvider: MultiProvider;
@@ -21,6 +22,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
     autoOpen: true,
+    autoOpenDelaySeconds: 6,
     autoAccept: false,
     acceptDelay: 2_000,
     multiProvider: "opgg",
