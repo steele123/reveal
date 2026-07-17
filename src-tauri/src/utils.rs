@@ -83,6 +83,9 @@ mod tests {
                 pid: "pid".to_string(),
                 puuid: "puuid".to_string(),
                 region: "NA".to_string(),
+                assigned_position: None,
+                cell_id: None,
+                pick_turn: None,
             }],
         }
     }

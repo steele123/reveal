@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Participant {
     pub cid: String,
     pub game_name: String,
@@ -11,9 +11,15 @@ pub struct Participant {
     pub pid: String,
     pub puuid: String,
     pub region: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assigned_position: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_id: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_turn: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Lobby {
     pub participants: Vec<Participant>,
 }

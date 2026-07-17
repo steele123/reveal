@@ -11,4 +11,7 @@ export interface Participant {
   pid: string;
   puuid: string;
   region: string;
+  assigned_position?: string;
+  cell_id?: number;
+  pick_turn?: number;
 }

@@ -6,6 +6,21 @@
 
   export let champSelect: ChampSelect | null = null;
 
+  const POSITION_LABELS: Record<string, string> = {
+    top: "Top",
+    jungle: "Jungle",
+    middle: "Mid",
+    bottom: "ADC",
+    utility: "Support",
+  };
+
+  function positionLabel(position: string): string {
+    return (
+      POSITION_LABELS[position.toLowerCase()] ||
+      `${position.slice(0, 1).toUpperCase()}${position.slice(1)}`
+    );
+  }
+
   function openMultiLink() {
     void invoke<void>("open_opgg_link").catch((error) => {
       logFrontendError("Failed to open multi link", error);
@@ -37,15 +52,27 @@
           class="reveal-panel flex h-11 min-w-0 items-center gap-2.5 px-3"
         >
           <div
-            class="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-blue-500/10 text-[10px] font-semibold text-blue-300"
+            class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md bg-blue-500/10 px-1 text-[9px] font-semibold text-blue-300"
+            title={participant.pick_turn === undefined
+              ? `Player ${index + 1}`
+              : `Pick ${participant.pick_turn + 1}`}
           >
-            {String(index + 1).padStart(2, "0")}
+            {participant.pick_turn === undefined
+              ? String(index + 1).padStart(2, "0")
+              : `P${participant.pick_turn + 1}`}
           </div>
-          <div class="min-w-0 truncate text-xs font-medium">
+          <div class="min-w-0 flex-1 truncate text-xs font-medium">
             {participant.game_name}<span class="text-muted-foreground"
               >#{participant.game_tag}</span
             >
           </div>
+          {#if participant.assigned_position}
+            <div
+              class="shrink-0 rounded-md border border-white/[0.07] bg-white/[0.035] px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground"
+            >
+              {positionLabel(participant.assigned_position)}
+            </div>
+          {/if}
         </div>
       {/each}
     {:else}

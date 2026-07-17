@@ -24,6 +24,9 @@ const PREVIEW_PARTICIPANTS = [
   pid: `preview-${index}`,
   puuid: `preview-${index}`,
   region: "NA",
+  assigned_position: ["top", "jungle", "middle", "bottom", "utility"][index],
+  cell_id: index,
+  pick_turn: index,
 }));
 
 export function getPreviewState(): PreviewState {
