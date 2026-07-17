@@ -9,6 +9,7 @@
     openExternalLink,
   } from "$lib/link_actions";
   import { logFrontendError } from "$lib/logging";
+  import { formatAssignedPosition } from "$lib/champ_select";
 
   export let history: LobbyHistoryEntry[] = [];
   export let provider: MultiProvider = "opgg";
@@ -148,7 +149,7 @@
       </div>
     </div>
   {:else}
-    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+    <div class="reveal-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto pr-1.5">
       {#each history as entry (entry.id)}
         <article class="reveal-panel p-3">
           <div class="flex items-center gap-2">
@@ -203,6 +204,13 @@
                 <div class="min-w-0 flex-1 truncate text-[11px] font-medium">
                   {participant.game_name}<span class="text-muted-foreground">#{participant.game_tag}</span>
                 </div>
+                {#if participant.assigned_position}
+                  <div
+                    class="mr-1 shrink-0 rounded border border-white/[0.07] bg-white/[0.035] px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground"
+                  >
+                    {formatAssignedPosition(participant.assigned_position)}
+                  </div>
+                {/if}
                 <button
                   class="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground transition hover:bg-white/5 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label={`Copy ${participant.game_name}'s OP.GG profile link`}

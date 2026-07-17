@@ -1,25 +1,13 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/tauri";
-  import type { ChampSelect } from "$lib/champ_select";
+  import {
+    formatAssignedPosition,
+    type ChampSelect,
+  } from "$lib/champ_select";
   import { Button } from "./ui/button";
   import { logFrontendError } from "$lib/logging";
 
   export let champSelect: ChampSelect | null = null;
-
-  const POSITION_LABELS: Record<string, string> = {
-    top: "Top",
-    jungle: "Jungle",
-    middle: "Mid",
-    bottom: "ADC",
-    utility: "Support",
-  };
-
-  function positionLabel(position: string): string {
-    return (
-      POSITION_LABELS[position.toLowerCase()] ||
-      `${position.slice(0, 1).toUpperCase()}${position.slice(1)}`
-    );
-  }
 
   function openMultiLink() {
     void invoke<void>("open_opgg_link").catch((error) => {
@@ -70,7 +58,7 @@
             <div
               class="shrink-0 rounded-md border border-white/[0.07] bg-white/[0.035] px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground"
             >
-              {positionLabel(participant.assigned_position)}
+              {formatAssignedPosition(participant.assigned_position)}
             </div>
           {/if}
         </div>

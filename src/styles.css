@@ -101,3 +101,28 @@
   @apply rounded-xl border bg-card/70;
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.025);
 }
+
+.reveal-scrollbar {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.reveal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reveal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reveal-scrollbar::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: hsl(var(--muted-foreground) / 0.24);
+  background-clip: padding-box;
+}
+
+.reveal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.42);
+  background-clip: padding-box;
+}
