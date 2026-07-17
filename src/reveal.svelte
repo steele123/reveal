@@ -8,18 +8,39 @@
   import Tool from "$lib/components/tool.svelte";
   import Navbar from "$lib/components/navbar.svelte";
   import Footer from "$lib/components/footer.svelte";
+  import HistoryPanel from "$lib/components/history-panel.svelte";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
   import { isTauriRuntime } from "$lib/runtime";
   import { getPreviewState } from "$lib/preview";
+  import {
+    clearLobbyHistory,
+    createLobbyHistoryId,
+    loadLobbyHistory,
+    markLobbyGameStarted,
+    recordLobbyReveal,
+    type LobbyHistoryEntry,
+  } from "$lib/lobby_history";
 
   let state = "Unknown";
   let connected = false;
   let champSelect: ChampSelect | null = null;
   let config: Config | null = null;
   let updateStatus: UpdateStatus = "Checking";
+  let activePage: "reveal" | "history" = "reveal";
+  let history: LobbyHistoryEntry[] = [];
+  let activeLobbyId: string | null = null;
 
   function setConfig(nextConfig: Config) {
     config = nextConfig;
+  }
+
+  function clearHistory() {
+    clearLobbyHistory();
+    history = [];
+  }
+
+  function navigate(page: "reveal" | "history") {
+    activePage = page;
   }
 
   $: updateMessage = {
@@ -30,12 +51,16 @@
   }[updateStatus];
 
   onMount(() => {
+    history = loadLobbyHistory();
+
     if (!isTauriRuntime()) {
       const preview = getPreviewState();
       config = { ...DEFAULT_CONFIG };
       connected = preview.connected;
       state = preview.state;
       champSelect = preview.champSelect;
+      activePage = preview.activePage;
+      if (preview.history.length > 0) history = preview.history;
       updateStatus = "UpToDate";
       return;
     }
@@ -50,7 +75,15 @@
           await listen<string>(
             "client_state_update",
             ({ payload: newState }) => {
-              if (newState === "ChampSelect") champSelect = null;
+              if (newState === "ChampSelect" && state !== "ChampSelect") {
+                activeLobbyId = createLobbyHistoryId();
+                champSelect = null;
+              } else if (newState === "InProgress" && activeLobbyId) {
+                history = markLobbyGameStarted(activeLobbyId);
+                activeLobbyId = null;
+              } else if (newState !== "ChampSelect") {
+                activeLobbyId = null;
+              }
               state = newState;
             },
           ),
@@ -63,6 +96,8 @@
         listeners.push(
           await listen<ChampSelect>("champ_select_started", ({ payload }) => {
             champSelect = payload;
+            activeLobbyId ??= createLobbyHistoryId();
+            history = recordLobbyReveal(activeLobbyId, payload);
           }),
         );
 
@@ -103,16 +138,28 @@
 <main
   class="reveal-shell flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
 >
-  <Navbar />
+  <Navbar
+    {activePage}
+    historyCount={history.length}
+    onNavigate={navigate}
+  />
   <div class="min-h-0 flex-1 px-5 py-4">
     {#if updateStatus === "UpToDate"}
-      <Tool
-        {config}
-        {state}
-        {champSelect}
-        {connected}
-        onConfigChange={setConfig}
-      />
+      {#if activePage === "history"}
+        <HistoryPanel
+          {history}
+          provider={config?.multiProvider ?? "opgg"}
+          onClear={clearHistory}
+        />
+      {:else}
+        <Tool
+          {config}
+          {state}
+          {champSelect}
+          {connected}
+          onConfigChange={setConfig}
+        />
+      {/if}
     {:else}
       <div class="flex h-full items-center justify-center">
         <div class="flex flex-col items-center gap-4 text-center">

@@ -4,6 +4,10 @@
   import { appWindow } from "@tauri-apps/api/window";
   import { isTauriRuntime } from "$lib/runtime";
 
+  export let activePage: "reveal" | "history" = "reveal";
+  export let historyCount = 0;
+  export let onNavigate: (page: "reveal" | "history") => void = () => {};
+
   let version = "Preview";
 
   onMount(() => {
@@ -39,6 +43,28 @@
       </div>
     </div>
   </div>
+
+  <nav class="ml-5 flex items-center rounded-lg border border-white/[0.07] bg-white/[0.025] p-0.5">
+    <button
+      class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
+        activePage === "reveal" ? "bg-white/10 text-foreground" : ""
+      }`}
+      on:click={() => onNavigate("reveal")}
+    >
+      Reveal
+    </button>
+    <button
+      class={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
+        activePage === "history" ? "bg-white/10 text-foreground" : ""
+      }`}
+      on:click={() => onNavigate("history")}
+    >
+      History
+      {#if historyCount > 0}
+        <span class="text-[9px] tabular-nums opacity-70">{historyCount}</span>
+      {/if}
+    </button>
+  </nav>
 
   <div class="ml-auto flex items-center gap-1">
     <button

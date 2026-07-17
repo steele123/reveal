@@ -39,6 +39,10 @@
         "all": false,
         "open": true
       },
+      "clipboard": {
+        "all": false,
+        "writeText": true
+      },
       "http": {
         "all": false,
         "request": true,
