@@ -2,12 +2,13 @@
   import { invoke } from "@tauri-apps/api/tauri";
   import type { ChampSelect } from "$lib/champ_select";
   import { Button } from "./ui/button";
+  import { logFrontendError } from "$lib/logging";
 
   export let champSelect: ChampSelect | null = null;
 
   function openMultiLink() {
     void invoke<void>("open_opgg_link").catch((error) => {
-      console.error("Failed to open multi link", error);
+      logFrontendError("Failed to open multi link", error);
     });
   }
 </script>

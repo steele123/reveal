@@ -8,6 +8,7 @@
     createOpggProfileLink,
     openExternalLink,
   } from "$lib/link_actions";
+  import { logFrontendError } from "$lib/logging";
 
   export let history: LobbyHistoryEntry[] = [];
   export let provider: MultiProvider = "opgg";
@@ -45,7 +46,7 @@
     try {
       await openExternalLink(createMultiSearchLink(entry.participants, provider));
     } catch (error) {
-      console.error("Failed to open historical multi link", error);
+      logFrontendError("Failed to open historical multi link", error);
       showMessage("Could not open the link");
     }
   }
@@ -55,7 +56,7 @@
       await copyLink(createMultiSearchLink(entry.participants, provider));
       showMessage("Multi-search link copied");
     } catch (error) {
-      console.error("Failed to copy historical multi link", error);
+      logFrontendError("Failed to copy historical multi link", error);
       showMessage("Could not copy the link");
     }
   }
@@ -65,7 +66,7 @@
       await copyLink(createOpggProfileLink(entry.participants[index]));
       showMessage("OP.GG profile link copied");
     } catch (error) {
-      console.error("Failed to copy profile link", error);
+      logFrontendError("Failed to copy profile link", error);
       showMessage("Could not copy the link");
     }
   }

@@ -17,12 +17,19 @@ pub async fn app_ready(
     lcu: tauri::State<'_, Lcu>,
     cfg: tauri::State<'_, AppConfig>,
 ) -> CommandResult<Config> {
-    println!("App Ready!");
+    log_info!("Frontend reported ready");
     let lcu = lcu.0.lock().await;
     let cfg = cfg.0.lock().await;
 
-    println!("LCU State: {}", lcu.connected);
-    println!("Config: {:?}", cfg);
+    log_info!("Initial League connection state: {}", lcu.connected);
+    log_info!(
+        "Active settings: auto_open={}, auto_open_delay_seconds={}, auto_accept={}, accept_delay_ms={}, provider={}",
+        cfg.auto_open,
+        cfg.auto_open_delay_seconds,
+        cfg.auto_accept,
+        cfg.accept_delay,
+        cfg.multi_provider
+    );
 
     app_handle
         .emit_all("lcu_state_update", lcu.connected)
@@ -49,7 +56,14 @@ pub async fn set_config(
     new_cfg: Config,
     app_handle: AppHandle,
 ) -> CommandResult<()> {
-    println!("Setting Config: {:?}", new_cfg);
+    log_info!(
+        "Saving settings: auto_open={}, auto_open_delay_seconds={}, auto_accept={}, accept_delay_ms={}, provider={}",
+        new_cfg.auto_open,
+        new_cfg.auto_open_delay_seconds,
+        new_cfg.auto_accept,
+        new_cfg.accept_delay,
+        new_cfg.multi_provider
+    );
     let mut stored_config = cfg.0.lock().await;
     config::save(&app_handle, &new_cfg)
         .await
@@ -61,7 +75,7 @@ pub async fn set_config(
 
 #[tauri::command]
 pub async fn open_opgg_link(app_handle: AppHandle) -> CommandResult<()> {
-    println!("Manually opening Multi Link...");
+    log_info!("Manual multi-search open requested");
     let lcu_info = current_lcu_info(&app_handle).await?;
     let app_client = RESTClient::new(lcu_info, false).map_err(|error| error.to_string())?;
 
@@ -106,7 +120,7 @@ pub async fn dodge(app_handle: AppHandle) -> CommandResult<()> {
     let lcu_info = current_lcu_info(&app_handle).await?;
     let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
 
-    println!("Attempting to quit champ select...");
+    log_warn!("Manual Champ Select dodge requested");
     remoting_client
         .post(
             "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
@@ -149,4 +163,14 @@ async fn current_lcu_info(app_handle: &AppHandle) -> CommandResult<LCUClientInfo
     lcu.data
         .clone()
         .ok_or_else(|| "League Client is not connected".to_string())
+}
+
+#[tauri::command]
+pub fn write_frontend_log(level: String, message: String) {
+    let message = crate::logging::sanitize_frontend_message(&message);
+    match level.as_str() {
+        "error" => log_error!("Frontend: {message}"),
+        "warn" => log_warn!("Frontend: {message}"),
+        _ => log_info!("Frontend: {message}"),
+    }
 }

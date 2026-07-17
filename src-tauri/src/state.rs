@@ -16,6 +16,7 @@ pub async fn handle_client_state(
     remoting_client: &RESTClient,
     app_client: &RESTClient,
 ) {
+    log_info!("League Client state changed to {client_state}");
     match client_state.as_str() {
         "ChampSelect" => {
             let cloned_app_handle = app_handle.clone();
@@ -43,23 +44,28 @@ pub async fn handle_client_state(
                 value
             };
             if cfg.auto_accept {
+                log_info!("Auto-accept is enabled; scheduling ready-check acceptance");
                 tokio::time::sleep(std::time::Duration::from_millis(
                     u64::from(cfg.accept_delay).saturating_sub(1_000),
                 ))
                 .await;
-                let _resp = remoting_client
+                if let Err(error) = remoting_client
                     .post(
                         "/lol-matchmaking/v1/ready-check/accept".to_string(),
                         serde_json::json!({}),
                     )
-                    .await;
+                    .await
+                {
+                    log_error!("Ready-check auto-accept failed: {error}");
+                } else {
+                    log_info!("Ready check accepted automatically");
+                }
             }
         }
         _ => {}
     }
 
-    println!("Client State Update: {}", client_state);
-    app_handle
-        .emit_all("client_state_update", client_state)
-        .unwrap_or_else(|error| eprintln!("Failed to emit client state: {error}"));
+    if let Err(error) = app_handle.emit_all("client_state_update", client_state) {
+        log_error!("Failed to emit League Client state: {error}");
+    }
 }

@@ -17,7 +17,7 @@ pub async fn send_analytics_event(team: &Lobby, summoner: &Summoner, region: &Re
         .send()
         .await;
 
-    if resp.is_err() {
-        println!("Failed to send analytics event!");
+    if let Err(error) = resp {
+        log_warn!("Analytics request failed: {error}");
     }
 }

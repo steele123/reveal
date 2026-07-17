@@ -53,15 +53,19 @@ pub fn load(app_handle: &AppHandle) -> Result<Config> {
     std::fs::create_dir_all(&config_dir).context("failed to create config directory")?;
 
     let config_path = config_dir.join("config.json");
+    log_info!("Loading config from {}", config_path.display());
     if !config_path.exists() {
         let config = Config::default();
         let json = serde_json::to_string(&config).context("failed to serialize default config")?;
         std::fs::write(&config_path, json).context("failed to write default config")?;
+        log_info!("Created a default config");
         return Ok(config);
     }
 
     let json = std::fs::read_to_string(&config_path).context("failed to read config")?;
-    serde_json::from_str(&json).context("failed to parse config")
+    let config = serde_json::from_str(&json).context("failed to parse config")?;
+    log_info!("Config loaded successfully");
+    Ok(config)
 }
 
 pub async fn save(app_handle: &AppHandle, config: &Config) -> Result<()> {
@@ -74,7 +78,9 @@ pub async fn save(app_handle: &AppHandle, config: &Config) -> Result<()> {
 
     tokio::fs::write(config_path, json)
         .await
-        .context("failed to write config")
+        .context("failed to write config")?;
+    log_info!("Config saved successfully");
+    Ok(())
 }
 
 #[cfg(test)]

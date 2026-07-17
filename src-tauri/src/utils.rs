@@ -46,7 +46,10 @@ pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Res
 }
 
 pub fn display_champ_select(lobby: &Lobby, region: &str, site: &str) -> anyhow::Result<()> {
-    println!("Team: {}", join_participants(&lobby.participants, '#'));
+    log_info!(
+        "Opening {site} multi-search for {} participants in region {region}",
+        lobby.participants.len()
+    );
     let link = create_multi_link(lobby, region, site)?;
     open::that(link)?;
     Ok(())

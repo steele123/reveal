@@ -19,7 +19,7 @@ pub async fn run(app_handle: AppHandle) {
     loop {
         let Some(args) = process_info::get_league_process_args() else {
             if was_connected {
-                println!("Waiting for League Client to open...");
+                log_info!("League Client is not running; waiting for it to open");
                 was_connected = false;
                 set_connection_state(&app_handle, false, None).await;
             }
@@ -31,7 +31,7 @@ pub async fn run(app_handle: AppHandle) {
         let lcu_info = match process_info::get_auth_info(args) {
             Ok(info) => info,
             Err(error) => {
-                eprintln!("Failed to read League Client connection info: {error}");
+                log_warn!("Failed to read League Client connection info: {error}");
                 tokio::time::sleep(CLIENT_POLL_INTERVAL).await;
                 continue;
             }
@@ -50,7 +50,7 @@ pub async fn run(app_handle: AppHandle) {
         set_connection_state(&app_handle, true, Some(lcu_info)).await;
 
         let Some(mut websocket) = connect_websocket().await else {
-            eprintln!("Failed to connect to the League Client websocket");
+            log_error!("League Client websocket retries were exhausted");
             tokio::time::sleep(CLIENT_POLL_INTERVAL).await;
             continue;
         };
@@ -59,7 +59,7 @@ pub async fn run(app_handle: AppHandle) {
             .subscribe(JsonApiEvent("/lol-gameflow/v1/gameflow-phase".to_string()))
             .await
         {
-            eprintln!("Failed to subscribe to gameflow updates: {error}");
+            log_error!("Failed to subscribe to gameflow updates: {error}");
             continue;
         }
 
@@ -67,11 +67,11 @@ pub async fn run(app_handle: AppHandle) {
             .subscribe(JsonApiEvent("/lol-champ-select/v1/session".to_string()))
             .await
         {
-            eprintln!("Failed to subscribe to Champ Select updates: {error}");
+            log_error!("Failed to subscribe to Champ Select updates: {error}");
             continue;
         }
 
-        println!("Connected to League Client!");
+        log_info!("Connected to League Client");
 
         match state::get_gameflow_state(&remoting_client).await {
             Ok(client_state) => {
@@ -83,12 +83,13 @@ pub async fn run(app_handle: AppHandle) {
                 )
                 .await;
             }
-            Err(error) => eprintln!("Failed to read initial gameflow state: {error}"),
+            Err(error) => log_warn!("Failed to read initial gameflow state: {error}"),
         }
 
         while let Some(message) = websocket.next().await {
             handle_websocket_message(message, &app_handle, &remoting_client, &app_client).await;
         }
+        log_warn!("League Client websocket closed; reconnecting");
     }
 }
 
@@ -96,7 +97,7 @@ fn create_rest_client(lcu_info: shaco::rest::LCUClientInfo, remoting: bool) -> O
     match RESTClient::new(lcu_info, remoting) {
         Ok(client) => Some(client),
         Err(error) => {
-            eprintln!("Failed to create League Client API client: {error}");
+            log_warn!("Failed to create League Client API client: {error}");
             None
         }
     }
@@ -109,11 +110,18 @@ async fn connect_websocket() -> Option<LcuWebsocketClient> {
         }
 
         match LcuWebsocketClient::connect().await {
-            Ok(websocket) => return Some(websocket),
-            Err(error) if attempt == WEBSOCKET_ATTEMPTS => {
-                eprintln!("League websocket connection failed: {error}");
+            Ok(websocket) => {
+                log_info!("League Client websocket connected on attempt {attempt}");
+                return Some(websocket);
             }
-            Err(_) => {}
+            Err(error) if attempt == WEBSOCKET_ATTEMPTS => {
+                log_error!("League websocket connection failed: {error}");
+            }
+            Err(error) => {
+                log_warn!(
+                    "League websocket connection attempt {attempt}/{WEBSOCKET_ATTEMPTS} failed: {error}"
+                );
+            }
         }
     }
 
@@ -132,7 +140,7 @@ async fn set_connection_state(
     drop(lcu);
 
     if let Err(error) = app_handle.emit_all("lcu_state_update", connected) {
-        eprintln!("Failed to emit League connection state: {error}");
+        log_error!("Failed to emit League connection state: {error}");
     }
 }
 
@@ -152,7 +160,7 @@ async fn handle_websocket_message(
         "OnJsonApiEvent_lol-champ-select_v1_session" => {
             handle_last_second_dodge(message, app_handle, remoting_client).await;
         }
-        _ => println!("Unhandled Message: {message_type}"),
+        _ => log_warn!("Unhandled League websocket message: {message_type}"),
     }
 }
 
@@ -164,7 +172,7 @@ async fn handle_last_second_dodge(
     let champ_select = match serde_json::from_value::<ChampSelectSession>(message.data) {
         Ok(session) => session,
         Err(error) => {
-            eprintln!("Failed to parse Champ Select session: {error}");
+            log_warn!("Failed to parse Champ Select session: {error}");
             return;
         }
     };
@@ -185,11 +193,11 @@ async fn handle_last_second_dodge(
 
     let delay = Duration::from_millis(champ_select.timer.adjusted_time_left_in_phase);
     let remoting_client = remoting_client.clone();
-    println!("Spawned task to dodge in finalization timer: {delay:?}");
+    log_warn!("Last-second dodge scheduled after {delay:?}");
 
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(delay).await;
-        println!("Last second dodge calling quit endpoint...");
+        log_warn!("Calling the last-second dodge endpoint");
         if let Err(error) = remoting_client
             .post(
                 "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
@@ -197,7 +205,7 @@ async fn handle_last_second_dodge(
             )
             .await
         {
-            eprintln!("Last second dodge failed: {error}");
+            log_error!("Last-second dodge failed: {error}");
         }
     });
 }

@@ -20,6 +20,7 @@
     recordLobbyReveal,
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
+  import { logFrontendError, logFrontendInfo } from "$lib/logging";
 
   let state = "Unknown";
   let connected = false;
@@ -69,6 +70,7 @@
     let unlisten: UnlistenFn[] = [];
 
     async function initialize() {
+      logFrontendInfo("Frontend initialization started");
       const listeners: UnlistenFn[] = [];
       try {
         listeners.push(
@@ -114,9 +116,10 @@
 
         unlisten = listeners;
         config = loadedConfig;
+        logFrontendInfo("Frontend initialization completed");
       } catch (error) {
         listeners.forEach((stopListening) => stopListening());
-        console.error("Failed to initialize Reveal", error);
+        logFrontendError("Failed to initialize Reveal", error);
       }
 
       if (!disposed) {

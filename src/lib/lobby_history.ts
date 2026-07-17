@@ -1,4 +1,5 @@
 import type { ChampSelect, Participant } from "$lib/champ_select";
+import { logFrontendError } from "$lib/logging";
 
 const STORAGE_KEY = "reveal:lobby-history";
 export const MAX_HISTORY_ITEMS = 50;
@@ -47,7 +48,7 @@ function persist(entries: LobbyHistoryEntry[]): LobbyHistoryEntry[] {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextEntries));
   } catch (error) {
-    console.error("Failed to save lobby history", error);
+    logFrontendError("Failed to save lobby history", error);
   }
 
   return nextEntries;
@@ -71,7 +72,7 @@ export function loadLobbyHistory(): LobbyHistoryEntry[] {
 
     return parsed.filter(isHistoryEntry).slice(0, MAX_HISTORY_ITEMS);
   } catch (error) {
-    console.error("Failed to load lobby history", error);
+    logFrontendError("Failed to load lobby history", error);
     return [];
   }
 }
@@ -113,6 +114,6 @@ export function clearLobbyHistory(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.error("Failed to clear lobby history", error);
+    logFrontendError("Failed to clear lobby history", error);
   }
 }

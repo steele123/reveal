@@ -29,6 +29,12 @@ pub async fn handle_champ_select_start(
     config: &Config,
     app_handle: &AppHandle,
 ) {
+    log_info!(
+        "Champ Select participant polling started; auto_open={}, max_wait_seconds={}, provider={}",
+        config.auto_open,
+        config.auto_open_delay_seconds,
+        config.multi_provider
+    );
     let region_info: RegionInfo = match app_client
         .get("/riotclient/region-locale".to_string())
         .await
@@ -37,7 +43,7 @@ pub async fn handle_champ_select_start(
     {
         Ok(region_info) => region_info,
         Err(error) => {
-            eprintln!("Failed to read League region: {error}");
+            log_error!("Failed to read League region: {error}");
             return;
         }
     };
@@ -61,11 +67,14 @@ pub async fn handle_champ_select_start(
         if let Ok(state) = gameflow_state {
             let state_str = state.to_string().replace('\"', "");
             if state_str != "ChampSelect" {
-                println!("Left champ select, stopping poll");
+                log_info!("Champ Select ended; stopping participant polling");
                 break;
             }
         } else {
             // Invalid gameflow state - assume we're not in champ select
+            log_warn!(
+                "Could not confirm the current gameflow state; stopping Champ Select polling"
+            );
             break;
         }
 
@@ -73,7 +82,7 @@ pub async fn handle_champ_select_start(
         let team = match lobby::get_lobby_info(app_client).await {
             Ok(team) => team,
             Err(error) => {
-                println!("Lobby info not available yet, retrying: {error}");
+                log_warn!("Lobby participants are not available yet; retrying: {error}");
                 tokio::time::sleep(PARTICIPANT_POLL_INTERVAL).await;
                 continue;
             }
@@ -85,14 +94,15 @@ pub async fn handle_champ_select_start(
         }
 
         if participant_count > last_participant_count {
-            println!(
-                "Found {} participants (was {})",
-                participant_count, last_participant_count
+            log_info!(
+                "Champ Select participant count increased to {} from {}",
+                participant_count,
+                last_participant_count
             );
             last_participant_count = participant_count;
 
             if let Err(error) = app_handle.emit_all("champ_select_started", &team) {
-                eprintln!("Failed to emit Champ Select participants: {error}");
+                log_error!("Failed to emit Champ Select participants: {error}");
             }
         }
 
@@ -111,7 +121,14 @@ pub async fn handle_champ_select_start(
             auto_open_max_wait,
         ) {
             if let Err(error) = display_champ_select(&team, region, &config.multi_provider) {
-                eprintln!("Failed to open multi link: {error}");
+                log_error!("Automatic multi-search open failed: {error}");
+            } else {
+                log_info!(
+                    "Automatically opened {} multi-search with {} participants after {:?}",
+                    config.multi_provider,
+                    participant_count,
+                    auto_open_elapsed
+                );
             }
             auto_opened = true;
         }
@@ -123,10 +140,10 @@ pub async fn handle_champ_select_start(
                     analytics::send_analytics_event(&team, &summoner, &region_info).await;
                 }
                 Err(error) => {
-                    eprintln!("Failed to read current summoner for analytics: {error}");
+                    log_warn!("Failed to read current summoner for analytics: {error}");
                 }
             }
-            println!("Found all 5 participants, stopping poll");
+            log_info!("Complete Champ Select team found; participant polling finished");
             break;
         }
 

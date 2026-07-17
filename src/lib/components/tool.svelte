@@ -5,6 +5,7 @@
   import type { ChampSelect } from "$lib/champ_select";
   import ChampSelectPanel from "./champ-select-panel.svelte";
   import SettingsPanel from "./settings-panel.svelte";
+  import { logFrontendError } from "$lib/logging";
 
   export let config: Config | null = null;
   export let state = "Unknown";
@@ -19,7 +20,7 @@
     try {
       await updateConfig(nextConfig);
     } catch (error) {
-      console.error("Failed to save config", error);
+      logFrontendError("Failed to save config", error);
       if (previousConfig) onConfigChange(previousConfig);
     }
   }
