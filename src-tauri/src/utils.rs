@@ -29,6 +29,13 @@ pub fn create_tracker_link(summoners: &[Participant], region: &str) -> String {
     format!("{}{}", base_url, encoded_path)
 }
 
+pub fn create_fow_link(summoners: &[Participant], region: &str) -> String {
+    let base_url = format!("https://www.fow.lol/multi/{}#", region.to_lowercase());
+    let participants = join_participants(summoners, '#');
+    let encoded_path = encode(&participants);
+    format!("{}{}", base_url, encoded_path)
+}
+
 pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Result<String> {
     if lobby.participants.is_empty() {
         anyhow::bail!("cannot create a multi link without participants");
@@ -39,6 +46,7 @@ pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Res
         "deeplol" => create_deeplol_link(&lobby.participants, region),
         "ugg" => create_ugg_link(&lobby.participants, &format!("{}1", region)),
         "tracker" => create_tracker_link(&lobby.participants, region),
+        "fow" => create_fow_link(&lobby.participants, region),
         _ => anyhow::bail!("unsupported multi provider: {site}"),
     };
 
@@ -101,6 +109,33 @@ mod tests {
         assert_eq!(
             create_multi_link(&lobby, "NA", "ugg").unwrap(),
             "https://u.gg/multisearch?region=na1&summoners=Player%20One-NA1"
+        );
+        assert_eq!(
+            create_multi_link(&lobby, "SG", "fow").unwrap(),
+            "https://www.fow.lol/multi/sg#Player%20One%23NA1"
+        );
+    }
+
+    #[test]
+    fn creates_fow_multi_links_with_multiple_riot_ids() {
+        let mut lobby = lobby();
+        lobby.participants.push(Participant {
+            cid: "champ-select".to_string(),
+            game_name: "Second Player".to_string(),
+            game_tag: "0911".to_string(),
+            muted: false,
+            name: "Second Player".to_string(),
+            pid: "second-pid".to_string(),
+            puuid: "second-puuid".to_string(),
+            region: "SG".to_string(),
+            assigned_position: None,
+            cell_id: None,
+            pick_turn: None,
+        });
+
+        assert_eq!(
+            create_multi_link(&lobby, "SG", "fow").unwrap(),
+            "https://www.fow.lol/multi/sg#Player%20One%23NA1%2CSecond%20Player%230911"
         );
     }
 

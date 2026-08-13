@@ -39,6 +39,10 @@ export function createMultiSearchLink(
     return `https://tracker.gg/lol/multisearch/${region}/${encodeURIComponent(joinedParticipants(participants, "#"))}`;
   }
 
+  if (provider === "fow") {
+    return `https://www.fow.lol/multi/${region.toLowerCase()}#${encodeURIComponent(joinedParticipants(participants, "#"))}`;
+  }
+
   return `https://www.op.gg/multisearch/${region}?summoners=${encodeURIComponent(joinedParticipants(participants, "#"))}`;
 }
 

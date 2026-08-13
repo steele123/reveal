@@ -31,6 +31,7 @@
     deeplol: "DeepLoL",
     ugg: "U.GG",
     tracker: "Tracker.gg",
+    fow: "FOW.LOL",
   }[provider];
 
   function showMessage(nextMessage: string) {
