@@ -1,17 +1,21 @@
-use crate::{lobby::Lobby, region::RegionInfo, summoner::Summoner};
 use serde_json::json;
 
-pub async fn send_analytics_event(team: &Lobby, summoner: &Summoner, region: &RegionInfo) {
-    let summoner_name = format!("{}#{}", summoner.game_name, summoner.tag_line);
-
-    // send analytics event
+/// Reports that a lobby was revealed. The payload is deliberately anonymous:
+/// no Riot IDs, PUUIDs, or other player identifiers are sent.
+pub async fn send_analytics_event(
+    participant_count: usize,
+    region: &str,
+    provider: &str,
+    app_version: &str,
+) {
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://lobbyreveal.app/api/reveal/collect")
+        .post("https://lobbyreveal.app/api/reveal/v2/collect")
         .json(&json!({
-            "select": &team,
-            "from": &summoner_name,
-            "region": &region.web_region
+            "region": region,
+            "participantCount": participant_count,
+            "provider": provider,
+            "appVersion": app_version
         }))
         .timeout(std::time::Duration::from_secs(5))
         .send()

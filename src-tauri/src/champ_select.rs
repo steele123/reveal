@@ -1,6 +1,4 @@
-use crate::{
-    analytics, config::Config, lobby, region::RegionInfo, summoner, utils::display_champ_select,
-};
+use crate::{analytics, config::Config, lobby, region::RegionInfo, utils::display_champ_select};
 use serde::Deserialize;
 use shaco::rest::RESTClient;
 use std::{
@@ -173,14 +171,13 @@ pub async fn handle_champ_select_start(
         if participant_count >= EXPECTED_PARTICIPANT_COUNT
             && mapped_participant_count >= participant_count
         {
-            match summoner::get_current_summoner(remoting_client).await {
-                Ok(summoner) => {
-                    analytics::send_analytics_event(&team, &summoner, &region_info).await;
-                }
-                Err(error) => {
-                    log_warn!("Failed to read current summoner for analytics: {error}");
-                }
-            }
+            analytics::send_analytics_event(
+                participant_count,
+                &region_info.web_region,
+                &config.multi_provider,
+                &app_handle.package_info().version.to_string(),
+            )
+            .await;
             log_info!("Complete Champ Select team found; participant polling finished");
             break;
         }

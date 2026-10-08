@@ -14,7 +14,6 @@ mod lobby;
 mod queue_pause;
 mod region;
 mod state;
-mod summoner;
 mod utils;
 
 use app_state::{Dodge, Lcu, QueuePause};
