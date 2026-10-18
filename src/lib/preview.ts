@@ -12,7 +12,7 @@ interface PreviewState {
 const PREVIEW_RANKS: RankSummary[] = [
   { tier: "DIAMOND", division: "II", leaguePoints: 45, wins: 70, losses: 51, provisional: false },
   { tier: "MASTER", leaguePoints: 155, wins: 376, losses: 328, provisional: false },
-  { tier: "GOLD", division: "IV", leaguePoints: 0, wins: 22, losses: 25, provisional: false },
+  { tier: "GOLD", division: "I", leaguePoints: 24, wins: 3, losses: 0, provisional: false },
   { tier: "UNRANKED", leaguePoints: 0, wins: 2, losses: 1, provisional: true },
   { tier: "UNRANKED", leaguePoints: 0, wins: 0, losses: 0, provisional: false },
 ];

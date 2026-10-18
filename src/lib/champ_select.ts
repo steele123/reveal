@@ -75,10 +75,19 @@ export interface FormattedRank {
   details: string[];
 }
 
+/** Below this many games (or during placements) a win rate is noise, so show the record instead. */
+export const MIN_GAMES_FOR_WIN_RATE = 10;
+
 /** e.g. { tier: "Diamond II", details: ["45 LP", "58%"], summary: "... · 121 games" } */
 export function formatRank(rank: RankSummary): FormattedRank {
   const games = rank.wins + rank.losses;
-  const winRate = games > 0 ? `${Math.round((rank.wins / games) * 100)}%` : "";
+  // Early in a split most players have a handful of games, where "100%" just means 2-0.
+  const winRate =
+    games === 0
+      ? ""
+      : games < MIN_GAMES_FOR_WIN_RATE || rank.provisional
+        ? `${rank.wins}W ${rank.losses}L`
+        : `${Math.round((rank.wins / games) * 100)}%`;
   const record = games > 0 ? `${rank.wins}W ${rank.losses}L (${games} games)` : "";
 
   if (rank.tier === "UNRANKED") {

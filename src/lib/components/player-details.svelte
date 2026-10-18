@@ -5,6 +5,7 @@
     championIconUrl,
     formatAssignedPosition,
     formatRank,
+    MIN_GAMES_FOR_WIN_RATE,
     profileIconUrl,
     type Participant,
   } from "$lib/champ_select";
@@ -27,7 +28,9 @@
     ? participant.rank.wins + participant.rank.losses
     : 0;
   $: winRate =
-    participant.rank && games > 0
+    participant.rank &&
+    games >= MIN_GAMES_FOR_WIN_RATE &&
+    !participant.rank.provisional
       ? Math.round((participant.rank.wins / games) * 100)
       : null;
   $: subtitle = [
@@ -136,15 +139,21 @@
               {/if}
             </div>
           </div>
-          {#if games > 0 && winRate !== null}
+          {#if games > 0}
             <div class="mt-2.5 text-[11px] text-muted-foreground">
               <span class="text-emerald-300">{participant.rank.wins}W</span>
               <span class="text-red-300">{participant.rank.losses}L</span>
-              · {winRate}% win rate
+              {#if winRate !== null}
+                · {winRate}% win rate
+              {:else}
+                · {games} game{games === 1 ? "" : "s"} this split
+              {/if}
             </div>
-            <div class="mt-1 h-1 overflow-hidden rounded-full bg-red-400/30">
-              <div class="h-full bg-emerald-400" style="width: {winRate}%" />
-            </div>
+            {#if winRate !== null}
+              <div class="mt-1 h-1 overflow-hidden rounded-full bg-red-400/30">
+                <div class="h-full bg-emerald-400" style="width: {winRate}%" />
+              </div>
+            {/if}
           {/if}
         {:else}
           <div class="mt-1.5 text-xs text-muted-foreground">Not available</div>
