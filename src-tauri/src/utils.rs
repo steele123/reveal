@@ -2,7 +2,7 @@ use crate::lobby::{Lobby, Participant};
 use urlencoding::encode;
 
 /// Multi-search providers Reveal can open. Saved configs naming anything else fall back to OP.GG.
-pub const MULTI_PROVIDERS: &[&str] = &["opgg", "ugg", "fow"];
+pub const MULTI_PROVIDERS: &[&str] = &["opgg", "ugg", "fow", "porofessor"];
 
 pub fn create_opgg_link(summoners: &[Participant], region: &str) -> String {
     let base_url = format!("https://op.gg/lol/multisearch/{}?summoners=", region);
@@ -53,6 +53,48 @@ pub fn create_fow_link(summoners: &[Participant], region: &str) -> String {
     format!("{}{}", base_url, encoded_path)
 }
 
+pub fn create_porofessor_link(summoners: &[Participant], region: &str) -> String {
+    let participants = summoners
+        .iter()
+        .map(|participant| {
+            encode(&format!(
+                "{}-{}",
+                participant.game_name, participant.game_tag
+            ))
+            .into_owned()
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "https://porofessor.gg/pregame/{}/{}",
+        porofessor_region(region),
+        participants
+    )
+}
+
+/// Maps League's web region (or a Riot platform ID) to Porofessor's region slug.
+fn porofessor_region(region: &str) -> String {
+    let slug = match region.to_uppercase().as_str() {
+        "NA1" => "na",
+        "EUW1" => "euw",
+        "EUN1" => "eune",
+        "BR1" => "br",
+        "JP1" => "jp",
+        "OC1" => "oce",
+        "TR1" => "tr",
+        "LA1" => "lan",
+        "LA2" => "las",
+        "ME1" => "me",
+        "SG2" => "sg",
+        "PH2" => "ph",
+        "TH2" => "th",
+        "TW2" => "tw",
+        "VN2" => "vn",
+        _ => return region.to_lowercase(),
+    };
+    slug.to_string()
+}
+
 pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Result<String> {
     if lobby.participants.is_empty() {
         anyhow::bail!("cannot create a multi link without participants");
@@ -62,6 +104,7 @@ pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Res
         "opgg" => create_opgg_link(&lobby.participants, region),
         "ugg" => create_ugg_link(&lobby.participants, region),
         "fow" => create_fow_link(&lobby.participants, region),
+        "porofessor" => create_porofessor_link(&lobby.participants, region),
         _ => anyhow::bail!("unsupported multi provider: {site}"),
     };
 
@@ -171,6 +214,24 @@ mod tests {
         assert!(create_multi_link(&lobby(), "NA", "unknown").is_err());
         assert!(create_multi_link(&lobby(), "NA", "deeplol").is_err());
         assert!(create_multi_link(&lobby(), "NA", "tracker").is_err());
+    }
+
+    #[test]
+    fn creates_porofessor_pregame_links() {
+        let mut lobby = lobby();
+        lobby.participants.push(Participant {
+            game_name: "Second Player".to_string(),
+            game_tag: "0911".to_string(),
+            ..lobby.participants[0].clone()
+        });
+
+        assert_eq!(
+            create_multi_link(&lobby, "NA", "porofessor").unwrap(),
+            "https://porofessor.gg/pregame/na/Player%20One-NA1,Second%20Player-0911"
+        );
+        assert_eq!(porofessor_region("LAS"), "las");
+        assert_eq!(porofessor_region("EUN1"), "eune");
+        assert_eq!(porofessor_region("SG2"), "sg");
     }
 
     #[test]

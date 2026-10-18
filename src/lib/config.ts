@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/tauri";
 
-export type MultiProvider = "opgg" | "ugg" | "fow";
+export type MultiProvider = "opgg" | "ugg" | "fow" | "porofessor";
 
 export const MULTI_PROVIDERS: ReadonlyArray<{
     label: string;
@@ -9,6 +9,7 @@ export const MULTI_PROVIDERS: ReadonlyArray<{
     { label: "OP.GG", value: "opgg" },
     { label: "U.GG", value: "ugg" },
     { label: "FOW.LOL", value: "fow" },
+    { label: "Porofessor", value: "porofessor" },
 ];
 
 export interface Config {

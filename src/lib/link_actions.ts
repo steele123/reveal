@@ -51,6 +51,29 @@ function riotPlatformId(region: string): string {
   );
 }
 
+// Maps League's web region (or a Riot platform ID) to Porofessor's region slug.
+const POROFESSOR_REGIONS: Record<string, string> = {
+  NA1: "na",
+  EUW1: "euw",
+  EUN1: "eune",
+  BR1: "br",
+  JP1: "jp",
+  OC1: "oce",
+  TR1: "tr",
+  LA1: "lan",
+  LA2: "las",
+  ME1: "me",
+  SG2: "sg",
+  PH2: "ph",
+  TH2: "th",
+  TW2: "tw",
+  VN2: "vn",
+};
+
+function porofessorRegion(region: string): string {
+  return POROFESSOR_REGIONS[region.toUpperCase()] ?? region.toLowerCase();
+}
+
 function joinedParticipants(
   participants: Participant[],
   separator: "#" | "-",
@@ -71,6 +94,15 @@ export function createMultiSearchLink(
 
   if (provider === "ugg") {
     return `https://u.gg/lol/multisearch?region=${riotPlatformId(region)}&summoners=${encodeURIComponent(joinedParticipants(participants, "-"))}`;
+  }
+
+  if (provider === "porofessor") {
+    const players = participants
+      .map((participant) =>
+        encodeURIComponent(`${participant.game_name}-${participant.game_tag}`),
+      )
+      .join(",");
+    return `https://porofessor.gg/pregame/${porofessorRegion(region)}/${players}`;
   }
 
   if (provider === "fow") {
