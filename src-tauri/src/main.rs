@@ -13,6 +13,7 @@ mod lcu;
 mod legacy_install;
 mod lobby;
 mod queue_pause;
+mod ranked;
 mod region;
 mod state;
 mod utils;

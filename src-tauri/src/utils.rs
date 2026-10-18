@@ -162,6 +162,7 @@ mod tests {
                 assigned_position: None,
                 cell_id: None,
                 pick_turn: None,
+                rank: None,
             }],
         }
     }
@@ -203,6 +204,7 @@ mod tests {
             assigned_position: None,
             cell_id: None,
             pick_turn: None,
+            rank: None,
         });
 
         assert_eq!(

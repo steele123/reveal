@@ -1,3 +1,4 @@
+use crate::ranked::RankSummary;
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
 
@@ -17,6 +18,8 @@ pub struct Participant {
     pub cell_id: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pick_turn: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank: Option<RankSummary>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

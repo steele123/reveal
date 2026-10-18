@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/tauri";
   import {
     formatAssignedPosition,
+    formatRank,
     type ChampSelect,
   } from "$lib/champ_select";
   import { Button } from "./ui/button";
@@ -78,10 +79,22 @@
               ? String(index + 1).padStart(2, "0")
               : `P${participant.pick_turn + 1}`}
           </div>
-          <div class="min-w-0 flex-1 truncate text-xs font-medium">
-            {participant.game_name}<span class="text-muted-foreground"
-              >#{participant.game_tag}</span
-            >
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-xs font-medium leading-tight">
+              {participant.game_name}<span class="text-muted-foreground"
+                >#{participant.game_tag}</span
+              >
+            </div>
+            {#if participant.rank}
+              {@const rank = formatRank(participant.rank)}
+              <div
+                class="truncate text-[10px] leading-tight text-muted-foreground"
+                title="Solo/Duo: {[rank.tier, ...rank.details].join(' · ')}"
+              >
+                <span class="font-medium {rank.tierClass}">{rank.tier}</span
+                >{#each rank.details as detail}<span>{` · ${detail}`}</span>{/each}
+              </div>
+            {/if}
           </div>
           {#if participant.assigned_position}
             <div

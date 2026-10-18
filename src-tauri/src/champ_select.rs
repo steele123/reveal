@@ -1,4 +1,6 @@
-use crate::{analytics, config::Config, lobby, region::RegionInfo, utils::display_champ_select};
+use crate::{
+    analytics, config::Config, lobby, ranked, region::RegionInfo, utils::display_champ_select,
+};
 use serde::Deserialize;
 use shaco::rest::RESTClient;
 use std::{
@@ -10,6 +12,7 @@ use tauri::{AppHandle, Manager};
 
 const EXPECTED_PARTICIPANT_COUNT: usize = 5;
 const PARTICIPANT_POLL_INTERVAL: Duration = Duration::from_secs(2);
+const MAX_RANK_ATTEMPTS: u8 = 3;
 
 static PARTICIPANT_POLLING: AtomicBool = AtomicBool::new(false);
 
@@ -93,6 +96,7 @@ pub async fn handle_champ_select_start(
     let mut last_emitted_team: Option<lobby::Lobby> = None;
     let mut first_participant_seen_at: Option<Instant> = None;
     let mut session_warning_logged = false;
+    let mut ranks = RankCache::default();
 
     // Poll until we have all 5 teammates or champ select ends
     loop {
@@ -140,6 +144,8 @@ pub async fn handle_champ_select_start(
                 0
             }
         };
+        ranks.fetch_missing(remoting_client, &team).await;
+        ranks.apply(&mut team);
         let participant_count = team.participants.len();
 
         if participant_count > 0 && first_participant_seen_at.is_none() {
@@ -192,6 +198,7 @@ pub async fn handle_champ_select_start(
         // Only send analytics once we have all 5 teammates
         if participant_count >= EXPECTED_PARTICIPANT_COUNT
             && mapped_participant_count >= participant_count
+            && ranks.is_settled(&team)
         {
             analytics::send_analytics_event(
                 participant_count,
@@ -205,6 +212,54 @@ pub async fn handle_champ_select_start(
         }
 
         tokio::time::sleep(PARTICIPANT_POLL_INTERVAL).await;
+    }
+}
+
+/// Solo/Duo ranks looked up once per player for the current Champ Select.
+#[derive(Default)]
+struct RankCache {
+    ranks: HashMap<String, ranked::RankSummary>,
+    attempts: HashMap<String, u8>,
+}
+
+impl RankCache {
+    async fn fetch_missing(&mut self, remoting_client: &RESTClient, team: &lobby::Lobby) {
+        for participant in &team.participants {
+            let puuid = &participant.puuid;
+            if puuid.is_empty() || self.ranks.contains_key(puuid) {
+                continue;
+            }
+            let attempts = self.attempts.entry(puuid.clone()).or_default();
+            if *attempts >= MAX_RANK_ATTEMPTS {
+                continue;
+            }
+            *attempts += 1;
+
+            match ranked::get_solo_rank(remoting_client, puuid).await {
+                Ok(rank) => {
+                    self.ranks.insert(puuid.clone(), rank);
+                }
+                Err(error) => log_warn!(
+                    "Rank lookup failed (attempt {}/{MAX_RANK_ATTEMPTS}): {error}",
+                    *attempts
+                ),
+            }
+        }
+    }
+
+    fn apply(&self, team: &mut lobby::Lobby) {
+        for participant in &mut team.participants {
+            participant.rank = self.ranks.get(&participant.puuid).cloned();
+        }
+    }
+
+    /// True once every player has a rank or has used up their lookup attempts.
+    fn is_settled(&self, team: &lobby::Lobby) -> bool {
+        team.participants.iter().all(|participant| {
+            participant.puuid.is_empty()
+                || self.ranks.contains_key(&participant.puuid)
+                || self.attempts.get(&participant.puuid).copied().unwrap_or(0) >= MAX_RANK_ATTEMPTS
+        })
     }
 }
 
@@ -332,6 +387,7 @@ mod tests {
             assigned_position: None,
             cell_id: None,
             pick_turn: None,
+            rank: None,
         }
     }
 
@@ -370,6 +426,38 @@ mod tests {
         );
         assert_eq!(team.participants[1].puuid, "second-puuid");
         assert_eq!(team.participants[1].pick_turn, Some(1));
+    }
+
+    #[test]
+    fn rank_cache_applies_ranks_and_settles_after_attempts() {
+        let mut team = lobby::Lobby {
+            participants: vec![
+                participant("ranked", "Ranked"),
+                participant("failing", "Failing"),
+            ],
+        };
+        let mut cache = RankCache::default();
+        cache.ranks.insert(
+            "ranked".to_string(),
+            ranked::RankSummary {
+                tier: "GOLD".to_string(),
+                division: Some("I".to_string()),
+                league_points: 12,
+                wins: 10,
+                losses: 8,
+                provisional: false,
+            },
+        );
+
+        cache.apply(&mut team);
+        assert_eq!(team.participants[0].rank.as_ref().unwrap().tier, "GOLD");
+        assert_eq!(team.participants[1].rank, None);
+        assert!(!cache.is_settled(&team));
+
+        cache
+            .attempts
+            .insert("failing".to_string(), MAX_RANK_ATTEMPTS);
+        assert!(cache.is_settled(&team));
     }
 
     #[test]
