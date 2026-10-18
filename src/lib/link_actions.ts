@@ -96,6 +96,10 @@ export function createMultiSearchLink(
     return `https://u.gg/lol/multisearch?region=${riotPlatformId(region)}&summoners=${encodeURIComponent(joinedParticipants(participants, "-"))}`;
   }
 
+  if (provider === "laddereye") {
+    return `https://laddereye.com/multi?q=${encodeURIComponent(joinedParticipants(participants, "#"))}&region=${riotPlatformId(region).toUpperCase()}`;
+  }
+
   if (provider === "porofessor") {
     const players = participants
       .map((participant) =>

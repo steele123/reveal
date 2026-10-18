@@ -2,7 +2,7 @@ use crate::lobby::{Lobby, Participant};
 use urlencoding::encode;
 
 /// Multi-search providers Reveal can open. Saved configs naming anything else fall back to OP.GG.
-pub const MULTI_PROVIDERS: &[&str] = &["opgg", "ugg", "fow", "porofessor"];
+pub const MULTI_PROVIDERS: &[&str] = &["opgg", "ugg", "fow", "porofessor", "laddereye"];
 
 pub fn create_opgg_link(summoners: &[Participant], region: &str) -> String {
     let base_url = format!("https://op.gg/lol/multisearch/{}?summoners=", region);
@@ -72,6 +72,15 @@ pub fn create_porofessor_link(summoners: &[Participant], region: &str) -> String
     )
 }
 
+pub fn create_laddereye_link(summoners: &[Participant], region: &str) -> String {
+    let participants = join_participants(summoners, '#');
+    format!(
+        "https://laddereye.com/multi?q={}&region={}",
+        encode(&participants),
+        riot_platform_id(region).to_uppercase()
+    )
+}
+
 /// Maps League's web region (or a Riot platform ID) to Porofessor's region slug.
 fn porofessor_region(region: &str) -> String {
     let slug = match region.to_uppercase().as_str() {
@@ -105,6 +114,7 @@ pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Res
         "ugg" => create_ugg_link(&lobby.participants, region),
         "fow" => create_fow_link(&lobby.participants, region),
         "porofessor" => create_porofessor_link(&lobby.participants, region),
+        "laddereye" => create_laddereye_link(&lobby.participants, region),
         _ => anyhow::bail!("unsupported multi provider: {site}"),
     };
 
@@ -232,6 +242,18 @@ mod tests {
         assert_eq!(porofessor_region("LAS"), "las");
         assert_eq!(porofessor_region("EUN1"), "eune");
         assert_eq!(porofessor_region("SG2"), "sg");
+    }
+
+    #[test]
+    fn creates_laddereye_lobby_links() {
+        assert_eq!(
+            create_multi_link(&lobby(), "NA", "laddereye").unwrap(),
+            "https://laddereye.com/multi?q=Player%20One%23NA1&region=NA1"
+        );
+        assert_eq!(
+            create_multi_link(&lobby(), "KR", "laddereye").unwrap(),
+            "https://laddereye.com/multi?q=Player%20One%23NA1&region=KR"
+        );
     }
 
     #[test]
