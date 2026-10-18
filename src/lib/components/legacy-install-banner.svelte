@@ -29,14 +29,19 @@
 >
   <div class="min-w-0 flex-1">
     <div class="text-xs font-medium text-amber-200">
-      Finish updating Reveal
+      Remove the old copy of Reveal
     </div>
-    <div class="mt-0.5 text-[10px] text-amber-200/70">
-      {#if status === "failed"}
-        Removal was cancelled or failed. You can try again any time.
+    <div class="mt-0.5 text-[10px] leading-snug text-amber-200/70">
+      {#if status === "removing"}
+        Choose <span class="font-semibold text-amber-100">Yes</span> on the Windows
+        prompt to finish.
+      {:else if status === "failed"}
+        The old copy wasn't removed. Click Try again and choose
+        <span class="font-semibold text-amber-100">Yes</span> on the Windows prompt.
       {:else}
-        An old copy{version ? ` (v${version})` : ""} is still in Program Files. Removing
-        it needs one admin prompt; updates won't after that.
+        Reveal no longer needs admin to update. Click Remove, then choose
+        <span class="font-semibold text-amber-100">Yes</span> on the Windows prompt to
+        delete the old{version ? ` v${version}` : ""} copy. Your settings and history stay.
       {/if}
     </div>
   </div>
@@ -45,6 +50,6 @@
     disabled={status === "removing"}
     on:click={removeOldVersion}
   >
-    {status === "removing" ? "Removing…" : "Remove old version"}
+    {status === "removing" ? "Waiting…" : status === "failed" ? "Try again" : "Remove"}
   </button>
 </div>
