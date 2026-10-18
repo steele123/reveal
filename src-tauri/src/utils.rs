@@ -1,32 +1,49 @@
 use crate::lobby::{Lobby, Participant};
 use urlencoding::encode;
 
-pub fn create_opgg_link(summoners: &[Participant], region: &str) -> String {
-    let base_url = format!("https://www.op.gg/multisearch/{}?summoners=", region);
-    let participants = join_participants(summoners, '#');
-    let encoded_path = encode(&participants);
-    format!("{}{}", base_url, encoded_path)
-}
+/// Multi-search providers Reveal can open. Saved configs naming anything else fall back to OP.GG.
+pub const MULTI_PROVIDERS: &[&str] = &["opgg", "ugg", "fow"];
 
-pub fn create_deeplol_link(summoners: &[Participant], region: &str) -> String {
-    let base_url = format!("https://deeplol.gg/multi/{}/", region);
+pub fn create_opgg_link(summoners: &[Participant], region: &str) -> String {
+    let base_url = format!("https://op.gg/lol/multisearch/{}?summoners=", region);
     let participants = join_participants(summoners, '#');
     let encoded_path = encode(&participants);
     format!("{}{}", base_url, encoded_path)
 }
 
 pub fn create_ugg_link(summoners: &[Participant], region: &str) -> String {
-    let base_url = format!("https://u.gg/multisearch?region={}", region.to_lowercase());
+    let base_url = format!(
+        "https://u.gg/lol/multisearch?region={}",
+        riot_platform_id(region)
+    );
     let participants = join_participants(summoners, '-');
     let encoded_path = encode(&participants);
     format!("{}&summoners={}", base_url, encoded_path)
 }
 
-pub fn create_tracker_link(summoners: &[Participant], region: &str) -> String {
-    let base_url = format!("https://tracker.gg/lol/multisearch/{}/", region);
-    let participants = join_participants(summoners, '#');
-    let encoded_path = encode(&participants);
-    format!("{}{}", base_url, encoded_path)
+/// Maps League's web region (e.g. "NA", "EUNE", "LAS") to Riot's platform ID, which U.GG uses.
+fn riot_platform_id(region: &str) -> String {
+    let platform = match region.to_uppercase().as_str() {
+        "NA" | "NA1" => "na1",
+        "EUW" | "EUW1" => "euw1",
+        "EUNE" | "EUN1" => "eun1",
+        "KR" => "kr",
+        "BR" | "BR1" => "br1",
+        "JP" | "JP1" => "jp1",
+        "RU" => "ru",
+        "OCE" | "OC1" => "oc1",
+        "TR" | "TR1" => "tr1",
+        "LAN" | "LA1" => "la1",
+        "LAS" | "LA2" => "la2",
+        "ME" | "ME1" => "me1",
+        "SG" | "SG2" => "sg2",
+        "PH" | "PH2" => "ph2",
+        "TH" | "TH2" => "th2",
+        "TW" | "TW2" => "tw2",
+        "VN" | "VN2" => "vn2",
+        _ => return format!("{}1", region.to_lowercase()),
+    };
+    platform.to_string()
 }
 
 pub fn create_fow_link(summoners: &[Participant], region: &str) -> String {
@@ -43,9 +60,7 @@ pub fn create_multi_link(lobby: &Lobby, region: &str, site: &str) -> anyhow::Res
 
     let link = match site {
         "opgg" => create_opgg_link(&lobby.participants, region),
-        "deeplol" => create_deeplol_link(&lobby.participants, region),
-        "ugg" => create_ugg_link(&lobby.participants, &format!("{}1", region)),
-        "tracker" => create_tracker_link(&lobby.participants, region),
+        "ugg" => create_ugg_link(&lobby.participants, region),
         "fow" => create_fow_link(&lobby.participants, region),
         _ => anyhow::bail!("unsupported multi provider: {site}"),
     };
@@ -104,11 +119,15 @@ mod tests {
 
         assert_eq!(
             create_multi_link(&lobby, "NA", "opgg").unwrap(),
-            "https://www.op.gg/multisearch/NA?summoners=Player%20One%23NA1"
+            "https://op.gg/lol/multisearch/NA?summoners=Player%20One%23NA1"
         );
         assert_eq!(
             create_multi_link(&lobby, "NA", "ugg").unwrap(),
-            "https://u.gg/multisearch?region=na1&summoners=Player%20One-NA1"
+            "https://u.gg/lol/multisearch?region=na1&summoners=Player%20One-NA1"
+        );
+        assert_eq!(
+            create_multi_link(&lobby, "KR", "ugg").unwrap(),
+            "https://u.gg/lol/multisearch?region=kr&summoners=Player%20One-NA1"
         );
         assert_eq!(
             create_multi_link(&lobby, "SG", "fow").unwrap(),
@@ -150,5 +169,24 @@ mod tests {
         )
         .is_err());
         assert!(create_multi_link(&lobby(), "NA", "unknown").is_err());
+        assert!(create_multi_link(&lobby(), "NA", "deeplol").is_err());
+        assert!(create_multi_link(&lobby(), "NA", "tracker").is_err());
+    }
+
+    #[test]
+    fn maps_web_regions_to_ugg_platform_ids() {
+        for (region, platform) in [
+            ("NA", "na1"),
+            ("EUNE", "eun1"),
+            ("KR", "kr"),
+            ("OCE", "oc1"),
+            ("LAN", "la1"),
+            ("LAS", "la2"),
+            ("RU", "ru"),
+            ("SG", "sg2"),
+            ("VN2", "vn2"),
+        ] {
+            assert_eq!(riot_platform_id(region), platform);
+        }
     }
 }

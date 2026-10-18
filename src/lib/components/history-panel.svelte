@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import type { MultiProvider } from "$lib/config";
+  import { MULTI_PROVIDERS, type MultiProvider } from "$lib/config";
   import type { LobbyHistoryEntry } from "$lib/lobby_history";
   import {
     copyLink,
@@ -26,13 +26,8 @@
     minute: "2-digit",
   });
 
-  $: providerName = {
-    opgg: "OP.GG",
-    deeplol: "DeepLoL",
-    ugg: "U.GG",
-    tracker: "Tracker.gg",
-    fow: "FOW.LOL",
-  }[provider];
+  $: providerName =
+    MULTI_PROVIDERS.find(({ value }) => value === provider)?.label ?? "OP.GG";
 
   function showMessage(nextMessage: string) {
     message = nextMessage;

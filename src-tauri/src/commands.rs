@@ -70,6 +70,8 @@ pub async fn set_config(
         new_cfg.accept_delay,
         new_cfg.multi_provider
     );
+    let mut new_cfg = new_cfg;
+    new_cfg.normalize_provider();
     let mut stored_config = cfg.0.lock().await;
     config::save(&app_handle, &new_cfg)
         .await

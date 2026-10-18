@@ -1,3 +1,4 @@
+use crate::utils::MULTI_PROVIDERS;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
@@ -29,6 +30,17 @@ impl Default for Config {
             pause_queue_after_dodge: false,
             multi_provider: default_provider(),
         }
+    }
+}
+
+impl Config {
+    /// Replaces a removed multi-search provider with the default. Returns true if it changed.
+    pub fn normalize_provider(&mut self) -> bool {
+        if MULTI_PROVIDERS.contains(&self.multi_provider.as_str()) {
+            return false;
+        }
+        self.multi_provider = default_provider();
+        true
     }
 }
 
@@ -66,7 +78,12 @@ pub fn load(app_handle: &AppHandle) -> Result<Config> {
     }
 
     let json = std::fs::read_to_string(&config_path).context("failed to read config")?;
-    let config = serde_json::from_str(&json).context("failed to parse config")?;
+    let mut config: Config = serde_json::from_str(&json).context("failed to parse config")?;
+    if config.normalize_provider() {
+        log_warn!("Saved multi-search provider is no longer supported; using OP.GG");
+        let json = serde_json::to_string(&config).context("failed to serialize config")?;
+        std::fs::write(&config_path, json).context("failed to write config")?;
+    }
     log_info!("Config loaded successfully");
     Ok(config)
 }
@@ -107,5 +124,24 @@ mod tests {
             DEFAULT_AUTO_OPEN_DELAY_SECONDS
         );
         assert!(!config.pause_queue_after_dodge);
+    }
+
+    #[test]
+    fn removed_providers_fall_back_to_opgg() {
+        for provider in ["deeplol", "tracker"] {
+            let mut config = Config {
+                multi_provider: provider.to_string(),
+                ..Config::default()
+            };
+            assert!(config.normalize_provider());
+            assert_eq!(config.multi_provider, "opgg");
+        }
+
+        let mut config = Config {
+            multi_provider: "fow".to_string(),
+            ..Config::default()
+        };
+        assert!(!config.normalize_provider());
+        assert_eq!(config.multi_provider, "fow");
     }
 }

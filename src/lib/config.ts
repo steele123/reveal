@@ -1,15 +1,13 @@
 import { invoke } from "@tauri-apps/api/tauri";
 
-export type MultiProvider = "opgg" | "deeplol" | "ugg" | "tracker" | "fow";
+export type MultiProvider = "opgg" | "ugg" | "fow";
 
 export const MULTI_PROVIDERS: ReadonlyArray<{
     label: string;
     value: MultiProvider;
 }> = [
     { label: "OP.GG", value: "opgg" },
-    { label: "DeepLoL", value: "deeplol" },
     { label: "U.GG", value: "ugg" },
-    { label: "Tracker.gg", value: "tracker" },
     { label: "FOW.LOL", value: "fow" },
 ];
 
