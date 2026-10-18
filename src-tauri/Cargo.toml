@@ -1,6 +1,6 @@
 [package]
 name = "reveal"
-version = "1.4.4"
+version = "1.4.5"
 description = "Reveal"
 authors = ["steele"]
 license = ""
