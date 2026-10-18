@@ -2854,7 +2854,7 @@ dependencies = [
 
 [[package]]
 name = "reveal"
-version = "1.4.3"
+version = "1.4.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2868,6 +2868,7 @@ dependencies = [
  "tauri-build",
  "tokio",
  "urlencoding",
+ "winreg 0.52.0",
 ]
 
 [[package]]

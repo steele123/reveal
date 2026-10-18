@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "Reveal",
-    "version": "1.4.3"
+    "version": "1.4.4"
   },
   "tauri": {
     "updater": {
@@ -51,13 +51,18 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
+      "targets": ["nsis", "updater"],
       "identifier": "Reveal",
       "publisher": "Lobby Reveal",
       "copyright": "Copyright © 2026 Lobby Reveal",
       "shortDescription": "Reveal your teammates' names in League of Legends champ select",
       "longDescription": "Reveal shows your teammates' names in League of Legends champ select, with multi-search links, auto accept, and dodging tools.",
       "category": "Utility",
+      "windows": {
+        "nsis": {
+          "installMode": "currentUser"
+        }
+      },
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

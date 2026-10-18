@@ -2,6 +2,7 @@ use crate::{
     app_state::{Dodge, Lcu, QueuePause},
     champ_select::ChampSelectSession,
     config::{self, AppConfig, Config},
+    legacy_install::{self, LegacyInstall},
     lobby::get_lobby_info,
     region::RegionInfo,
     utils::display_champ_select,
@@ -183,6 +184,37 @@ async fn current_lcu_info(app_handle: &AppHandle) -> CommandResult<LCUClientInfo
     lcu.data
         .clone()
         .ok_or_else(|| "League Client is not connected".to_string())
+}
+
+#[tauri::command]
+pub async fn get_legacy_install() -> CommandResult<Option<LegacyInstall>> {
+    let install = tauri::async_runtime::spawn_blocking(legacy_install::find)
+        .await
+        .map_err(|error| error.to_string())?;
+    if let Some(install) = &install {
+        log_info!(
+            "Found old MSI install v{} at {}",
+            install.version,
+            install.location
+        );
+    }
+    Ok(install)
+}
+
+#[tauri::command]
+pub async fn remove_legacy_install() -> CommandResult<bool> {
+    let Some(install) = tauri::async_runtime::spawn_blocking(legacy_install::find)
+        .await
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(true);
+    };
+
+    log_info!("Removing old MSI install v{}", install.version);
+    tauri::async_runtime::spawn_blocking(move || legacy_install::remove(&install))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

@@ -9,6 +9,7 @@
   import Navbar from "$lib/components/navbar.svelte";
   import Footer from "$lib/components/footer.svelte";
   import HistoryPanel from "$lib/components/history-panel.svelte";
+  import LegacyInstallBanner from "$lib/components/legacy-install-banner.svelte";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
   import { isTauriRuntime } from "$lib/runtime";
   import { getPreviewState } from "$lib/preview";
@@ -31,6 +32,7 @@
   let activePage: "reveal" | "history" = "reveal";
   let history: LobbyHistoryEntry[] = [];
   let activeLobbyId: string | null = null;
+  let legacyInstall: { version: string } | null = null;
 
   function setConfig(nextConfig: Config) {
     config = nextConfig;
@@ -63,6 +65,9 @@
       champSelect = preview.champSelect;
       activePage = preview.activePage;
       if (preview.history.length > 0) history = preview.history;
+      if (new URLSearchParams(location.search).has("legacy")) {
+        legacyInstall = { version: "1.4.3" };
+      }
       updateStatus = "UpToDate";
       return;
     }
@@ -123,6 +128,14 @@
         unlisten = listeners;
         config = loadedConfig;
         logFrontendInfo("Frontend initialization completed");
+
+        invoke<{ version: string } | null>("get_legacy_install")
+          .then((install) => {
+            if (!disposed) legacyInstall = install;
+          })
+          .catch((error) =>
+            logFrontendError("Failed to check for an old MSI install", error),
+          );
       } catch (error) {
         listeners.forEach((stopListening) => stopListening());
         logFrontendError("Failed to initialize Reveal", error);
@@ -152,6 +165,13 @@
     historyCount={history.length}
     onNavigate={navigate}
   />
+  <!-- Hidden in Champ Select, where the fixed-size window has no room to spare. -->
+  {#if legacyInstall && state !== "ChampSelect"}
+    <LegacyInstallBanner
+      version={legacyInstall.version}
+      onRemoved={() => (legacyInstall = null)}
+    />
+  {/if}
   <div class="min-h-0 flex-1 px-5 py-3">
     {#if updateStatus === "UpToDate"}
       {#if activePage === "history"}

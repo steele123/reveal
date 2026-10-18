@@ -10,6 +10,7 @@ mod champ_select;
 mod commands;
 mod config;
 mod lcu;
+mod legacy_install;
 mod lobby;
 mod queue_pause;
 mod region;
@@ -18,8 +19,8 @@ mod utils;
 
 use app_state::{Dodge, Lcu, QueuePause};
 use commands::{
-    app_ready, dodge, enable_dodge, get_config, get_lcu_info, get_lcu_state, open_opgg_link,
-    set_config, write_frontend_log,
+    app_ready, dodge, enable_dodge, get_config, get_lcu_info, get_lcu_state, get_legacy_install,
+    open_opgg_link, remove_legacy_install, set_config, write_frontend_log,
 };
 use config::AppConfig;
 use tauri::Manager;
@@ -64,6 +65,8 @@ fn main() {
             open_opgg_link,
             dodge,
             enable_dodge,
+            get_legacy_install,
+            remove_legacy_install,
             write_frontend_log
         ])
         .run(tauri::generate_context!());
