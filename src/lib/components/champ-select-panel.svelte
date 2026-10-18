@@ -11,7 +11,14 @@
 
   export let champSelect: ChampSelect | null = null;
 
-  let copyStatus: "idle" | "copied" | "failed" = "idle";
+  type CopyStatus = "idle" | "copied" | "failed";
+  const COPY_LABELS: [CopyStatus, string][] = [
+    ["idle", "Copy names"],
+    ["copied", "Copied"],
+    ["failed", "Copy failed"],
+  ];
+
+  let copyStatus: CopyStatus = "idle";
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function copyNames() {
@@ -106,11 +113,16 @@
       on:click={copyNames}
       title="Copy all Riot IDs"
     >
-      {copyStatus === "copied"
-        ? "Copied"
-        : copyStatus === "failed"
-          ? "Copy failed"
-          : "Copy names"}
+      <!-- All labels share one grid cell so the button keeps the widest label's size. -->
+      <span class="grid">
+        {#each COPY_LABELS as [status, label]}
+          <span
+            class="col-start-1 row-start-1 text-center"
+            class:invisible={copyStatus !== status}
+            aria-hidden={copyStatus !== status}>{label}</span
+          >
+        {/each}
+      </span>
     </Button>
     <Button
       class="h-9 flex-1 bg-blue-500 text-sm shadow-[0_8px_24px_rgba(59,130,246,0.18)] hover:bg-blue-400"
