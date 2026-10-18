@@ -60,6 +60,7 @@ const PREVIEW_PARTICIPANTS = [
   pick_turn: index,
   rank: PREVIEW_RANKS[index],
   mains: PREVIEW_MAINS[index],
+  profile_icon_id: [7085, 4553, 29, 5367, undefined][index],
 }));
 
 export function getPreviewState(): PreviewState {

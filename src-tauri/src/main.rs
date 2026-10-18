@@ -17,6 +17,7 @@ mod queue_pause;
 mod ranked;
 mod region;
 mod state;
+mod summoner;
 mod utils;
 
 use app_state::{Dodge, Lcu, QueuePause};

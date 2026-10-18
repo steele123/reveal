@@ -22,6 +22,8 @@ pub struct Participant {
     pub rank: Option<RankSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mains: Option<Vec<ChampionMain>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_icon_id: Option<i32>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

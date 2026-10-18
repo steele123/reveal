@@ -7,6 +7,7 @@
     formatAssignedPosition,
     formatRank,
     positionBadge,
+    profileIconUrl,
     type ChampSelect,
   } from "$lib/champ_select";
   import { Button } from "./ui/button";
@@ -67,31 +68,45 @@
   <div class="grid grid-cols-2 gap-2 text-sm">
     {#if champSelect}
       {#each champSelect.participants as participant, index (participant.puuid)}
+        {@const badgeTitle = [
+          participant.pick_turn === undefined
+            ? `Player ${index + 1}`
+            : `Pick ${participant.pick_turn + 1}`,
+          participant.assigned_position &&
+            formatAssignedPosition(participant.assigned_position),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        {@const badgeLabel = participant.assigned_position
+          ? positionBadge(participant.assigned_position)
+          : participant.pick_turn !== undefined
+            ? `P${participant.pick_turn + 1}`
+            : String(index + 1).padStart(2, "0")}
         <div
           class:col-span-2={champSelect.participants.length % 2 === 1 &&
             index === champSelect.participants.length - 1}
           class="reveal-panel flex h-10 min-w-0 items-center gap-2.5 px-3"
         >
-          <div
-            class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md bg-blue-500/10 px-1 text-[9px] font-semibold text-blue-300"
-            title={[
-              participant.pick_turn === undefined
-                ? `Player ${index + 1}`
-                : `Pick ${participant.pick_turn + 1}`,
-              participant.assigned_position &&
-                formatAssignedPosition(participant.assigned_position),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          >
-            {#if participant.assigned_position}
-              {positionBadge(participant.assigned_position)}
-            {:else if participant.pick_turn !== undefined}
-              P{participant.pick_turn + 1}
-            {:else}
-              {String(index + 1).padStart(2, "0")}
-            {/if}
-          </div>
+          {#if participant.profile_icon_id !== undefined}
+            <div class="relative shrink-0" title={badgeTitle}>
+              <img
+                src={profileIconUrl(participant.profile_icon_id)}
+                alt=""
+                class="h-7 w-7 rounded-md bg-white/5 object-cover"
+              />
+              <span
+                class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#0b1220] px-1 text-[7px] font-semibold leading-[10px] text-blue-300 ring-1 ring-blue-400/20"
+                >{badgeLabel}</span
+              >
+            </div>
+          {:else}
+            <div
+              class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md bg-blue-500/10 px-1 text-[9px] font-semibold text-blue-300"
+              title={badgeTitle}
+            >
+              {badgeLabel}
+            </div>
+          {/if}
           <div class="min-w-0 flex-1">
             <div class="truncate text-xs font-medium leading-tight">
               {participant.game_name}<span class="text-muted-foreground"

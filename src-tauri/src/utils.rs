@@ -164,6 +164,7 @@ mod tests {
                 pick_turn: None,
                 rank: None,
                 mains: None,
+                profile_icon_id: None,
             }],
         }
     }
@@ -207,6 +208,7 @@ mod tests {
             pick_turn: None,
             rank: None,
             mains: None,
+            profile_icon_id: None,
         });
 
         assert_eq!(

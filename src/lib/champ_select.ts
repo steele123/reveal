@@ -16,6 +16,12 @@ export interface Participant {
   pick_turn?: number;
   rank?: RankSummary;
   mains?: ChampionMain[];
+  profile_icon_id?: number;
+}
+
+/** Profile icon from Community Dragon's mirror of League's game data. */
+export function profileIconUrl(iconId: number): string {
+  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${iconId}.jpg`;
 }
 
 /** One of a player's most-played champions, by mastery points. */

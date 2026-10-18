@@ -1,5 +1,5 @@
 use crate::{
-    analytics, champions, config::Config, lobby, ranked, region::RegionInfo,
+    analytics, champions, config::Config, lobby, ranked, region::RegionInfo, summoner,
     utils::display_champ_select,
 };
 use serde::Deserialize;
@@ -273,6 +273,7 @@ impl<T: Clone> Lookup<T> {
 struct PlayerCache {
     ranks: Lookup<ranked::RankSummary>,
     mains: Lookup<Vec<champions::ChampionMain>>,
+    profile_icons: Lookup<i32>,
     champion_names: Option<HashMap<i32, String>>,
 }
 
@@ -284,6 +285,11 @@ impl PlayerCache {
             if self.ranks.start_attempt(puuid) {
                 let result = ranked::get_solo_rank(remoting_client, puuid).await;
                 self.ranks.record("Rank", puuid, result);
+            }
+
+            if self.profile_icons.start_attempt(puuid) {
+                let result = summoner::get_profile_icon_id(remoting_client, puuid).await;
+                self.profile_icons.record("Profile icon", puuid, result);
             }
 
             if self.mains.start_attempt(puuid) {
@@ -305,13 +311,16 @@ impl PlayerCache {
         for participant in &mut team.participants {
             participant.rank = self.ranks.get(&participant.puuid);
             participant.mains = self.mains.get(&participant.puuid);
+            participant.profile_icon_id = self.profile_icons.get(&participant.puuid);
         }
     }
 
     /// True once every player has their details or has used up their lookup attempts.
     fn is_settled(&self, team: &lobby::Lobby) -> bool {
         team.participants.iter().all(|participant| {
-            self.ranks.is_settled(&participant.puuid) && self.mains.is_settled(&participant.puuid)
+            self.ranks.is_settled(&participant.puuid)
+                && self.mains.is_settled(&participant.puuid)
+                && self.profile_icons.is_settled(&participant.puuid)
         })
     }
 }
@@ -442,6 +451,7 @@ mod tests {
             pick_turn: None,
             rank: None,
             mains: None,
+            profile_icon_id: None,
         }
     }
 
@@ -538,7 +548,14 @@ mod tests {
             );
         }
         assert!(!cache.ranks.start_attempt("failing"));
+        assert!(!cache.is_settled(&team), "profile icons are still pending");
+        for puuid in ["found", "failing"] {
+            assert!(cache.profile_icons.start_attempt(puuid));
+            cache.profile_icons.record("Profile icon", puuid, Ok(7085));
+        }
         assert!(cache.is_settled(&team));
+        cache.apply(&mut team);
+        assert_eq!(team.participants[1].profile_icon_id, Some(7085));
         assert!(!cache.ranks.start_attempt("found"));
     }
 
