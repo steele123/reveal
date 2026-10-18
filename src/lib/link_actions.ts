@@ -116,6 +116,13 @@ export function createMultiSearchLink(
   return `https://op.gg/lol/multisearch/${region}?summoners=${encodeURIComponent(joinedParticipants(participants, "#"))}`;
 }
 
+/** Riot IDs as "Name#TAG, Name#TAG", which multi-search sites accept when pasted. */
+export function formatRiotIds(participants: Participant[]): string {
+  return participants
+    .map((participant) => `${participant.game_name}#${participant.game_tag}`)
+    .join(", ");
+}
+
 export function createOpggProfileLink(participant: Participant): string {
   const region = participant.region === "SG2" ? "SG" : participant.region;
   const profile = `${participant.game_name}-${participant.game_tag}`;

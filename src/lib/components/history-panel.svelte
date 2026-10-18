@@ -6,6 +6,7 @@
     copyLink,
     createMultiSearchLink,
     createOpggProfileLink,
+    formatRiotIds,
     openExternalLink,
   } from "$lib/link_actions";
   import { logFrontendError } from "$lib/logging";
@@ -55,6 +56,16 @@
     } catch (error) {
       logFrontendError("Failed to copy historical multi link", error);
       showMessage("Could not copy the link");
+    }
+  }
+
+  async function copyNames(entry: LobbyHistoryEntry) {
+    try {
+      await copyLink(formatRiotIds(entry.participants));
+      showMessage("Names copied");
+    } catch (error) {
+      logFrontendError("Failed to copy historical names", error);
+      showMessage("Could not copy the names");
     }
   }
 
@@ -171,6 +182,22 @@
               on:click={() => openMulti(entry)}
             >
               Open {providerName}
+            </button>
+            <button
+              class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-white/5 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Copy all Riot IDs"
+              title="Copy all Riot IDs"
+              on:click={() => copyNames(entry)}
+            >
+              <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" aria-hidden="true">
+                <path
+                  d="M3 4.5h10M3 8h10M3 11.5h6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-width="1.25"
+                />
+              </svg>
             </button>
             <button
               class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-white/5 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

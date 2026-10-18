@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { invoke } from "@tauri-apps/api/tauri";
   import {
     formatAssignedPosition,
@@ -6,8 +7,29 @@
   } from "$lib/champ_select";
   import { Button } from "./ui/button";
   import { logFrontendError } from "$lib/logging";
+  import { copyLink, formatRiotIds } from "$lib/link_actions";
 
   export let champSelect: ChampSelect | null = null;
+
+  let copyStatus: "idle" | "copied" | "failed" = "idle";
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function copyNames() {
+    if (!champSelect) return;
+    try {
+      await copyLink(formatRiotIds(champSelect.participants));
+      copyStatus = "copied";
+    } catch (error) {
+      logFrontendError("Failed to copy teammate names", error);
+      copyStatus = "failed";
+    }
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (copyStatus = "idle"), 2_000);
+  }
+
+  onDestroy(() => {
+    if (copyTimer) clearTimeout(copyTimer);
+  });
 
   function openMultiLink() {
     void invoke<void>("open_opgg_link").catch((error) => {
@@ -76,25 +98,40 @@
     {/if}
   </div>
 
-  <Button
-    class="mt-auto h-9 w-full bg-blue-500 text-sm shadow-[0_8px_24px_rgba(59,130,246,0.18)] hover:bg-blue-400"
-    disabled={!champSelect}
-    on:click={openMultiLink}
-  >
-    Open team multi-search
-    <svg
-      viewBox="0 0 16 16"
-      class="ml-2 h-3.5 w-3.5"
-      aria-hidden="true"
+  <div class="mt-auto flex gap-2">
+    <Button
+      variant="outline"
+      class="h-9 shrink-0 border-white/10 bg-white/[0.035] px-3 text-xs shadow-none hover:bg-white/[0.07]"
+      disabled={!champSelect}
+      on:click={copyNames}
+      title="Copy all Riot IDs"
     >
-      <path
-        d="M6 3h7v7m0-7L6.5 9.5M11 9v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3"
-        fill="none"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.25"
-      />
-    </svg>
-  </Button>
+      {copyStatus === "copied"
+        ? "Copied"
+        : copyStatus === "failed"
+          ? "Copy failed"
+          : "Copy names"}
+    </Button>
+    <Button
+      class="h-9 flex-1 bg-blue-500 text-sm shadow-[0_8px_24px_rgba(59,130,246,0.18)] hover:bg-blue-400"
+      disabled={!champSelect}
+      on:click={openMultiLink}
+    >
+      Open team multi-search
+      <svg
+        viewBox="0 0 16 16"
+        class="ml-2 h-3.5 w-3.5"
+        aria-hidden="true"
+      >
+        <path
+          d="M6 3h7v7m0-7L6.5 9.5M11 9v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.25"
+        />
+      </svg>
+    </Button>
+  </div>
 </section>
