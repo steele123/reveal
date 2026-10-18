@@ -19,6 +19,9 @@ pub struct Config {
     pub pause_queue_after_dodge: bool,
     #[serde(default = "default_provider")]
     pub multi_provider: String,
+    /// Set once the user has answered the one-time "join our Discord" prompt.
+    #[serde(default)]
+    pub discord_prompt_seen: bool,
 }
 
 impl Default for Config {
@@ -30,6 +33,7 @@ impl Default for Config {
             accept_delay: 2_000,
             pause_queue_after_dodge: false,
             multi_provider: default_provider(),
+            discord_prompt_seen: false,
         }
     }
 }
@@ -152,6 +156,7 @@ mod tests {
             DEFAULT_AUTO_OPEN_DELAY_SECONDS
         );
         assert!(!config.pause_queue_after_dodge);
+        assert!(!config.discord_prompt_seen);
     }
 
     fn temp_config_path(name: &str) -> PathBuf {
@@ -192,6 +197,24 @@ mod tests {
         assert_eq!(load_from(&path).unwrap().multi_provider, "fow");
         assert!(!path.with_extension("json.tmp").exists());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn discord_prompt_seen_round_trips_with_the_frontend_name() {
+        let config: Config = serde_json::from_str(
+            r#"{
+                "autoOpen": true,
+                "autoAccept": false,
+                "acceptDelay": 2000,
+                "multiProvider": "opgg",
+                "discordPromptSeen": true
+            }"#,
+        )
+        .unwrap();
+        assert!(config.discord_prompt_seen);
+        assert!(serde_json::to_string(&config)
+            .unwrap()
+            .contains(r#""discordPromptSeen":true"#));
     }
 
     #[test]

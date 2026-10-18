@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/tauri";
-  import { DEFAULT_CONFIG, type Config } from "$lib/config";
+  import { DEFAULT_CONFIG, updateConfig, type Config } from "$lib/config";
   import "@fontsource-variable/inter";
   import type { ChampSelect } from "$lib/champ_select";
   import Tool from "$lib/components/tool.svelte";
@@ -10,6 +10,8 @@
   import Footer from "$lib/components/footer.svelte";
   import HistoryPanel from "$lib/components/history-panel.svelte";
   import LegacyInstallBanner from "$lib/components/legacy-install-banner.svelte";
+  import DiscordPrompt from "$lib/components/discord-prompt.svelte";
+  import { DISCORD_URL, openExternalLink } from "$lib/link_actions";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
   import { isTauriRuntime } from "$lib/runtime";
   import { getPreviewState } from "$lib/preview";
@@ -38,6 +40,32 @@
     config = nextConfig;
   }
 
+  // Shown once, never over Champ Select or the update screen.
+  $: showDiscordPrompt =
+    config !== null &&
+    !config.discordPromptSeen &&
+    updateStatus === "UpToDate" &&
+    state !== "ChampSelect";
+
+  async function closeDiscordPrompt(joined: boolean) {
+    if (!config) return;
+    if (joined) {
+      openExternalLink(DISCORD_URL).catch((error) =>
+        logFrontendError("Failed to open Discord invite", error),
+      );
+    }
+
+    const nextConfig = { ...config, discordPromptSeen: true };
+    config = nextConfig;
+    logFrontendInfo(`Discord prompt answered; joined=${joined}`);
+    if (!isTauriRuntime()) return;
+    try {
+      await updateConfig(nextConfig);
+    } catch (error) {
+      logFrontendError("Failed to save Discord prompt state", error);
+    }
+  }
+
   function clearHistory() {
     clearLobbyHistory();
     history = [];
@@ -59,7 +87,10 @@
 
     if (!isTauriRuntime()) {
       const preview = getPreviewState();
-      config = { ...DEFAULT_CONFIG };
+      config = {
+        ...DEFAULT_CONFIG,
+        discordPromptSeen: !new URLSearchParams(location.search).has("discord"),
+      };
       connected = preview.connected;
       state = preview.state;
       champSelect = preview.champSelect;
@@ -158,7 +189,7 @@
 </script>
 
 <main
-  class="reveal-shell flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+  class="reveal-shell relative flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
 >
   <Navbar
     {activePage}
@@ -212,4 +243,7 @@
     {/if}
   </div>
   <Footer {connected} />
+  {#if showDiscordPrompt}
+    <DiscordPrompt onClose={closeDiscordPrompt} />
+  {/if}
 </main>

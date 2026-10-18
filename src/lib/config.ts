@@ -25,6 +25,7 @@ export interface Config {
     acceptDelay: number;
     pauseQueueAfterDodge: boolean;
     multiProvider: MultiProvider;
+    discordPromptSeen: boolean;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -34,6 +35,7 @@ export const DEFAULT_CONFIG: Config = {
     acceptDelay: 2_000,
     pauseQueueAfterDodge: false,
     multiProvider: "opgg",
+    discordPromptSeen: false,
 };
 
 export async function updateConfig(config: Config): Promise<void> {

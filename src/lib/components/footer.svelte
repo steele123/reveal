@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
+  import { DISCORD_URL } from "$lib/link_actions";
 
   export let connected = false;
 </script>
@@ -28,7 +29,7 @@
   </div>
   <div class="ml-auto flex items-center gap-1">
     <a
-      href="https://lobbyreveal.app/discord"
+      href={DISCORD_URL}
       target="_blank"
       rel="noreferrer"
       class="group flex items-center gap-1.5 rounded-md px-2 py-1 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"

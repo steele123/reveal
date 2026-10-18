@@ -4,6 +4,8 @@ import type { Participant } from "$lib/champ_select";
 import type { MultiProvider } from "$lib/config";
 import { isTauriRuntime } from "$lib/runtime";
 
+export const DISCORD_URL = "https://lobbyreveal.app/discord";
+
 function lobbyRegion(participants: Participant[]): string {
   const region = participants[0]?.region || "NA";
   return region === "SG2" ? "SG" : region;
