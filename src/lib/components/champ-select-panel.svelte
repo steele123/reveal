@@ -91,7 +91,11 @@
                 class="truncate text-[10px] leading-tight text-muted-foreground"
                 title="Solo/Duo: {[rank.tier, ...rank.details].join(' · ')}"
               >
-                <span class="font-medium {rank.tierClass}">{rank.tier}</span
+                <img
+                  src={rank.icon}
+                  alt=""
+                  class="mr-1 inline-block h-3 w-3.5 object-contain align-[-2px]"
+                /><span class="font-medium {rank.tierClass}">{rank.tier}</span
                 >{#each rank.details as detail}<span>{` · ${detail}`}</span>{/each}
               </div>
             {/if}

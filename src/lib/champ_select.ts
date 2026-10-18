@@ -44,6 +44,8 @@ const TIER_COLORS: Record<string, string> = {
 export interface FormattedRank {
   tier: string;
   tierClass: string;
+  /** Rank crest bundled in public/ranks (League's mini crests, via Community Dragon). */
+  icon: string;
   details: string[];
 }
 
@@ -57,6 +59,7 @@ export function formatRank(rank: RankSummary): FormattedRank {
     return {
       tier: rank.provisional && games > 0 ? "Placements" : "Unranked",
       tierClass: "text-muted-foreground",
+      icon: "/ranks/unranked.svg",
       details: [winRate, gamesLabel].filter(Boolean),
     };
   }
@@ -65,6 +68,9 @@ export function formatRank(rank: RankSummary): FormattedRank {
   return {
     tier: rank.division ? `${tierName} ${rank.division}` : tierName,
     tierClass: TIER_COLORS[rank.tier] ?? "text-foreground",
+    icon: TIER_COLORS[rank.tier]
+      ? `/ranks/${rank.tier.toLowerCase()}.svg`
+      : "/ranks/unranked.svg",
     details: [`${rank.leaguePoints} LP`, winRate, gamesLabel].filter(Boolean),
   };
 }
