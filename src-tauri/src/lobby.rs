@@ -1,4 +1,7 @@
-use crate::{champions::ChampionMain, ranked::RankSummary};
+use crate::{
+    champions::ChampionMain,
+    ranked::{RankSummary, RecentForm},
+};
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
 
@@ -24,6 +27,8 @@ pub struct Participant {
     pub mains: Option<Vec<ChampionMain>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile_icon_id: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recent: Option<RecentForm>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

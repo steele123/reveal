@@ -1,4 +1,9 @@
-import type { ChampSelect, ChampionMain, RankSummary } from "$lib/champ_select";
+import type {
+  ChampSelect,
+  ChampionMain,
+  RankSummary,
+  RecentForm,
+} from "$lib/champ_select";
 import type { LobbyHistoryEntry } from "$lib/lobby_history";
 
 interface PreviewState {
@@ -10,11 +15,19 @@ interface PreviewState {
 }
 
 const PREVIEW_RANKS: RankSummary[] = [
-  { tier: "DIAMOND", division: "II", leaguePoints: 45, wins: 70, losses: 51, provisional: false },
-  { tier: "MASTER", leaguePoints: 155, wins: 376, losses: 328, provisional: false },
-  { tier: "GOLD", division: "I", leaguePoints: 24, wins: 3, losses: 0, provisional: false },
-  { tier: "UNRANKED", leaguePoints: 0, wins: 2, losses: 1, provisional: true },
+  { tier: "DIAMOND", division: "II", leaguePoints: 45, wins: 70, losses: 0, provisional: false },
+  { tier: "MASTER", leaguePoints: 155, wins: 376, losses: 0, provisional: false },
+  { tier: "GOLD", division: "I", leaguePoints: 24, wins: 12, losses: 0, provisional: false },
+  { tier: "UNRANKED", leaguePoints: 0, wins: 2, losses: 0, provisional: true },
   { tier: "UNRANKED", leaguePoints: 0, wins: 0, losses: 0, provisional: false },
+];
+
+const PREVIEW_RECENT: RecentForm[] = [
+  { wins: 11, losses: 8 },
+  { wins: 10, losses: 10 },
+  { wins: 3, losses: 3 },
+  { wins: 2, losses: 1 },
+  { wins: 0, losses: 0 },
 ];
 
 const PREVIEW_MAINS: ChampionMain[][] = [
@@ -60,6 +73,7 @@ const PREVIEW_PARTICIPANTS = [
   pick_turn: index,
   rank: PREVIEW_RANKS[index],
   mains: PREVIEW_MAINS[index],
+  recent: PREVIEW_RECENT[index],
   profile_icon_id: [7085, 4553, 29, 5367, undefined][index],
 }));
 

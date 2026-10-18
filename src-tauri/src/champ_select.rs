@@ -274,6 +274,7 @@ struct PlayerCache {
     ranks: Lookup<ranked::RankSummary>,
     mains: Lookup<Vec<champions::ChampionMain>>,
     profile_icons: Lookup<i32>,
+    recent_forms: Lookup<ranked::RecentForm>,
     champion_names: Option<HashMap<i32, String>>,
 }
 
@@ -285,6 +286,11 @@ impl PlayerCache {
             if self.ranks.start_attempt(puuid) {
                 let result = ranked::get_solo_rank(remoting_client, puuid).await;
                 self.ranks.record("Rank", puuid, result);
+            }
+
+            if self.recent_forms.start_attempt(puuid) {
+                let result = ranked::get_recent_solo_form(remoting_client, puuid).await;
+                self.recent_forms.record("Match history", puuid, result);
             }
 
             if self.profile_icons.start_attempt(puuid) {
@@ -312,6 +318,7 @@ impl PlayerCache {
             participant.rank = self.ranks.get(&participant.puuid);
             participant.mains = self.mains.get(&participant.puuid);
             participant.profile_icon_id = self.profile_icons.get(&participant.puuid);
+            participant.recent = self.recent_forms.get(&participant.puuid);
         }
     }
 
@@ -321,6 +328,7 @@ impl PlayerCache {
             self.ranks.is_settled(&participant.puuid)
                 && self.mains.is_settled(&participant.puuid)
                 && self.profile_icons.is_settled(&participant.puuid)
+                && self.recent_forms.is_settled(&participant.puuid)
         })
     }
 }
@@ -452,6 +460,7 @@ mod tests {
             rank: None,
             mains: None,
             profile_icon_id: None,
+            recent: None,
         }
     }
 
@@ -552,6 +561,12 @@ mod tests {
         for puuid in ["found", "failing"] {
             assert!(cache.profile_icons.start_attempt(puuid));
             cache.profile_icons.record("Profile icon", puuid, Ok(7085));
+            assert!(cache.recent_forms.start_attempt(puuid));
+            cache.recent_forms.record(
+                "Match history",
+                puuid,
+                Ok(ranked::RecentForm { wins: 6, losses: 7 }),
+            );
         }
         assert!(cache.is_settled(&team));
         cache.apply(&mut team);

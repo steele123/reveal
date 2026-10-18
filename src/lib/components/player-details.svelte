@@ -23,15 +23,15 @@
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   $: riotId = `${participant.game_name}#${participant.game_tag}`;
-  $: rank = participant.rank ? formatRank(participant.rank) : null;
-  $: games = participant.rank
-    ? participant.rank.wins + participant.rank.losses
+  $: rank = participant.rank
+    ? formatRank(participant.rank, participant.recent)
+    : null;
+  $: recentGames = participant.recent
+    ? participant.recent.wins + participant.recent.losses
     : 0;
   $: winRate =
-    participant.rank &&
-    games >= MIN_GAMES_FOR_WIN_RATE &&
-    !participant.rank.provisional
-      ? Math.round((participant.rank.wins / games) * 100)
+    participant.recent && recentGames >= MIN_GAMES_FOR_WIN_RATE
+      ? Math.round((participant.recent.wins / recentGames) * 100)
       : null;
   $: subtitle = [
     participant.assigned_position &&
@@ -139,15 +139,17 @@
               {/if}
             </div>
           </div>
-          {#if games > 0}
-            <div class="mt-2.5 text-[11px] text-muted-foreground">
-              <span class="text-emerald-300">{participant.rank.wins}W</span>
-              <span class="text-red-300">{participant.rank.losses}L</span>
-              {#if winRate !== null}
-                · {winRate}% win rate
-              {:else}
-                · {games} game{games === 1 ? "" : "s"} this split
-              {/if}
+          {#if participant.rank.wins > 0}
+            <div class="mt-2 text-[11px] text-muted-foreground">
+              {participant.rank.wins} wins this season
+            </div>
+          {/if}
+          {#if participant.recent && recentGames > 0}
+            <div class="mt-1 text-[11px] text-muted-foreground">
+              Last {recentGames}:
+              <span class="text-emerald-300">{participant.recent.wins}W</span>
+              <span class="text-red-300">{participant.recent.losses}L</span>
+              {#if winRate !== null}· {winRate}%{/if}
             </div>
             {#if winRate !== null}
               <div class="mt-1 h-1 overflow-hidden rounded-full bg-red-400/30">

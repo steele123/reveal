@@ -143,7 +143,7 @@
               >
             </div>
             {#if participant.rank}
-              {@const rank = formatRank(participant.rank)}
+              {@const rank = formatRank(participant.rank, participant.recent)}
               <div
                 class="truncate text-[10px] leading-tight text-muted-foreground"
                 title="Solo/Duo: {rank.summary}"
@@ -152,7 +152,7 @@
                   src={rank.icon}
                   alt=""
                   class="mr-1 inline-block h-3 w-3.5 object-contain align-[-2px]"
-                /><span class="font-medium {rank.tierClass}">{rank.tier}</span
+                /><span class="font-medium {rank.tierClass}">{rank.shortTier}</span
                 >{#each rank.details as detail}<span>{` · ${detail}`}</span>{/each}
               </div>
             {/if}
