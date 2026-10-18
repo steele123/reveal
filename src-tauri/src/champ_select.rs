@@ -3,12 +3,34 @@ use serde::Deserialize;
 use shaco::rest::RESTClient;
 use std::{
     collections::HashMap,
+    sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
 
 const EXPECTED_PARTICIPANT_COUNT: usize = 5;
 const PARTICIPANT_POLL_INTERVAL: Duration = Duration::from_secs(2);
+
+static PARTICIPANT_POLLING: AtomicBool = AtomicBool::new(false);
+
+/// Held while Champ Select participants are being polled. The gameflow phase can be reported
+/// more than once (initial read plus websocket), and a second loop would open a second tab.
+pub struct PollingGuard(());
+
+impl PollingGuard {
+    pub fn acquire() -> Option<Self> {
+        PARTICIPANT_POLLING
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self(()))
+    }
+}
+
+impl Drop for PollingGuard {
+    fn drop(&mut self) {
+        PARTICIPANT_POLLING.store(false, Ordering::Release);
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -245,6 +267,15 @@ mod tests {
     use super::*;
 
     const MAX_WAIT: Duration = Duration::from_secs(6);
+
+    #[test]
+    fn only_one_participant_poll_runs_at_a_time() {
+        let guard = PollingGuard::acquire().expect("first poll should start");
+        assert!(PollingGuard::acquire().is_none());
+        drop(guard);
+        let guard = PollingGuard::acquire().expect("poll should restart after the first ends");
+        drop(guard);
+    }
 
     #[test]
     fn opens_immediately_for_a_complete_team() {

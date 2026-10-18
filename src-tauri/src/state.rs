@@ -1,4 +1,8 @@
-use crate::{app_state::QueuePause, champ_select::handle_champ_select_start, config::AppConfig};
+use crate::{
+    app_state::QueuePause,
+    champ_select::{handle_champ_select_start, PollingGuard},
+    config::AppConfig,
+};
 use shaco::rest::RESTClient;
 use tauri::{AppHandle, Manager};
 
@@ -50,11 +54,16 @@ pub async fn handle_client_state(
 
     match client_state.as_str() {
         "ChampSelect" => {
+            let Some(polling_guard) = PollingGuard::acquire() else {
+                log_info!("Champ Select participant polling is already running");
+                return emit_client_state(app_handle, client_state);
+            };
             let cloned_app_handle = app_handle.clone();
             let cloned_app_client = app_client.clone();
             let cloned_remoting = remoting_client.clone();
 
             tauri::async_runtime::spawn(async move {
+                let _polling_guard = polling_guard;
                 handle_champ_select_start(
                     &cloned_app_client,
                     &cloned_remoting,
@@ -118,6 +127,10 @@ pub async fn handle_client_state(
         _ => {}
     }
 
+    emit_client_state(app_handle, client_state);
+}
+
+fn emit_client_state(app_handle: &AppHandle, client_state: String) {
     if let Err(error) = app_handle.emit_all("client_state_update", client_state) {
         log_error!("Failed to emit League Client state: {error}");
     }
