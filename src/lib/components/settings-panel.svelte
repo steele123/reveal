@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Config } from "$lib/config";
-  import { MULTI_PROVIDERS } from "$lib/config";
+  import { MULTI_PROVIDERS, PLAYER_CLICK_ACTIONS } from "$lib/config";
   import { Label } from "./ui/label";
   import * as Select from "./ui/select";
   import { Switch } from "./ui/switch";
@@ -51,6 +51,40 @@
           {#each MULTI_PROVIDERS as provider}
             <Select.Item value={provider.value} label={provider.label}>
               {provider.label}
+            </Select.Item>
+          {/each}
+        </Select.Group>
+      </Select.Content>
+    </Select.Root>
+
+    <Label
+      for="player-click-action"
+      class="mb-1.5 mt-3 block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+    >
+      Clicking a player
+    </Label>
+    <Select.Root
+      onSelectedChange={(selected) => {
+        const action = PLAYER_CLICK_ACTIONS.find(
+          ({ value }) => value === selected?.value,
+        );
+        if (action) updateConfig({ playerClickAction: action.value });
+      }}
+      selected={PLAYER_CLICK_ACTIONS.find(
+        ({ value }) => value === (config?.playerClickAction ?? "details"),
+      )}
+    >
+      <Select.Trigger
+        id="player-click-action"
+        class="h-9 w-full border-white/10 bg-white/[0.035] shadow-none"
+      >
+        <Select.Value />
+      </Select.Trigger>
+      <Select.Content>
+        <Select.Group>
+          {#each PLAYER_CLICK_ACTIONS as action}
+            <Select.Item value={action.value} label={action.label}>
+              {action.label}
             </Select.Item>
           {/each}
         </Select.Group>

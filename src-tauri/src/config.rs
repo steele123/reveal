@@ -22,6 +22,9 @@ pub struct Config {
     /// Set once the user has answered the one-time "join our Discord" prompt.
     #[serde(default)]
     pub discord_prompt_seen: bool,
+    /// What clicking a teammate does: "details" (Reveal popup) or "opgg" (open their profile).
+    #[serde(default = "default_player_click_action")]
+    pub player_click_action: String,
 }
 
 impl Default for Config {
@@ -34,6 +37,7 @@ impl Default for Config {
             pause_queue_after_dodge: false,
             multi_provider: default_provider(),
             discord_prompt_seen: false,
+            player_click_action: default_player_click_action(),
         }
     }
 }
@@ -51,6 +55,10 @@ impl Config {
 
 fn default_auto_open_delay_seconds() -> u32 {
     DEFAULT_AUTO_OPEN_DELAY_SECONDS
+}
+
+fn default_player_click_action() -> String {
+    "details".to_string()
 }
 
 fn default_provider() -> String {
@@ -157,6 +165,7 @@ mod tests {
         );
         assert!(!config.pause_queue_after_dodge);
         assert!(!config.discord_prompt_seen);
+        assert_eq!(config.player_click_action, "details");
     }
 
     fn temp_config_path(name: &str) -> PathBuf {

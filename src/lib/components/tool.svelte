@@ -39,7 +39,10 @@
 
   {#if state === "ChampSelect"}
     <div in:fade class="flex min-h-0 flex-1 flex-col">
-      <ChampSelectPanel {champSelect} />
+      <ChampSelectPanel
+        {champSelect}
+        clickAction={config?.playerClickAction ?? "details"}
+      />
     </div>
   {:else}
     <div class="grid grid-cols-2 gap-3">

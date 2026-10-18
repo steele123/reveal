@@ -9,12 +9,36 @@
     positionBadge,
     profileIconUrl,
     type ChampSelect,
+    type Participant,
   } from "$lib/champ_select";
   import { Button } from "./ui/button";
   import { logFrontendError } from "$lib/logging";
-  import { copyLink, formatRiotIds } from "$lib/link_actions";
+  import {
+    copyLink,
+    createOpggProfileLink,
+    formatRiotIds,
+    openExternalLink,
+  } from "$lib/link_actions";
+  import type { PlayerClickAction } from "$lib/config";
+  import PlayerDetails from "./player-details.svelte";
 
   export let champSelect: ChampSelect | null = null;
+  export let clickAction: PlayerClickAction = "details";
+
+  let selectedPuuid: string | null = null;
+  // Look the player up on every update so the popup fills in as ranks and mains arrive.
+  $: selectedPlayer =
+    champSelect?.participants.find(({ puuid }) => puuid === selectedPuuid) ?? null;
+
+  function selectPlayer(participant: Participant) {
+    if (clickAction === "opgg") {
+      openExternalLink(createOpggProfileLink(participant)).catch((error) =>
+        logFrontendError("Failed to open OP.GG profile", error),
+      );
+      return;
+    }
+    selectedPuuid = participant.puuid;
+  }
 
   type CopyStatus = "idle" | "copied" | "failed";
   const COPY_LABELS: [CopyStatus, string][] = [
@@ -82,10 +106,15 @@
           : participant.pick_turn !== undefined
             ? `P${participant.pick_turn + 1}`
             : String(index + 1).padStart(2, "0")}
-        <div
+        <button
+          type="button"
           class:col-span-2={champSelect.participants.length % 2 === 1 &&
             index === champSelect.participants.length - 1}
-          class="reveal-panel flex h-10 min-w-0 items-center gap-2.5 px-3"
+          class="reveal-panel flex h-10 min-w-0 items-center gap-2.5 px-3 text-left transition hover:border-blue-400/30 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/50"
+          aria-label={clickAction === "opgg"
+            ? `Open ${participant.game_name}'s OP.GG profile`
+            : `Show details for ${participant.game_name}`}
+          on:click={() => selectPlayer(participant)}
         >
           {#if participant.profile_icon_id !== undefined}
             <div class="relative shrink-0" title={badgeTitle}>
@@ -141,7 +170,7 @@
               {/each}
             </div>
           {/if}
-        </div>
+        </button>
       {/each}
     {:else}
       {#each Array.from({ length: 5 }) as _, index (index)}
@@ -198,3 +227,10 @@
     </Button>
   </div>
 </section>
+
+{#if selectedPlayer}
+  <PlayerDetails
+    participant={selectedPlayer}
+    onClose={() => (selectedPuuid = null)}
+  />
+{/if}

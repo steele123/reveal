@@ -18,6 +18,16 @@ export const MULTI_PROVIDERS: ReadonlyArray<{
     { label: "LadderEye", value: "laddereye" },
 ];
 
+export type PlayerClickAction = "details" | "opgg";
+
+export const PLAYER_CLICK_ACTIONS: ReadonlyArray<{
+    label: string;
+    value: PlayerClickAction;
+}> = [
+    { label: "Show details", value: "details" },
+    { label: "Open OP.GG", value: "opgg" },
+];
+
 export interface Config {
     autoOpen: boolean;
     autoOpenDelaySeconds: number;
@@ -26,6 +36,7 @@ export interface Config {
     pauseQueueAfterDodge: boolean;
     multiProvider: MultiProvider;
     discordPromptSeen: boolean;
+    playerClickAction: PlayerClickAction;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -36,6 +47,7 @@ export const DEFAULT_CONFIG: Config = {
     pauseQueueAfterDodge: false,
     multiProvider: "opgg",
     discordPromptSeen: false,
+    playerClickAction: "details",
 };
 
 export async function updateConfig(config: Config): Promise<void> {
