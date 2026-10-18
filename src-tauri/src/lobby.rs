@@ -1,4 +1,4 @@
-use crate::ranked::RankSummary;
+use crate::{champions::ChampionMain, ranked::RankSummary};
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
 
@@ -20,6 +20,8 @@ pub struct Participant {
     pub pick_turn: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank: Option<RankSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mains: Option<Vec<ChampionMain>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

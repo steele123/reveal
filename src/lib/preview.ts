@@ -1,4 +1,4 @@
-import type { ChampSelect, RankSummary } from "$lib/champ_select";
+import type { ChampSelect, ChampionMain, RankSummary } from "$lib/champ_select";
 import type { LobbyHistoryEntry } from "$lib/lobby_history";
 
 interface PreviewState {
@@ -15,6 +15,29 @@ const PREVIEW_RANKS: RankSummary[] = [
   { tier: "GOLD", division: "IV", leaguePoints: 0, wins: 22, losses: 25, provisional: false },
   { tier: "UNRANKED", leaguePoints: 0, wins: 2, losses: 1, provisional: true },
   { tier: "UNRANKED", leaguePoints: 0, wins: 0, losses: 0, provisional: false },
+];
+
+const PREVIEW_MAINS: ChampionMain[][] = [
+  [
+    { championId: 157, name: "Yasuo", level: 40, points: 406821 },
+    { championId: 92, name: "Riven", level: 39, points: 394816 },
+    { championId: 238, name: "Zed", level: 38, points: 384110 },
+  ],
+  [
+    { championId: 64, name: "Lee Sin", level: 25, points: 210500 },
+    { championId: 121, name: "Kha'Zix", level: 18, points: 150200 },
+    { championId: 254, name: "Vi", level: 12, points: 90100 },
+  ],
+  [
+    { championId: 103, name: "Ahri", level: 30, points: 250000 },
+    { championId: 950, name: "Naafiri", level: 6, points: 40000 },
+  ],
+  [
+    { championId: 222, name: "Jinx", level: 9, points: 60000 },
+    { championId: 51, name: "Caitlyn", level: 7, points: 45000 },
+    { championId: 145, name: "Kai'Sa", level: 5, points: 30000 },
+  ],
+  [],
 ];
 
 const PREVIEW_PARTICIPANTS = [
@@ -36,6 +59,7 @@ const PREVIEW_PARTICIPANTS = [
   cell_id: index,
   pick_turn: index,
   rank: PREVIEW_RANKS[index],
+  mains: PREVIEW_MAINS[index],
 }));
 
 export function getPreviewState(): PreviewState {

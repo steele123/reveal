@@ -2,8 +2,11 @@
   import { onDestroy } from "svelte";
   import { invoke } from "@tauri-apps/api/tauri";
   import {
+    championIconUrl,
+    describeMain,
     formatAssignedPosition,
     formatRank,
+    positionBadge,
     type ChampSelect,
   } from "$lib/champ_select";
   import { Button } from "./ui/button";
@@ -71,13 +74,23 @@
         >
           <div
             class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md bg-blue-500/10 px-1 text-[9px] font-semibold text-blue-300"
-            title={participant.pick_turn === undefined
-              ? `Player ${index + 1}`
-              : `Pick ${participant.pick_turn + 1}`}
+            title={[
+              participant.pick_turn === undefined
+                ? `Player ${index + 1}`
+                : `Pick ${participant.pick_turn + 1}`,
+              participant.assigned_position &&
+                formatAssignedPosition(participant.assigned_position),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           >
-            {participant.pick_turn === undefined
-              ? String(index + 1).padStart(2, "0")
-              : `P${participant.pick_turn + 1}`}
+            {#if participant.assigned_position}
+              {positionBadge(participant.assigned_position)}
+            {:else if participant.pick_turn !== undefined}
+              P{participant.pick_turn + 1}
+            {:else}
+              {String(index + 1).padStart(2, "0")}
+            {/if}
           </div>
           <div class="min-w-0 flex-1">
             <div class="truncate text-xs font-medium leading-tight">
@@ -89,7 +102,7 @@
               {@const rank = formatRank(participant.rank)}
               <div
                 class="truncate text-[10px] leading-tight text-muted-foreground"
-                title="Solo/Duo: {[rank.tier, ...rank.details].join(' · ')}"
+                title="Solo/Duo: {rank.summary}"
               >
                 <img
                   src={rank.icon}
@@ -100,11 +113,17 @@
               </div>
             {/if}
           </div>
-          {#if participant.assigned_position}
-            <div
-              class="shrink-0 rounded-md border border-white/[0.07] bg-white/[0.035] px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground"
-            >
-              {formatAssignedPosition(participant.assigned_position)}
+          {#if participant.mains?.length}
+            <div class="flex shrink-0 -space-x-1" aria-label="Most played champions">
+              {#each participant.mains as main (main.championId)}
+                <img
+                  src={championIconUrl(main.championId)}
+                  alt={main.name}
+                  title={describeMain(main)}
+                  loading="lazy"
+                  class="h-5 w-5 rounded-full border border-[#0b1220] bg-white/5 object-cover"
+                />
+              {/each}
             </div>
           {/if}
         </div>

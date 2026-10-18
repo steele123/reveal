@@ -7,6 +7,7 @@ mod logging;
 mod analytics;
 mod app_state;
 mod champ_select;
+mod champions;
 mod commands;
 mod config;
 mod lcu;
