@@ -1,10 +1,10 @@
 [package]
 name = "reveal"
-version = "0.0.0"
+version = "1.4.3"
 description = "Reveal"
 authors = ["steele"]
 license = ""
-repository = ""
+repository = "https://github.com/steele123/reveal"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

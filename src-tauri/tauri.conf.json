@@ -53,6 +53,11 @@
       "active": true,
       "targets": "all",
       "identifier": "Reveal",
+      "publisher": "Lobby Reveal",
+      "copyright": "Copyright © 2026 Lobby Reveal",
+      "shortDescription": "Reveal your teammates' names in League of Legends champ select",
+      "longDescription": "Reveal shows your teammates' names in League of Legends champ select, with multi-search links, auto accept, and dodging tools.",
+      "category": "Utility",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
