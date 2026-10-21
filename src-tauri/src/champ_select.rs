@@ -40,6 +40,8 @@ impl Drop for PollingGuard {
 #[serde(rename_all = "camelCase")]
 pub struct ChampSelectSession {
     pub game_id: u64,
+    #[serde(default = "no_cell")]
+    pub local_player_cell_id: i64,
     pub timer: Timer,
     #[serde(default)]
     pub my_team: Vec<ChampSelectTeamMember>,
@@ -65,6 +67,10 @@ pub struct ChampSelectTeamMember {
     pub champion_pick_intent: i64,
     #[serde(default)]
     pub is_autofilled: bool,
+}
+
+fn no_cell() -> i64 {
+    -1
 }
 
 #[derive(Debug, Deserialize)]
@@ -148,6 +154,7 @@ pub async fn handle_champ_select_start(
             Ok(session) => {
                 session_warning_logged = false;
                 apply_champ_select_context(&mut team, &session.my_team);
+                mark_local_player(&mut team, &session.my_team, session.local_player_cell_id);
                 Some(session)
             }
             Err(error) => {
@@ -413,6 +420,22 @@ fn apply_champ_select_context(
     mapped_count
 }
 
+/// Marks the user's own entry; the local player's slot is never hidden from them.
+fn mark_local_player(
+    lobby: &mut lobby::Lobby,
+    champ_select_team: &[ChampSelectTeamMember],
+    local_cell_id: i64,
+) {
+    let local_puuid = champ_select_team
+        .iter()
+        .find(|member| i64::from(member.cell_id) == local_cell_id)
+        .map(|member| member.puuid.as_str())
+        .filter(|puuid| !puuid.is_empty());
+    for participant in &mut lobby.participants {
+        participant.is_self = Some(participant.puuid.as_str()) == local_puuid;
+    }
+}
+
 /// Places teammates whose slots Riot hid (ranked) by matching their match history against
 /// each hidden slot's position, summoner spells and champion. Marks those as guessed.
 fn guess_hidden_positions(
@@ -569,6 +592,7 @@ mod tests {
             position_guessed: false,
             autofilled: false,
             role_fit: None,
+            is_self: false,
         }
     }
 
@@ -584,6 +608,31 @@ mod tests {
             champion_pick_intent: 0,
             is_autofilled: false,
         }
+    }
+
+    #[test]
+    fn marks_only_the_local_player_as_self() {
+        let mut team = lobby::Lobby {
+            participants: vec![participant("me", "Me"), participant("them", "Them")],
+        };
+        let slots = vec![
+            ChampSelectTeamMember {
+                cell_id: 3,
+                puuid: "me".to_string(),
+                ..member_defaults()
+            },
+            ChampSelectTeamMember {
+                cell_id: 4,
+                ..member_defaults()
+            },
+        ];
+
+        mark_local_player(&mut team, &slots, 3);
+        assert!(team.participants[0].is_self);
+        assert!(!team.participants[1].is_self);
+
+        mark_local_player(&mut team, &slots, -1);
+        assert!(!team.participants[0].is_self);
     }
 
     #[test]

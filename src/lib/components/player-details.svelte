@@ -16,9 +16,11 @@
     openExternalLink,
   } from "$lib/link_actions";
   import { logFrontendError } from "$lib/logging";
+  import { describeSeenBefore, type SeenBefore } from "$lib/lobby_history";
 
   export let participant: Participant;
   export let onClose: () => void = () => {};
+  export let seen: SeenBefore | undefined = undefined;
 
   let copied = false;
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -120,6 +122,11 @@
         {/if}
         {#if offRole}
           <div class="mt-1 text-[11px] font-medium text-amber-300">{offRole}</div>
+        {/if}
+        {#if seen}
+          <div class="mt-1 text-[11px] font-medium text-violet-300">
+            {describeSeenBefore(seen)}
+          </div>
         {/if}
       </div>
     </div>

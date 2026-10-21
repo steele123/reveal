@@ -75,6 +75,7 @@ const PREVIEW_PARTICIPANTS = [
   mains: PREVIEW_MAINS[index],
   recent: PREVIEW_RECENT[index],
   position_guessed: index === 1 || index === 3,
+  is_self: index === 2,
   autofilled: index === 3,
   role_fit: [
     { games: 20, inRole: 14, mainPosition: "top", mainGames: 14 },
@@ -123,7 +124,25 @@ export function getPreviewState(): PreviewState {
       state: "ChampSelect",
       champSelect: { participants: PREVIEW_PARTICIPANTS },
       activePage: "reveal",
-      history: [],
+      history: [
+        {
+          id: "preview-seen-1",
+          revealedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+          gameStartedAt: new Date(Date.now() - 2 * 86_400_000 + 120_000).toISOString(),
+          participants: [PREVIEW_PARTICIPANTS[1], PREVIEW_PARTICIPANTS[3]],
+        },
+        {
+          id: "preview-seen-2",
+          revealedAt: new Date(Date.now() - 6 * 86_400_000).toISOString(),
+          participants: [PREVIEW_PARTICIPANTS[1]],
+        },
+        {
+          id: "preview-seen-3",
+          revealedAt: new Date(Date.now() - 9 * 86_400_000).toISOString(),
+          gameStartedAt: new Date(Date.now() - 9 * 86_400_000 + 120_000).toISOString(),
+          participants: [PREVIEW_PARTICIPANTS[1], PREVIEW_PARTICIPANTS[2]],
+        },
+      ],
     };
   }
 

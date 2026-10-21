@@ -218,6 +218,8 @@
           {champSelect}
           {connected}
           {queuePaused}
+          {history}
+          {activeLobbyId}
           onConfigChange={setConfig}
         />
       {/if}

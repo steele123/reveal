@@ -2,7 +2,7 @@ import type { ChampSelect, Participant } from "$lib/champ_select";
 import { logFrontendError } from "$lib/logging";
 
 const STORAGE_KEY = "reveal:lobby-history";
-export const MAX_HISTORY_ITEMS = 50;
+export const MAX_HISTORY_ITEMS = 200;
 
 export interface LobbyHistoryEntry {
   id: string;
@@ -11,7 +11,7 @@ export interface LobbyHistoryEntry {
   participants: Participant[];
 }
 
-function participantKey(participant: Participant): string {
+export function participantKey(participant: Participant): string {
   return (
     participant.puuid ||
     `${participant.game_name}#${participant.game_tag}:${participant.region}`
@@ -108,6 +108,62 @@ export function markLobbyGameStarted(lobbyId: string): LobbyHistoryEntry[] {
   });
 
   return changed ? persist(nextEntries) : entries;
+}
+
+export interface SeenBefore {
+  /** Earlier lobbies this player was in. */
+  lobbies: number;
+  /** Of those, how many went on to a game (not dodged). */
+  games: number;
+  lastSeen: string;
+}
+
+/** How often each player appeared in earlier lobbies, keyed by participantKey. */
+export function seenBeforeIndex(
+  history: LobbyHistoryEntry[],
+  currentLobbyId: string | null,
+): Map<string, SeenBefore> {
+  const index = new Map<string, SeenBefore>();
+  for (const entry of history) {
+    if (entry.id === currentLobbyId) continue;
+    for (const participant of entry.participants) {
+      const key = participantKey(participant);
+      const seen = index.get(key) ?? { lobbies: 0, games: 0, lastSeen: entry.revealedAt };
+      seen.lobbies += 1;
+      if (entry.gameStartedAt) seen.games += 1;
+      if (entry.revealedAt > seen.lastSeen) seen.lastSeen = entry.revealedAt;
+      index.set(key, seen);
+    }
+  }
+  return index;
+}
+
+const relativeTime = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+
+/** e.g. "2 days ago", "yesterday", "3 hours ago". */
+export function formatTimeAgo(iso: string, now = Date.now()): string {
+  const seconds = (new Date(iso).getTime() - now) / 1000;
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31_536_000],
+    ["month", 2_592_000],
+    ["week", 604_800],
+    ["day", 86_400],
+    ["hour", 3_600],
+    ["minute", 60],
+  ];
+  for (const [unit, size] of steps) {
+    if (Math.abs(seconds) >= size) return relativeTime.format(Math.round(seconds / size), unit);
+  }
+  return "just now";
+}
+
+/** e.g. "Seen 3× before (2 games together) · last 2 days ago". */
+export function describeSeenBefore(seen: SeenBefore): string {
+  const games =
+    seen.games === seen.lobbies
+      ? `${seen.games} game${seen.games === 1 ? "" : "s"} together`
+      : `${seen.games} game${seen.games === 1 ? "" : "s"} together, ${seen.lobbies - seen.games} dodged`;
+  return `Seen ${seen.lobbies}× before (${games}) · last ${formatTimeAgo(seen.lastSeen)}`;
 }
 
 export function clearLobbyHistory(): void {

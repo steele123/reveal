@@ -39,6 +39,9 @@ pub struct Participant {
     /// Their recent games compared with the assigned role, to spot off-role players.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role_fit: Option<RoleFit>,
+    /// The user's own entry.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_self: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

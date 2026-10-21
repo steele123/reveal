@@ -23,6 +23,8 @@ export interface Participant {
   /** Riot's autofill flag for this player's slot. */
   autofilled?: boolean;
   role_fit?: RoleFit;
+  /** The user's own entry. */
+  is_self?: boolean;
 }
 
 export interface RoleFit {

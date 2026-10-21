@@ -22,9 +22,21 @@
   } from "$lib/link_actions";
   import type { PlayerClickAction } from "$lib/config";
   import PlayerDetails from "./player-details.svelte";
+  import {
+    describeSeenBefore,
+    participantKey,
+    seenBeforeIndex,
+    type LobbyHistoryEntry,
+  } from "$lib/lobby_history";
 
   export let champSelect: ChampSelect | null = null;
   export let clickAction: PlayerClickAction = "details";
+  export let history: LobbyHistoryEntry[] = [];
+  export let activeLobbyId: string | null = null;
+
+  $: seenIndex = seenBeforeIndex(history, activeLobbyId);
+  $: seenBefore = (participant: Participant) =>
+    participant.is_self ? undefined : seenIndex.get(participantKey(participant));
 
   let selectedPuuid: string | null = null;
   // Look the player up on every update so the popup fills in as ranks and mains arrive.
@@ -94,6 +106,7 @@
     {#if champSelect}
       {#each champSelect.participants as participant, index (participant.puuid)}
         {@const offRole = offRoleReason(participant)}
+        {@const seen = seenBefore(participant)}
         {@const badgeTitle = [
           participant.pick_turn === undefined
             ? `Player ${index + 1}`
@@ -103,6 +116,7 @@
               ? `Likely ${formatAssignedPosition(participant.assigned_position)}, guessed from their recent roles, summoner spells and champion (Riot hides this in ranked)`
               : formatAssignedPosition(participant.assigned_position)),
           offRole,
+          seen && describeSeenBefore(seen),
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -129,6 +143,12 @@
                 alt=""
                 class="h-7 w-7 rounded-md bg-white/5 object-cover"
               />
+              {#if seen}
+                <span
+                  class="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-violet-500 px-0.5 text-[8px] font-bold leading-none text-white ring-2 ring-[#0b1220]"
+                  >{seen.lobbies}×</span
+                >
+              {/if}
               <span
                 class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#0b1220] px-1 text-[7px] font-semibold leading-[10px] ring-1 {offRole
                   ? 'text-amber-300 ring-amber-400/40'
@@ -137,12 +157,18 @@
             </div>
           {:else}
             <div
-              class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md px-1 text-[9px] font-semibold {offRole
+              class="relative grid h-6 min-w-7 shrink-0 place-items-center rounded-md px-1 text-[9px] font-semibold {offRole
                 ? 'bg-amber-500/10 text-amber-300'
                 : 'bg-blue-500/10 text-blue-300'}"
               title={badgeTitle}
             >
               {badgeLabel}
+              {#if seen}
+                <span
+                  class="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-violet-500 px-0.5 text-[8px] font-bold leading-none text-white ring-2 ring-[#0b1220]"
+                  >{seen.lobbies}×</span
+                >
+              {/if}
             </div>
           {/if}
           <div class="min-w-0 flex-1">
@@ -240,6 +266,7 @@
 {#if selectedPlayer}
   <PlayerDetails
     participant={selectedPlayer}
+    seen={seenBefore(selectedPlayer)}
     onClose={() => (selectedPuuid = null)}
   />
 {/if}

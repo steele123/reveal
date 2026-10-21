@@ -6,12 +6,15 @@
   import ChampSelectPanel from "./champ-select-panel.svelte";
   import SettingsPanel from "./settings-panel.svelte";
   import { logFrontendError } from "$lib/logging";
+  import type { LobbyHistoryEntry } from "$lib/lobby_history";
 
   export let config: Config | null = null;
   export let state = "Unknown";
   export let champSelect: ChampSelect | null = null;
   export let connected = false;
   export let queuePaused = false;
+  export let history: LobbyHistoryEntry[] = [];
+  export let activeLobbyId: string | null = null;
   export let onConfigChange: (config: Config) => void = () => {};
 
   async function handleConfigChange(nextConfig: Config) {
@@ -41,6 +44,8 @@
     <div in:fade class="flex min-h-0 flex-1 flex-col">
       <ChampSelectPanel
         {champSelect}
+        {history}
+        {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
       />
     </div>

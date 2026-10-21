@@ -169,6 +169,7 @@ mod tests {
                 position_guessed: false,
                 autofilled: false,
                 role_fit: None,
+                is_self: false,
             }],
         }
     }
@@ -217,6 +218,7 @@ mod tests {
             position_guessed: false,
             autofilled: false,
             role_fit: None,
+            is_self: false,
         });
 
         assert_eq!(
