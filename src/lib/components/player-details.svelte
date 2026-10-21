@@ -35,7 +35,8 @@
       : null;
   $: subtitle = [
     participant.assigned_position &&
-      formatAssignedPosition(participant.assigned_position),
+      formatAssignedPosition(participant.assigned_position) +
+        (participant.position_guessed ? " (likely)" : ""),
     participant.pick_turn !== undefined && `Pick ${participant.pick_turn + 1}`,
   ]
     .filter(Boolean)

@@ -97,12 +97,15 @@
             ? `Player ${index + 1}`
             : `Pick ${participant.pick_turn + 1}`,
           participant.assigned_position &&
-            formatAssignedPosition(participant.assigned_position),
+            (participant.position_guessed
+              ? `Likely ${formatAssignedPosition(participant.assigned_position)}, guessed from their recent roles, summoner spells and champion (Riot hides this in ranked)`
+              : formatAssignedPosition(participant.assigned_position)),
         ]
           .filter(Boolean)
           .join(" · ")}
         {@const badgeLabel = participant.assigned_position
-          ? positionBadge(participant.assigned_position)
+          ? positionBadge(participant.assigned_position) +
+            (participant.position_guessed ? "?" : "")
           : participant.pick_turn !== undefined
             ? `P${participant.pick_turn + 1}`
             : String(index + 1).padStart(2, "0")}

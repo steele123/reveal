@@ -74,6 +74,7 @@ const PREVIEW_PARTICIPANTS = [
   rank: PREVIEW_RANKS[index],
   mains: PREVIEW_MAINS[index],
   recent: PREVIEW_RECENT[index],
+  position_guessed: index === 1 || index === 3,
   profile_icon_id: [7085, 4553, 29, 5367, undefined][index],
 }));
 

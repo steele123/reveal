@@ -29,6 +29,9 @@ pub struct Participant {
     pub profile_icon_id: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recent: Option<RecentForm>,
+    /// True when the position was guessed because Riot hid this player's slot.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub position_guessed: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

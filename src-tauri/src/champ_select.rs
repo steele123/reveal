@@ -1,5 +1,5 @@
 use crate::{
-    analytics, champions, config::Config, lobby, ranked, region::RegionInfo, summoner,
+    analytics, champions, config::Config, lobby, ranked, region::RegionInfo, roles, summoner,
     utils::display_champ_select,
 };
 use serde::Deserialize;
@@ -52,7 +52,19 @@ pub struct ChampSelectTeamMember {
     pub assigned_position: String,
     pub cell_id: u32,
     pub pick_turn: u32,
+    /// Empty when Riot hides the player (ranked).
+    #[serde(default)]
     pub puuid: String,
+    #[serde(default)]
+    pub spell1_id: i64,
+    #[serde(default)]
+    pub spell2_id: i64,
+    #[serde(default)]
+    pub champion_id: i64,
+    #[serde(default)]
+    pub champion_pick_intent: i64,
+    #[serde(default)]
+    pub is_autofilled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,8 +110,10 @@ pub async fn handle_champ_select_start(
     let mut first_participant_seen_at: Option<Instant> = None;
     let mut session_warning_logged = false;
     let mut players = PlayerCache::default();
+    let mut analytics_sent = false;
 
-    // Poll until we have all 5 teammates or champ select ends
+    // Poll until champ select ends: slots, spells and picks keep changing, which updates
+    // the guessed roles for hidden players.
     loop {
         // Champ select sanity check
         let gameflow_state = remoting_client
@@ -130,10 +144,11 @@ pub async fn handle_champ_select_start(
             }
         };
 
-        let mapped_participant_count = match get_champ_select_session(remoting_client).await {
+        let session = match get_champ_select_session(remoting_client).await {
             Ok(session) => {
                 session_warning_logged = false;
-                apply_champ_select_context(&mut team, &session.my_team)
+                apply_champ_select_context(&mut team, &session.my_team);
+                Some(session)
             }
             Err(error) => {
                 if !session_warning_logged {
@@ -142,11 +157,14 @@ pub async fn handle_champ_select_start(
                     );
                     session_warning_logged = true;
                 }
-                0
+                None
             }
         };
         players.fetch_missing(remoting_client, &team).await;
         players.apply(&mut team);
+        if let Some(session) = &session {
+            guess_hidden_positions(&mut team, &session.my_team, &players);
+        }
         let participant_count = team.participants.len();
 
         if participant_count > 0 && first_participant_seen_at.is_none() {
@@ -196,9 +214,9 @@ pub async fn handle_champ_select_start(
             auto_opened = true;
         }
 
-        // Only send analytics once we have all 5 teammates
-        if participant_count >= EXPECTED_PARTICIPANT_COUNT
-            && mapped_participant_count >= participant_count
+        // Send analytics once, when all 5 teammates and their details are in.
+        if !analytics_sent
+            && participant_count >= EXPECTED_PARTICIPANT_COUNT
             && players.is_settled(&team)
         {
             analytics::send_analytics_event(
@@ -208,8 +226,8 @@ pub async fn handle_champ_select_start(
                 &app_handle.package_info().version.to_string(),
             )
             .await;
-            log_info!("Complete Champ Select team found; participant polling finished");
-            break;
+            analytics_sent = true;
+            log_info!("Complete Champ Select team found; still watching for role changes");
         }
 
         tokio::time::sleep(PARTICIPANT_POLL_INTERVAL).await;
@@ -274,7 +292,7 @@ struct PlayerCache {
     ranks: Lookup<ranked::RankSummary>,
     mains: Lookup<Vec<champions::ChampionMain>>,
     profile_icons: Lookup<i32>,
-    recent_forms: Lookup<ranked::RecentForm>,
+    histories: Lookup<roles::PlayerHistory>,
     champion_names: Option<HashMap<i32, String>>,
 }
 
@@ -288,9 +306,9 @@ impl PlayerCache {
                 self.ranks.record("Rank", puuid, result);
             }
 
-            if self.recent_forms.start_attempt(puuid) {
-                let result = ranked::get_recent_solo_form(remoting_client, puuid).await;
-                self.recent_forms.record("Match history", puuid, result);
+            if self.histories.start_attempt(puuid) {
+                let result = roles::get_player_history(remoting_client, puuid).await;
+                self.histories.record("Match history", puuid, result);
             }
 
             if self.profile_icons.start_attempt(puuid) {
@@ -318,7 +336,11 @@ impl PlayerCache {
             participant.rank = self.ranks.get(&participant.puuid);
             participant.mains = self.mains.get(&participant.puuid);
             participant.profile_icon_id = self.profile_icons.get(&participant.puuid);
-            participant.recent = self.recent_forms.get(&participant.puuid);
+            participant.recent = self
+                .histories
+                .values
+                .get(&participant.puuid)
+                .map(|history| history.recent.clone());
         }
     }
 
@@ -328,7 +350,7 @@ impl PlayerCache {
             self.ranks.is_settled(&participant.puuid)
                 && self.mains.is_settled(&participant.puuid)
                 && self.profile_icons.is_settled(&participant.puuid)
-                && self.recent_forms.is_settled(&participant.puuid)
+                && self.histories.is_settled(&participant.puuid)
         })
     }
 }
@@ -372,6 +394,71 @@ fn apply_champ_select_context(
     });
 
     mapped_count
+}
+
+/// Places teammates whose slots Riot hid (ranked) by matching their match history against
+/// each hidden slot's position, summoner spells and champion. Marks those as guessed.
+fn guess_hidden_positions(
+    lobby: &mut lobby::Lobby,
+    champ_select_team: &[ChampSelectTeamMember],
+    players: &PlayerCache,
+) {
+    let slots: Vec<roles::HiddenSlot> = champ_select_team
+        .iter()
+        .filter(|member| member.puuid.is_empty() && !member.assigned_position.is_empty())
+        .map(|member| roles::HiddenSlot {
+            cell_id: member.cell_id,
+            position: member.assigned_position.clone(),
+            spells: (member.spell1_id, member.spell2_id),
+            champion_id: if member.champion_id > 0 {
+                member.champion_id
+            } else {
+                member.champion_pick_intent
+            },
+            autofilled: member.is_autofilled,
+        })
+        .collect();
+    if slots.is_empty() {
+        return;
+    }
+
+    let unplaced: Vec<usize> = (0..lobby.participants.len())
+        .filter(|&index| lobby.participants[index].cell_id.is_none())
+        .collect();
+    let no_mains = Vec::new();
+    let candidates: Vec<roles::Candidate> = unplaced
+        .iter()
+        .map(|&index| {
+            let puuid = &lobby.participants[index].puuid;
+            roles::Candidate {
+                history: players.histories.values.get(puuid),
+                mains: players.mains.values.get(puuid).unwrap_or(&no_mains),
+            }
+        })
+        .collect();
+
+    for (candidate, slot_index) in roles::assign(&candidates, &slots).into_iter().enumerate() {
+        let Some(slot_index) = slot_index else {
+            continue;
+        };
+        let slot = &slots[slot_index];
+        let member = champ_select_team
+            .iter()
+            .find(|member| member.cell_id == slot.cell_id)
+            .expect("slot comes from the team");
+        let participant = &mut lobby.participants[unplaced[candidate]];
+        participant.assigned_position = Some(slot.position.clone());
+        participant.cell_id = Some(slot.cell_id);
+        participant.pick_turn = Some(member.pick_turn);
+        participant.position_guessed = true;
+    }
+
+    lobby.participants.sort_by_key(|participant| {
+        (
+            participant.pick_turn.unwrap_or(u32::MAX),
+            participant.cell_id.unwrap_or(u32::MAX),
+        )
+    });
 }
 
 fn should_auto_open(
@@ -461,7 +548,65 @@ mod tests {
             mains: None,
             profile_icon_id: None,
             recent: None,
+            position_guessed: false,
         }
+    }
+
+    fn member_defaults() -> ChampSelectTeamMember {
+        ChampSelectTeamMember {
+            assigned_position: String::new(),
+            cell_id: 0,
+            pick_turn: 0,
+            puuid: String::new(),
+            spell1_id: 0,
+            spell2_id: 0,
+            champion_id: 0,
+            champion_pick_intent: 0,
+            is_autofilled: false,
+        }
+    }
+
+    #[test]
+    fn guesses_hidden_slots_from_history_and_spells() {
+        let mut team = lobby::Lobby {
+            participants: vec![participant("adc", "Adc"), participant("jungler", "Jungler")],
+        };
+        let hidden = |cell_id, position: &str, spells: (i64, i64)| ChampSelectTeamMember {
+            assigned_position: position.to_string(),
+            cell_id,
+            pick_turn: cell_id,
+            spell1_id: spells.0,
+            spell2_id: spells.1,
+            ..member_defaults()
+        };
+        let slots = vec![hidden(1, "jungle", (11, 4)), hidden(2, "bottom", (4, 21))];
+        let mut cache = PlayerCache::default();
+        for (puuid, position, spells) in
+            [("adc", "bottom", (4, 21)), ("jungler", "jungle", (11, 4))]
+        {
+            let mut history = roles::PlayerHistory {
+                games: 10,
+                ..Default::default()
+            };
+            history.positions.insert(position.to_string(), 8);
+            history.spells.insert(spells, 9);
+            assert!(cache.histories.start_attempt(puuid));
+            cache.histories.record("Match history", puuid, Ok(history));
+        }
+
+        guess_hidden_positions(&mut team, &slots, &cache);
+
+        assert_eq!(team.participants[0].puuid, "jungler");
+        assert_eq!(
+            team.participants[0].assigned_position.as_deref(),
+            Some("jungle")
+        );
+        assert!(team.participants[0].position_guessed);
+        assert_eq!(
+            team.participants[1].assigned_position.as_deref(),
+            Some("bottom")
+        );
+        assert_eq!(team.participants[1].cell_id, Some(2));
     }
 
     #[test]
@@ -478,12 +623,14 @@ mod tests {
                 cell_id: 4,
                 pick_turn: 1,
                 puuid: "second-puuid".to_string(),
+                ..member_defaults()
             },
             ChampSelectTeamMember {
                 assigned_position: "jungle".to_string(),
                 cell_id: 2,
                 pick_turn: 0,
                 puuid: "first-puuid".to_string(),
+                ..member_defaults()
             },
         ];
 
@@ -561,11 +708,14 @@ mod tests {
         for puuid in ["found", "failing"] {
             assert!(cache.profile_icons.start_attempt(puuid));
             cache.profile_icons.record("Profile icon", puuid, Ok(7085));
-            assert!(cache.recent_forms.start_attempt(puuid));
-            cache.recent_forms.record(
+            assert!(cache.histories.start_attempt(puuid));
+            cache.histories.record(
                 "Match history",
                 puuid,
-                Ok(ranked::RecentForm { wins: 6, losses: 7 }),
+                Ok(roles::PlayerHistory {
+                    recent: ranked::RecentForm { wins: 6, losses: 7 },
+                    ..Default::default()
+                }),
             );
         }
         assert!(cache.is_settled(&team));

@@ -20,46 +20,11 @@ pub struct RankSummary {
 
 /// Solo/Duo results from a player's recent match history. League's ranked stats report other
 /// players' losses as 0, so this is the only reliable win rate for teammates.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecentForm {
     pub wins: u32,
     pub losses: u32,
-}
-
-const SOLO_DUO_QUEUE_ID: i64 = 420;
-const RECENT_GAMES: u32 = 20;
-
-pub async fn get_recent_solo_form(
-    remoting_client: &RESTClient,
-    puuid: &str,
-) -> anyhow::Result<RecentForm> {
-    let history = remoting_client
-        .get(format!(
-            "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={}",
-            RECENT_GAMES - 1
-        ))
-        .await?;
-    if history["games"].is_null() {
-        anyhow::bail!("match history unavailable: {}", history["message"]);
-    }
-    Ok(parse_recent_solo_form(&history))
-}
-
-/// The match list only includes the requested player, so `participants[0]` is them.
-fn parse_recent_solo_form(history: &Value) -> RecentForm {
-    let mut form = RecentForm { wins: 0, losses: 0 };
-    for game in history["games"]["games"].as_array().into_iter().flatten() {
-        if game["queueId"].as_i64() != Some(SOLO_DUO_QUEUE_ID) {
-            continue;
-        }
-        match game["participants"][0]["stats"]["win"].as_bool() {
-            Some(true) => form.wins += 1,
-            Some(false) => form.losses += 1,
-            None => {}
-        }
-    }
-    form
 }
 
 pub async fn get_solo_rank(
@@ -133,19 +98,6 @@ mod tests {
         assert_eq!(rank.tier, "MASTER");
         assert_eq!(rank.division, None);
         assert_eq!(rank.league_points, 155);
-    }
-
-    #[test]
-    fn counts_only_solo_duo_results_from_match_history() {
-        let game = |queue: i64, win: bool| json!({ "queueId": queue, "participants": [{ "stats": { "win": win } }] });
-        let form = parse_recent_solo_form(&json!({ "games": { "games": [
-            game(420, true), game(420, false), game(420, true), game(440, false), game(450, true)
-        ]}}));
-        assert_eq!(form, RecentForm { wins: 2, losses: 1 });
-        assert_eq!(
-            parse_recent_solo_form(&json!({})),
-            RecentForm { wins: 0, losses: 0 }
-        );
     }
 
     #[test]

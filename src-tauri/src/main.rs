@@ -16,6 +16,7 @@ mod lobby;
 mod queue_pause;
 mod ranked;
 mod region;
+mod roles;
 mod state;
 mod summoner;
 mod utils;

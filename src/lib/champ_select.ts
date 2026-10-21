@@ -18,6 +18,8 @@ export interface Participant {
   mains?: ChampionMain[];
   profile_icon_id?: number;
   recent?: RecentForm;
+  /** The role was guessed from match history because Riot hid this player's slot. */
+  position_guessed?: boolean;
 }
 
 /** Solo/Duo results from the player's recent match history. */

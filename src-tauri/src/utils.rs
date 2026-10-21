@@ -166,6 +166,7 @@ mod tests {
                 mains: None,
                 profile_icon_id: None,
                 recent: None,
+                position_guessed: false,
             }],
         }
     }
@@ -211,6 +212,7 @@ mod tests {
             mains: None,
             profile_icon_id: None,
             recent: None,
+            position_guessed: false,
         });
 
         assert_eq!(
