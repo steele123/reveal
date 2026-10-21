@@ -165,6 +165,7 @@ pub async fn handle_champ_select_start(
         if let Some(session) = &session {
             guess_hidden_positions(&mut team, &session.my_team, &players);
         }
+        players.apply_role_fit(&mut team);
         let participant_count = team.participants.len();
 
         if participant_count > 0 && first_participant_seen_at.is_none() {
@@ -344,6 +345,21 @@ impl PlayerCache {
         }
     }
 
+    /// Compares each placed player's history with their assigned role.
+    fn apply_role_fit(&self, team: &mut lobby::Lobby) {
+        for participant in &mut team.participants {
+            participant.role_fit = participant
+                .assigned_position
+                .as_deref()
+                .and_then(|position| {
+                    self.histories
+                        .values
+                        .get(&participant.puuid)
+                        .and_then(|history| history.role_fit(position))
+                });
+        }
+    }
+
     /// True once every player has their details or has used up their lookup attempts.
     fn is_settled(&self, team: &lobby::Lobby) -> bool {
         team.participants.iter().all(|participant| {
@@ -383,6 +399,7 @@ fn apply_champ_select_context(
             (!member.assigned_position.is_empty()).then(|| member.assigned_position.clone());
         participant.cell_id = Some(member.cell_id);
         participant.pick_turn = Some(member.pick_turn);
+        participant.autofilled = member.is_autofilled;
         mapped_count += 1;
     }
 
@@ -451,6 +468,7 @@ fn guess_hidden_positions(
         participant.cell_id = Some(slot.cell_id);
         participant.pick_turn = Some(member.pick_turn);
         participant.position_guessed = true;
+        participant.autofilled = member.is_autofilled;
     }
 
     lobby.participants.sort_by_key(|participant| {
@@ -549,6 +567,8 @@ mod tests {
             profile_icon_id: None,
             recent: None,
             position_guessed: false,
+            autofilled: false,
+            role_fit: None,
         }
     }
 

@@ -85,6 +85,33 @@ fn position_from_timeline(timeline: &Value) -> Option<&'static str> {
     }
 }
 
+/// How a player's recent Summoner's Rift games line up with the role they were assigned.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoleFit {
+    pub games: u32,
+    /// Games played in the assigned role.
+    pub in_role: u32,
+    /// The role they play most, and how often.
+    pub main_position: String,
+    pub main_games: u32,
+}
+
+impl PlayerHistory {
+    pub fn role_fit(&self, assigned_position: &str) -> Option<RoleFit> {
+        let (main_position, main_games) = self
+            .positions
+            .iter()
+            .max_by_key(|(position, games)| (**games, std::cmp::Reverse(position.as_str())))?;
+        Some(RoleFit {
+            games: self.games,
+            in_role: self.positions.get(assigned_position).copied().unwrap_or(0),
+            main_position: main_position.clone(),
+            main_games: *main_games,
+        })
+    }
+}
+
 /// A Champ Select slot whose player is hidden.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HiddenSlot {
@@ -311,6 +338,24 @@ mod tests {
         let slots = [slot(1, "jungle", (11, 4), 64), slot(2, "top", (11, 4), 0)];
 
         assert_eq!(assign(&candidates, &slots), vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn summarises_role_fit_against_the_main_role() {
+        let mut history = profile("jungle", (11, 4), 64);
+        history.positions.insert("top".to_string(), 1);
+
+        let fit = history.role_fit("top").unwrap();
+        assert_eq!(
+            fit,
+            RoleFit {
+                games: 10,
+                in_role: 1,
+                main_position: "jungle".into(),
+                main_games: 8
+            }
+        );
+        assert_eq!(PlayerHistory::default().role_fit("top"), None);
     }
 
     #[test]

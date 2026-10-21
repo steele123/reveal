@@ -1,6 +1,7 @@
 use crate::{
     champions::ChampionMain,
     ranked::{RankSummary, RecentForm},
+    roles::RoleFit,
 };
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
@@ -32,6 +33,12 @@ pub struct Participant {
     /// True when the position was guessed because Riot hid this player's slot.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub position_guessed: bool,
+    /// Riot's autofill flag for this player's slot.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub autofilled: bool,
+    /// Their recent games compared with the assigned role, to spot off-role players.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role_fit: Option<RoleFit>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

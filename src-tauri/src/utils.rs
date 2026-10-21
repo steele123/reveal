@@ -167,6 +167,8 @@ mod tests {
                 profile_icon_id: None,
                 recent: None,
                 position_guessed: false,
+                autofilled: false,
+                role_fit: None,
             }],
         }
     }
@@ -213,6 +215,8 @@ mod tests {
             profile_icon_id: None,
             recent: None,
             position_guessed: false,
+            autofilled: false,
+            role_fit: None,
         });
 
         assert_eq!(

@@ -6,6 +6,7 @@
     formatAssignedPosition,
     formatRank,
     MIN_GAMES_FOR_WIN_RATE,
+    offRoleReason,
     profileIconUrl,
     type Participant,
   } from "$lib/champ_select";
@@ -33,6 +34,7 @@
     participant.recent && recentGames >= MIN_GAMES_FOR_WIN_RATE
       ? Math.round((participant.recent.wins / recentGames) * 100)
       : null;
+  $: offRole = offRoleReason(participant);
   $: subtitle = [
     participant.assigned_position &&
       formatAssignedPosition(participant.assigned_position) +
@@ -115,6 +117,9 @@
         </div>
         {#if subtitle}
           <div class="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>
+        {/if}
+        {#if offRole}
+          <div class="mt-1 text-[11px] font-medium text-amber-300">{offRole}</div>
         {/if}
       </div>
     </div>

@@ -75,6 +75,14 @@ const PREVIEW_PARTICIPANTS = [
   mains: PREVIEW_MAINS[index],
   recent: PREVIEW_RECENT[index],
   position_guessed: index === 1 || index === 3,
+  autofilled: index === 3,
+  role_fit: [
+    { games: 20, inRole: 14, mainPosition: "top", mainGames: 14 },
+    { games: 18, inRole: 2, mainPosition: "middle", mainGames: 12 },
+    { games: 19, inRole: 16, mainPosition: "middle", mainGames: 16 },
+    { games: 17, inRole: 1, mainPosition: "jungle", mainGames: 13 },
+    undefined,
+  ][index],
   profile_icon_id: [7085, 4553, 29, 5367, undefined][index],
 }));
 

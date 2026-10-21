@@ -20,6 +20,44 @@ export interface Participant {
   recent?: RecentForm;
   /** The role was guessed from match history because Riot hid this player's slot. */
   position_guessed?: boolean;
+  /** Riot's autofill flag for this player's slot. */
+  autofilled?: boolean;
+  role_fit?: RoleFit;
+}
+
+export interface RoleFit {
+  games: number;
+  inRole: number;
+  mainPosition: string;
+  mainGames: number;
+}
+
+/** Below this many recent games, history says too little to call someone off-role. */
+const MIN_GAMES_FOR_ROLE_FIT = 5;
+
+/**
+ * Why a player is probably not on their usual role, or null. Uses Riot's autofill flag, or
+ * their history: they rarely play the assigned role (under 15%) but clearly main another.
+ */
+export function offRoleReason(participant: Participant): string | null {
+  const fit = participant.role_fit;
+  const usual =
+    fit && fit.mainPosition !== participant.assigned_position
+      ? `usually plays ${formatAssignedPosition(fit.mainPosition)} (${fit.mainGames} of ${fit.games} games)`
+      : null;
+  if (participant.autofilled) {
+    return usual ? `Autofilled: ${usual}` : "Autofilled";
+  }
+  if (
+    fit &&
+    usual &&
+    fit.games >= MIN_GAMES_FOR_ROLE_FIT &&
+    fit.inRole / fit.games < 0.15 &&
+    fit.mainGames / fit.games >= 0.5
+  ) {
+    return `Likely off-role: ${usual}`;
+  }
+  return null;
 }
 
 /** Solo/Duo results from the player's recent match history. */

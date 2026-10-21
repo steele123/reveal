@@ -6,6 +6,7 @@
     describeMain,
     formatAssignedPosition,
     formatRank,
+    offRoleReason,
     positionBadge,
     profileIconUrl,
     type ChampSelect,
@@ -92,6 +93,7 @@
   <div class="grid grid-cols-2 gap-2 text-sm">
     {#if champSelect}
       {#each champSelect.participants as participant, index (participant.puuid)}
+        {@const offRole = offRoleReason(participant)}
         {@const badgeTitle = [
           participant.pick_turn === undefined
             ? `Player ${index + 1}`
@@ -100,6 +102,7 @@
             (participant.position_guessed
               ? `Likely ${formatAssignedPosition(participant.assigned_position)}, guessed from their recent roles, summoner spells and champion (Riot hides this in ranked)`
               : formatAssignedPosition(participant.assigned_position)),
+          offRole,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -127,13 +130,16 @@
                 class="h-7 w-7 rounded-md bg-white/5 object-cover"
               />
               <span
-                class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#0b1220] px-1 text-[7px] font-semibold leading-[10px] text-blue-300 ring-1 ring-blue-400/20"
-                >{badgeLabel}</span
+                class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#0b1220] px-1 text-[7px] font-semibold leading-[10px] ring-1 {offRole
+                  ? 'text-amber-300 ring-amber-400/40'
+                  : 'text-blue-300 ring-blue-400/20'}">{badgeLabel}</span
               >
             </div>
           {:else}
             <div
-              class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md bg-blue-500/10 px-1 text-[9px] font-semibold text-blue-300"
+              class="grid h-6 min-w-7 shrink-0 place-items-center rounded-md px-1 text-[9px] font-semibold {offRole
+                ? 'bg-amber-500/10 text-amber-300'
+                : 'bg-blue-500/10 text-blue-300'}"
               title={badgeTitle}
             >
               {badgeLabel}
