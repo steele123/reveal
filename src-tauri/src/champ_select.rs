@@ -53,7 +53,6 @@ pub struct ChampSelectTeamMember {
     #[serde(default)]
     pub assigned_position: String,
     pub cell_id: u32,
-    pub pick_turn: u32,
     /// Empty when Riot hides the player (ranked).
     #[serde(default)]
     pub puuid: String,
@@ -387,6 +386,15 @@ async fn get_champ_select_session(
     Ok(serde_json::from_value(session)?)
 }
 
+/// A slot's place in the team's pick order. League reports `pickTurn` as 0 for every slot in
+/// ranked, but slots are numbered in pick order, which is also the order the client shows.
+fn pick_order(champ_select_team: &[ChampSelectTeamMember], cell_id: u32) -> u32 {
+    champ_select_team
+        .iter()
+        .filter(|member| member.cell_id < cell_id)
+        .count() as u32
+}
+
 fn apply_champ_select_context(
     lobby: &mut lobby::Lobby,
     champ_select_team: &[ChampSelectTeamMember],
@@ -405,7 +413,7 @@ fn apply_champ_select_context(
         participant.assigned_position =
             (!member.assigned_position.is_empty()).then(|| member.assigned_position.clone());
         participant.cell_id = Some(member.cell_id);
-        participant.pick_turn = Some(member.pick_turn);
+        participant.pick_turn = Some(pick_order(champ_select_team, member.cell_id));
         participant.autofilled = member.is_autofilled;
         mapped_count += 1;
     }
@@ -489,7 +497,7 @@ fn guess_hidden_positions(
         let participant = &mut lobby.participants[unplaced[candidate]];
         participant.assigned_position = Some(slot.position.clone());
         participant.cell_id = Some(slot.cell_id);
-        participant.pick_turn = Some(member.pick_turn);
+        participant.pick_turn = Some(pick_order(champ_select_team, member.cell_id));
         participant.position_guessed = true;
         participant.autofilled = member.is_autofilled;
     }
@@ -600,7 +608,6 @@ mod tests {
         ChampSelectTeamMember {
             assigned_position: String::new(),
             cell_id: 0,
-            pick_turn: 0,
             puuid: String::new(),
             spell1_id: 0,
             spell2_id: 0,
@@ -608,6 +615,33 @@ mod tests {
             champion_pick_intent: 0,
             is_autofilled: false,
         }
+    }
+
+    #[test]
+    fn numbers_picks_by_slot_even_when_pick_turn_is_zero() {
+        let mut team = lobby::Lobby {
+            participants: vec![
+                participant("c", "C"),
+                participant("a", "A"),
+                participant("b", "B"),
+            ],
+        };
+        let slot = |cell_id, puuid: &str| ChampSelectTeamMember {
+            assigned_position: "top".to_string(),
+            cell_id,
+            puuid: puuid.to_string(),
+            ..member_defaults()
+        };
+        let slots = vec![slot(5, "a"), slot(6, "b"), slot(9, "c")];
+
+        apply_champ_select_context(&mut team, &slots);
+
+        let order: Vec<(&str, Option<u32>)> = team
+            .participants
+            .iter()
+            .map(|participant| (participant.puuid.as_str(), participant.pick_turn))
+            .collect();
+        assert_eq!(order, vec![("a", Some(0)), ("b", Some(1)), ("c", Some(2))]);
     }
 
     #[test]
@@ -643,7 +677,6 @@ mod tests {
         let hidden = |cell_id, position: &str, spells: (i64, i64)| ChampSelectTeamMember {
             assigned_position: position.to_string(),
             cell_id,
-            pick_turn: cell_id,
             spell1_id: spells.0,
             spell2_id: spells.1,
             ..member_defaults()
@@ -690,14 +723,12 @@ mod tests {
             ChampSelectTeamMember {
                 assigned_position: "middle".to_string(),
                 cell_id: 4,
-                pick_turn: 1,
                 puuid: "second-puuid".to_string(),
                 ..member_defaults()
             },
             ChampSelectTeamMember {
                 assigned_position: "jungle".to_string(),
                 cell_id: 2,
-                pick_turn: 0,
                 puuid: "first-puuid".to_string(),
                 ..member_defaults()
             },
