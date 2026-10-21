@@ -1,0 +1,17 @@
+<!doctype html><html><head><style>html,body{margin:0;width:512px;height:512px;overflow:hidden;background:transparent}</style></head><body>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="28%" r="85%">
+      <stop offset="0" stop-color="#3b82f6"/><stop offset=".45" stop-color="#1e40af"/><stop offset="1" stop-color="#0b1220"/>
+    </radialGradient>
+    <filter id="glow" filterUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feFlood flood-color="#93c5fd" flood-opacity=".75"/><feComposite in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g filter="url(#glow)"><g transform="translate(106 106) scale(12.5)">
+    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" fill="#fff"/>
+  </g></g>
+</svg></body></html>
