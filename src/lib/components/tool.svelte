@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { updateConfig, type Config } from "$lib/config";
+  import { MULTI_PROVIDERS, updateConfig, type Config } from "$lib/config";
   import { fade } from "svelte/transition";
   import RevealCount from "./reveal-count.svelte";
   import type { ChampSelect } from "$lib/champ_select";
@@ -29,6 +29,19 @@
     }
   }
 
+  // Champ Select needs the height for five teammates in pick order, so settings collapse to a
+  // one-line summary there (changes made mid-select only apply next game anyway).
+  let settingsExpanded = false;
+  $: inChampSelect = state === "ChampSelect";
+  $: if (!inChampSelect) settingsExpanded = false;
+  $: settingsSummary = config
+    ? [
+        MULTI_PROVIDERS.find(({ value }) => value === config?.multiProvider)?.label ?? "OP.GG",
+        `Auto-open ${config.autoOpen ? "on" : "off"}`,
+        `Auto-accept ${config.autoAccept ? "on" : "off"}`,
+      ].join(" · ")
+    : "";
+
   function formatState(value: string): string {
     if (value === "InProgress") return "In game";
     if (value === "ChampSelect") return "Champ Select";
@@ -38,7 +51,35 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-2">
-  <SettingsPanel {config} onChange={handleConfigChange} />
+  {#if inChampSelect}
+    <button
+      type="button"
+      class="reveal-panel flex h-9 shrink-0 items-center gap-2 px-3 text-left text-xs transition hover:bg-white/[0.04]"
+      aria-expanded={settingsExpanded}
+      on:click={() => (settingsExpanded = !settingsExpanded)}
+    >
+      <span class="font-medium">Settings</span>
+      <span class="min-w-0 flex-1 truncate text-muted-foreground">{settingsSummary}</span>
+      <svg
+        viewBox="0 0 16 16"
+        class="h-3.5 w-3.5 shrink-0 text-muted-foreground transition"
+        class:rotate-180={settingsExpanded}
+        aria-hidden="true"
+      >
+        <path
+          d="m4 6 4 4 4-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+        />
+      </svg>
+    </button>
+  {/if}
+  {#if !inChampSelect || settingsExpanded}
+    <SettingsPanel {config} onChange={handleConfigChange} />
+  {/if}
 
   {#if state === "ChampSelect"}
     <div in:fade class="flex min-h-0 flex-1 flex-col">

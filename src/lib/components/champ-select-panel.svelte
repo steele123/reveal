@@ -102,7 +102,8 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-2 gap-2 text-sm">
+  <!-- One column, top to bottom in pick order, like the League client. -->
+  <div class="-mr-1 flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 text-sm">
     {#if champSelect}
       {#each champSelect.participants as participant, index (participant.puuid)}
         {@const offRole = offRoleReason(participant)}
@@ -128,9 +129,7 @@
             : String(index + 1).padStart(2, "0")}
         <button
           type="button"
-          class:col-span-2={champSelect.participants.length % 2 === 1 &&
-            index === champSelect.participants.length - 1}
-          class="reveal-panel flex h-10 min-w-0 items-center gap-2.5 px-3 text-left transition hover:border-blue-400/30 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/50"
+          class="reveal-panel flex h-10 min-w-0 shrink-0 items-center gap-2.5 px-3 text-left transition hover:border-blue-400/30 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/50"
           aria-label={clickAction === "opgg"
             ? `Open ${participant.game_name}'s OP.GG profile`
             : `Show details for ${participant.game_name}`}
@@ -210,8 +209,7 @@
     {:else}
       {#each Array.from({ length: 5 }) as _, index (index)}
         <div
-          class:col-span-2={index === 4}
-          class="reveal-panel flex h-10 animate-pulse items-center gap-2.5 px-3"
+          class="reveal-panel flex h-10 shrink-0 animate-pulse items-center gap-2.5 px-3"
         >
           <div class="h-6 w-6 rounded-md bg-white/5" />
           <div class="h-2.5 w-28 rounded-full bg-white/5" />
