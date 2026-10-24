@@ -47,6 +47,7 @@ pub async fn run(app_handle: AppHandle) {
         };
 
         was_connected = true;
+        crate::live_game::remember_client(&lcu_info);
         set_connection_state(&app_handle, true, Some(lcu_info)).await;
 
         let Some(mut websocket) = connect_websocket().await else {

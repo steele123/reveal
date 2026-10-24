@@ -35,7 +35,8 @@
   // Champ Select and the live scoreboard need the height, so settings collapse to a one-line
   // summary there (changes made mid-select only apply next game anyway).
   let settingsExpanded = false;
-  $: showingLiveGame = state === "InProgress" && liveGame !== null;
+  // The League Client often closes during games, so don't wait for it to say "InProgress".
+  $: showingLiveGame = liveGame !== null && state !== "ChampSelect";
   $: inChampSelect = state === "ChampSelect" || showingLiveGame;
   $: if (!inChampSelect) settingsExpanded = false;
   $: settingsSummary = config

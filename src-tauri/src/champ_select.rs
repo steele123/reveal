@@ -117,6 +117,7 @@ pub async fn handle_champ_select_start(
         "SG2" => "SG",
         _ => &region_info.web_region,
     };
+    crate::live_game::remember_region(region);
 
     let mut auto_opened = false;
     let mut last_participant_count = 0;

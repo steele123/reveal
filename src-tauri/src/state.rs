@@ -78,7 +78,7 @@ pub async fn handle_client_state(
             let remoting_client = remoting_client.clone();
             let app_client = app_client.clone();
             tauri::async_runtime::spawn(async move {
-                crate::live_game::watch(app_handle, remoting_client, app_client).await;
+                crate::live_game::watch(app_handle, Some(remoting_client), Some(app_client)).await;
             });
         }
         "ReadyCheck" => {

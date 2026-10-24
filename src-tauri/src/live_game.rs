@@ -11,7 +11,7 @@ use crate::{
 };
 use serde::Serialize;
 use serde_json::Value;
-use shaco::rest::RESTClient;
+use shaco::rest::{LCUClientInfo, RESTClient};
 use std::{
     collections::HashMap,
     sync::{
@@ -23,7 +23,9 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 const LIVE_CLIENT_URL: &str = "https://127.0.0.1:2999/liveclientdata/allgamedata";
+const LIVE_CLIENT_STATS_URL: &str = "https://127.0.0.1:2999/liveclientdata/gamestats";
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
+const DETECT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long to wait through the loading screen for the game's API to come up.
 const MAX_LOADING_POLLS: u32 = 100; // 5 minutes
 const CDRAGON: &str =
@@ -32,6 +34,47 @@ const CDRAGON: &str =
 static WATCHING: AtomicBool = AtomicBool::new(false);
 /// The last Champ Select team, to put names back on teammates Riot hides in game.
 static CHAMP_SELECT_ROSTER: Mutex<Vec<Participant>> = Mutex::new(Vec::new());
+/// The last League Client connection and region. The client often closes during games, but
+/// its API may still answer, and the region is still right for profile links.
+static LAST_CLIENT: Mutex<Option<LCUClientInfo>> = Mutex::new(None);
+static LAST_REGION: Mutex<String> = Mutex::new(String::new());
+
+pub fn remember_client(info: &LCUClientInfo) {
+    if let Ok(mut last) = LAST_CLIENT.lock() {
+        *last = Some(info.clone());
+    }
+}
+
+pub fn remember_region(region: &str) {
+    if let Ok(mut last) = LAST_REGION.lock() {
+        *last = region.to_string();
+    }
+}
+
+/// Watches for games by asking the game itself, so the scoreboard works even when the League
+/// Client is closed during games or Reveal is opened mid-game.
+pub async fn detect(app_handle: AppHandle) {
+    let Ok(http) = local_client() else { return };
+    loop {
+        tokio::time::sleep(DETECT_INTERVAL).await;
+        if WATCHING.load(Ordering::Acquire) {
+            continue;
+        }
+        let game_running = matches!(
+            http.get(LIVE_CLIENT_STATS_URL).send().await,
+            Ok(response) if response.status().is_success()
+        );
+        if !game_running {
+            continue;
+        }
+        let info = LAST_CLIENT.lock().ok().and_then(|last| last.clone());
+        let remoting = info
+            .clone()
+            .and_then(|info| RESTClient::new(info, true).ok());
+        let app = info.and_then(|info| RESTClient::new(info, false).ok());
+        watch(app_handle.clone(), remoting, app).await;
+    }
+}
 
 pub fn remember_champ_select(team: &Lobby) {
     if let Ok(mut roster) = CHAMP_SELECT_ROSTER.lock() {
@@ -88,7 +131,11 @@ pub struct LiveItem {
 
 /// Watches the game until it ends, emitting `live_game_update` with the scoreboard and
 /// `null` when the game is over. Only one watcher runs at a time.
-pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient, app_client: RESTClient) {
+pub async fn watch(
+    app_handle: AppHandle,
+    remoting_client: Option<RESTClient>,
+    app_client: Option<RESTClient>,
+) {
     if WATCHING
         .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
         .is_err()
@@ -108,16 +155,24 @@ pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient, app_clien
     let mut assets = Assets::default();
     let mut lookups = PlayerLookups::default();
     let mut session_players: Vec<SessionPlayer> = Vec::new();
-    let region = web_region(&app_client).await.unwrap_or_default();
+    let region = match &app_client {
+        Some(app_client) => web_region(app_client).await,
+        None => None,
+    }
+    .or_else(|| LAST_REGION.lock().ok().map(|last| last.clone()))
+    .unwrap_or_default();
     let mut last_sent: Option<LiveGame> = None;
     let mut loading_polls = 0;
 
     loop {
-        let phase = remoting_client
-            .get("/lol-gameflow/v1/gameflow-phase".to_string())
-            .await
-            .map(|phase| phase.as_str().unwrap_or_default().to_string())
-            .unwrap_or_default();
+        let phase = match &remoting_client {
+            Some(client) => client
+                .get("/lol-gameflow/v1/gameflow-phase".to_string())
+                .await
+                .map(|phase| phase.as_str().unwrap_or_default().to_string())
+                .unwrap_or_default(),
+            None => String::new(),
+        };
         // The client can be closed during games; keep watching while the game API answers.
         let in_game = phase.is_empty() || phase == "InProgress" || phase == "Reconnect";
 
@@ -132,14 +187,18 @@ pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient, app_clien
                 let mut live = parse_live_game(&data, &assets);
                 live.region = region.clone();
                 if session_players.is_empty() {
-                    session_players = game_session_players(&remoting_client).await;
+                    if let Some(client) = &remoting_client {
+                        session_players = game_session_players(client).await;
+                    }
                 }
                 let roster = CHAMP_SELECT_ROSTER
                     .lock()
                     .map(|roster| roster.clone())
                     .unwrap_or_default();
                 recover_hidden_players(&mut live, &roster, &session_players);
-                lookups.fill(&remoting_client, &mut live).await;
+                if let Some(client) = &remoting_client {
+                    lookups.fill(client, &mut live).await;
+                }
                 if last_sent.as_ref() != Some(&live) {
                     let _ = app_handle.emit_all("live_game_update", &live);
                     last_sent = Some(live);

@@ -53,6 +53,10 @@ fn main() {
             })?;
             app.manage(AppConfig::new(loaded_config));
 
+            let live_game_handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                live_game::detect(live_game_handle).await;
+            });
             tauri::async_runtime::spawn(async move {
                 log_info!("League Client monitor started");
                 lcu::run(app_handle).await;

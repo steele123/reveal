@@ -3,13 +3,22 @@
   import { DISCORD_URL } from "$lib/link_actions";
 
   export let connected = false;
+  export let inGame = false;
 </script>
 
 <footer
   class="flex h-10 shrink-0 items-center border-t border-white/10 px-5 text-xs"
 >
   <div class="min-w-0">
-    {#if connected}
+    {#if inGame}
+      <div
+        in:fade={{ duration: 250 }}
+        class="flex items-center gap-2 text-muted-foreground"
+      >
+        <div class="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]" />
+        <div class="truncate">In game</div>
+      </div>
+    {:else if connected}
       <div
         in:fade={{ duration: 250 }}
         class="flex items-center gap-2 text-muted-foreground"

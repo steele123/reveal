@@ -253,7 +253,7 @@
       </div>
     {/if}
   </div>
-  <Footer {connected} />
+  <Footer {connected} inGame={liveGame !== null} />
   {#if showDiscordPrompt}
     <DiscordPrompt onClose={closeDiscordPrompt} />
   {/if}
