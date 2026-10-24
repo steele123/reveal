@@ -51,6 +51,48 @@ pub fn remember_region(region: &str) {
     }
 }
 
+const DEFAULT_INSTALL_DIR: &str = r"C:\Riot Games\League of Legends";
+const PRODUCT_SETTINGS: &str = r"C:\ProgramData\Riot Games\Metadata\league_of_legends.live\league_of_legends.live.product_settings.yaml";
+
+/// Connection details from League's lockfile ("LeagueClient:pid:port:password:https"), which the
+/// client's background process keeps while its window is closed during games.
+fn lockfile_client_info() -> Option<LCUClientInfo> {
+    let install_dir = std::fs::read_to_string(PRODUCT_SETTINGS)
+        .ok()
+        .and_then(|settings| install_dir_from_settings(&settings))
+        .unwrap_or_else(|| DEFAULT_INSTALL_DIR.to_string());
+    let lockfile =
+        std::fs::read_to_string(std::path::Path::new(&install_dir).join("lockfile")).ok()?;
+    client_info_from_lockfile(&lockfile)
+}
+
+fn install_dir_from_settings(settings: &str) -> Option<String> {
+    settings.lines().find_map(|line| {
+        line.trim()
+            .strip_prefix("product_install_full_path:")
+            .map(|path| path.trim().trim_matches('"').to_string())
+            .filter(|path| !path.is_empty())
+    })
+}
+
+fn client_info_from_lockfile(lockfile: &str) -> Option<LCUClientInfo> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+
+    let parts: Vec<&str> = lockfile.trim().split(':').collect();
+    let [_, _, port, password, _] = parts.as_slice() else {
+        return None;
+    };
+    let port: u16 = port.parse().ok()?;
+    let token = STANDARD.encode(format!("riot:{password}"));
+    // The lockfile's port serves both the client API and the riotclient endpoints Reveal uses.
+    Some(LCUClientInfo {
+        port,
+        token: token.clone(),
+        remoting_port: port,
+        remoting_token: token,
+    })
+}
+
 /// Watches for games by asking the game itself, so the scoreboard works even when the League
 /// Client is closed during games or Reveal is opened mid-game.
 pub async fn detect(app_handle: AppHandle) {
@@ -67,7 +109,10 @@ pub async fn detect(app_handle: AppHandle) {
         if !game_running {
             continue;
         }
-        let info = LAST_CLIENT.lock().ok().and_then(|last| last.clone());
+        // The lockfile is current even while the client's window is closed; fall back to the
+        // last connection Reveal saw.
+        let info = lockfile_client_info()
+            .or_else(|| LAST_CLIENT.lock().ok().and_then(|last| last.clone()));
         let remoting = info
             .clone()
             .and_then(|info| RESTClient::new(info, true).ok());
@@ -656,6 +701,25 @@ mod tests {
             enemy.puuid.as_deref(),
             Some("enemy-puuid"),
             "but ranks can still load"
+        );
+    }
+
+    #[test]
+    fn reads_the_lockfile_and_install_dir() {
+        let info = client_info_from_lockfile(
+            "LeagueClient:1234:61234:s3cret:https
+",
+        )
+        .unwrap();
+        assert_eq!((info.port, info.remoting_port), (61234, 61234));
+        assert_eq!(info.token, "cmlvdDpzM2NyZXQ=", "base64 of riot:s3cret");
+        assert!(client_info_from_lockfile("garbage").is_none());
+
+        let settings = "product_install_full_path: \"D:/Games/League of Legends\"
+product_install_root: \"D:/Games\"";
+        assert_eq!(
+            install_dir_from_settings(settings).as_deref(),
+            Some("D:/Games/League of Legends")
         );
     }
 
