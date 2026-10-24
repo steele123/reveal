@@ -4,7 +4,9 @@
 //! Only data Riot's API reports is shown; no cooldown tracking (Riot's third-party policy).
 
 use crate::{
+    lobby::{Lobby, Participant},
     ranked::{self, RankSummary, RecentForm},
+    region::RegionInfo,
     roles,
 };
 use serde::Serialize;
@@ -12,7 +14,10 @@ use serde_json::Value;
 use shaco::rest::RESTClient;
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
     time::Duration,
 };
 use tauri::{AppHandle, Manager};
@@ -25,12 +30,22 @@ const CDRAGON: &str =
     "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
 
 static WATCHING: AtomicBool = AtomicBool::new(false);
+/// The last Champ Select team, to put names back on teammates Riot hides in game.
+static CHAMP_SELECT_ROSTER: Mutex<Vec<Participant>> = Mutex::new(Vec::new());
+
+pub fn remember_champ_select(team: &Lobby) {
+    if let Ok(mut roster) = CHAMP_SELECT_ROSTER.lock() {
+        *roster = team.participants.clone();
+    }
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveGame {
     pub game_time: f64,
     pub game_mode: String,
+    /// Web region for profile links, e.g. "NA"; empty if the League Client is closed.
+    pub region: String,
     pub players: Vec<LivePlayer>,
 }
 
@@ -39,6 +54,8 @@ pub struct LiveGame {
 pub struct LivePlayer {
     pub game_name: String,
     pub tag_line: String,
+    /// Riot hid this player's Riot ID and Reveal couldn't recover it.
+    pub name_hidden: bool,
     /// "ORDER" (blue side) or "CHAOS" (red side).
     pub team: String,
     pub is_self: bool,
@@ -71,7 +88,7 @@ pub struct LiveItem {
 
 /// Watches the game until it ends, emitting `live_game_update` with the scoreboard and
 /// `null` when the game is over. Only one watcher runs at a time.
-pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient) {
+pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient, app_client: RESTClient) {
     if WATCHING
         .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
         .is_err()
@@ -90,6 +107,8 @@ pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient) {
     };
     let mut assets = Assets::default();
     let mut lookups = PlayerLookups::default();
+    let mut session_players: Vec<SessionPlayer> = Vec::new();
+    let region = web_region(&app_client).await.unwrap_or_default();
     let mut last_sent: Option<LiveGame> = None;
     let mut loading_polls = 0;
 
@@ -111,6 +130,15 @@ pub async fn watch(app_handle: AppHandle, remoting_client: RESTClient) {
             Some(data) if in_game => {
                 assets.load_once().await;
                 let mut live = parse_live_game(&data, &assets);
+                live.region = region.clone();
+                if session_players.is_empty() {
+                    session_players = game_session_players(&remoting_client).await;
+                }
+                let roster = CHAMP_SELECT_ROSTER
+                    .lock()
+                    .map(|roster| roster.clone())
+                    .unwrap_or_default();
+                recover_hidden_players(&mut live, &roster, &session_players);
                 lookups.fill(&remoting_client, &mut live).await;
                 if last_sent.as_ref() != Some(&live) {
                     let _ = app_handle.emit_all("live_game_update", &live);
@@ -151,9 +179,10 @@ fn parse_live_game(data: &Value, assets: &Assets) -> LiveGame {
         .flatten()
         .map(|player| {
             let riot_id = text(&player["riotId"]);
+            // Hidden players have no Riot ID (sometimes a placeholder without a tag).
             let (game_name, tag_line) = match riot_id.split_once('#') {
-                Some((name, tag)) => (name.to_string(), tag.to_string()),
-                None => (text(&player["summonerName"]), String::new()),
+                Some((name, tag)) if !name.is_empty() => (name.to_string(), tag.to_string()),
+                _ => (String::new(), String::new()),
             };
             let scores = &player["scores"];
             let mut items: Vec<LiveItem> = player["items"]
@@ -175,6 +204,7 @@ fn parse_live_game(data: &Value, assets: &Assets) -> LiveGame {
                 text(&player["rawChampionName"]).replace("game_character_displayname_", "");
             LivePlayer {
                 is_self: !me.is_empty() && riot_id == me,
+                name_hidden: game_name.is_empty(),
                 game_name,
                 tag_line,
                 team: text(&player["team"]),
@@ -206,8 +236,117 @@ fn parse_live_game(data: &Value, assets: &Assets) -> LiveGame {
         // Whole seconds, so the scoreboard only re-sends when something changes.
         game_time: data["gameData"]["gameTime"].as_f64().unwrap_or(0.0).floor(),
         game_mode: text(&data["gameData"]["gameMode"]),
+        region: String::new(),
         players,
     }
+}
+
+/// A player from the League Client's game session, which can include their puuid even when
+/// the game hides their Riot ID.
+#[derive(Clone, Debug, Default, PartialEq)]
+struct SessionPlayer {
+    champion_id: i64,
+    puuid: String,
+    game_name: String,
+    tag_line: String,
+}
+
+async fn game_session_players(remoting_client: &RESTClient) -> Vec<SessionPlayer> {
+    match remoting_client
+        .get("/lol-gameflow/v1/session".to_string())
+        .await
+    {
+        Ok(session) => parse_session_players(&session),
+        Err(_) => Vec::new(),
+    }
+}
+
+fn parse_session_players(session: &Value) -> Vec<SessionPlayer> {
+    let text = |value: &Value| value.as_str().unwrap_or_default().to_string();
+    ["teamOne", "teamTwo"]
+        .iter()
+        .flat_map(|team| {
+            session["gameData"][team]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+        })
+        .filter_map(|player| {
+            let champion_id = player["championId"].as_i64().filter(|id| *id > 0)?;
+            let game_name = [&player["gameName"], &player["riotIdGameName"]]
+                .into_iter()
+                .map(text)
+                .find(|name| !name.is_empty())
+                .unwrap_or_default();
+            let tag_line = [&player["tagLine"], &player["riotIdTagLine"]]
+                .into_iter()
+                .map(text)
+                .find(|tag| !tag.is_empty())
+                .unwrap_or_default();
+            Some(SessionPlayer {
+                champion_id,
+                puuid: text(&player["puuid"]),
+                game_name,
+                tag_line,
+            })
+        })
+        .collect()
+}
+
+/// Puts names and puuids back on hidden players, matched by champion: teammates from the
+/// Champ Select roster, then anyone the League Client's game session still identifies.
+fn recover_hidden_players(game: &mut LiveGame, roster: &[Participant], session: &[SessionPlayer]) {
+    let my_team = game
+        .players
+        .iter()
+        .find(|player| player.is_self)
+        .map(|player| player.team.clone());
+
+    for player in &mut game.players {
+        let Some(champion_id) = player.champion_id else {
+            continue;
+        };
+
+        if player.name_hidden && my_team.as_deref() == Some(player.team.as_str()) {
+            if let Some(teammate) = roster
+                .iter()
+                .find(|teammate| teammate.champion_id == Some(champion_id))
+            {
+                player.game_name = teammate.game_name.clone();
+                player.tag_line = teammate.game_tag.clone();
+                player.puuid = (!teammate.puuid.is_empty()).then(|| teammate.puuid.clone());
+                player.name_hidden = false;
+            }
+        }
+
+        if let Some(known) = session
+            .iter()
+            .find(|known| known.champion_id == champion_id)
+        {
+            if player.puuid.is_none() && !known.puuid.is_empty() {
+                player.puuid = Some(known.puuid.clone());
+            }
+            if player.name_hidden && !known.game_name.is_empty() && !known.tag_line.is_empty() {
+                player.game_name = known.game_name.clone();
+                player.tag_line = known.tag_line.clone();
+                player.name_hidden = false;
+            }
+        }
+    }
+}
+
+async fn web_region(app_client: &RESTClient) -> Option<String> {
+    let info: RegionInfo = serde_json::from_value(
+        app_client
+            .get("/riotclient/region-locale".to_string())
+            .await
+            .ok()?,
+    )
+    .ok()?;
+    Some(match info.web_region.as_str() {
+        "SG2" => "SG".to_string(),
+        region => region.to_string(),
+    })
 }
 
 /// Champion ids and item icons from Community Dragon, fetched once per app run.
@@ -278,12 +417,19 @@ struct PlayerLookups {
 impl PlayerLookups {
     async fn fill(&mut self, remoting_client: &RESTClient, game: &mut LiveGame) {
         for player in &mut game.players {
-            if player.is_bot || player.tag_line.is_empty() {
+            if player.is_bot {
                 continue;
             }
-            let key = format!("{}#{}", player.game_name, player.tag_line);
+            let key = match (&player.puuid, player.tag_line.is_empty()) {
+                (Some(puuid), _) => puuid.clone(),
+                (None, false) => format!("{}#{}", player.game_name, player.tag_line),
+                (None, true) => continue,
+            };
             if !self.done.contains_key(&key) {
-                let found = lookup(remoting_client, &player.game_name, &player.tag_line).await;
+                let found = match &player.puuid {
+                    Some(puuid) => details_for(remoting_client, puuid.clone()).await,
+                    None => lookup(remoting_client, &player.game_name, &player.tag_line).await,
+                };
                 self.done.insert(key.clone(), found);
             }
             if let Some(Some((puuid, rank, recent))) = self.done.get(&key) {
@@ -312,6 +458,10 @@ async fn lookup(
         .as_str()
         .filter(|puuid| !puuid.is_empty())?
         .to_string();
+    details_for(remoting_client, puuid).await
+}
+
+async fn details_for(remoting_client: &RESTClient, puuid: String) -> Option<PlayerDetails> {
     let rank = ranked::get_solo_rank(remoting_client, &puuid).await.ok();
     let recent = roles::get_player_history(remoting_client, &puuid)
         .await
@@ -395,6 +545,59 @@ mod tests {
         );
         assert!(enemy.is_dead);
         assert_eq!(enemy.respawn_timer, 13.0);
+    }
+
+    #[test]
+    fn recovers_hidden_teammates_from_champ_select_and_enemies_from_the_session() {
+        let mut data = sample();
+        data["allPlayers"][1]["riotId"] = json!("");
+        data["allPlayers"].as_array_mut().unwrap().push(json!({
+            "riotId": "", "team": "ORDER", "championName": "Qiyana",
+            "rawChampionName": "game_character_displayname_Qiyana", "position": "JUNGLE",
+            "level": 8, "scores": {}, "items": []
+        }));
+        let assets = Assets {
+            loaded: true,
+            champion_ids: HashMap::from([
+                ("taliyah".to_string(), 163),
+                ("monkeyking".to_string(), 62),
+                ("qiyana".to_string(), 246),
+            ]),
+            item_icons: HashMap::new(),
+        };
+        let mut game = parse_live_game(&data, &assets);
+        assert!(game.players[1].name_hidden && game.players[2].name_hidden);
+
+        let mut jungler = Participant {
+            game_name: "困困猫".into(),
+            game_tag: "0406".into(),
+            puuid: "jungler-puuid".into(),
+            champion_id: Some(246),
+            ..Default::default()
+        };
+        jungler.cid = "champ-select".into();
+        let session = parse_session_players(&json!({ "gameData": {
+            "teamOne": [{ "championId": 246, "puuid": "" }],
+            "teamTwo": [{ "championId": 62, "puuid": "enemy-puuid", "gameName": "", "tagLine": "" }]
+        }}));
+
+        recover_hidden_players(&mut game, &[jungler], &session);
+
+        let ally = &game.players[2];
+        assert!(!ally.name_hidden);
+        assert_eq!(
+            (ally.game_name.as_str(), ally.tag_line.as_str()),
+            ("困困猫", "0406")
+        );
+        assert_eq!(ally.puuid.as_deref(), Some("jungler-puuid"));
+
+        let enemy = &game.players[1];
+        assert!(enemy.name_hidden, "no name anywhere, so it stays hidden");
+        assert_eq!(
+            enemy.puuid.as_deref(),
+            Some("enemy-puuid"),
+            "but ranks can still load"
+        );
     }
 
     #[test]

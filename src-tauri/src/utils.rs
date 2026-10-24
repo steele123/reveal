@@ -170,6 +170,7 @@ mod tests {
                 autofilled: false,
                 role_fit: None,
                 is_self: false,
+                champion_id: None,
             }],
         }
     }
@@ -219,6 +220,7 @@ mod tests {
             autofilled: false,
             role_fit: None,
             is_self: false,
+            champion_id: None,
         });
 
         assert_eq!(

@@ -4,12 +4,16 @@ import type { RankSummary, RecentForm } from "$lib/champ_select";
 export interface LiveGame {
   gameTime: number;
   gameMode: string;
+  /** Web region for profile links, e.g. "NA"; empty if the League Client is closed. */
+  region: string;
   players: LivePlayer[];
 }
 
 export interface LivePlayer {
   gameName: string;
   tagLine: string;
+  /** Riot hid this player's Riot ID and Reveal couldn't recover it. */
+  nameHidden: boolean;
   /** "ORDER" (blue side) or "CHAOS" (red side). */
   team: string;
   isSelf: boolean;
@@ -53,6 +57,15 @@ export function splitTeams(game: LiveGame): { ally: LivePlayer[]; enemy: LivePla
 function rankOf(position: string): number {
   const index = POSITION_ORDER.indexOf(position);
   return index === -1 ? POSITION_ORDER.length : index;
+}
+
+/** The player's OP.GG profile, or null when their name is hidden or the region is unknown. */
+export function opggProfileUrl(game: LiveGame, player: LivePlayer): string | null {
+  if (player.nameHidden || player.isBot || !player.gameName || !player.tagLine || !game.region) {
+    return null;
+  }
+  const profile = `${player.gameName}-${player.tagLine}`;
+  return `https://op.gg/lol/summoners/${game.region.toLowerCase()}/${encodeURIComponent(profile)}`;
 }
 
 /** 812 -> "13:32". */

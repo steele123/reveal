@@ -68,6 +68,15 @@ pub struct ChampSelectTeamMember {
     pub is_autofilled: bool,
 }
 
+impl ChampSelectTeamMember {
+    /// The locked champion, or the hovered one before lock-in.
+    fn champion(&self) -> Option<i64> {
+        [self.champion_id, self.champion_pick_intent]
+            .into_iter()
+            .find(|id| *id > 0)
+    }
+}
+
 fn no_cell() -> i64 {
     -1
 }
@@ -188,6 +197,7 @@ pub async fn handle_champ_select_start(
                 last_participant_count = participant_count;
             }
 
+            crate::live_game::remember_champ_select(&team);
             if let Err(error) = app_handle.emit_all("champ_select_started", &team) {
                 log_error!("Failed to emit Champ Select participants: {error}");
             }
@@ -415,6 +425,7 @@ fn apply_champ_select_context(
         participant.cell_id = Some(member.cell_id);
         participant.pick_turn = Some(pick_order(champ_select_team, member.cell_id));
         participant.autofilled = member.is_autofilled;
+        participant.champion_id = member.champion();
         mapped_count += 1;
     }
 
@@ -500,6 +511,7 @@ fn guess_hidden_positions(
         participant.pick_turn = Some(pick_order(champ_select_team, member.cell_id));
         participant.position_guessed = true;
         participant.autofilled = member.is_autofilled;
+        participant.champion_id = member.champion();
     }
 
     lobby.participants.sort_by_key(|participant| {
@@ -601,6 +613,7 @@ mod tests {
             autofilled: false,
             role_fit: None,
             is_self: false,
+            champion_id: None,
         }
     }
 

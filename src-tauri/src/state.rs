@@ -76,8 +76,9 @@ pub async fn handle_client_state(
         "InProgress" | "Reconnect" => {
             let app_handle = app_handle.clone();
             let remoting_client = remoting_client.clone();
+            let app_client = app_client.clone();
             tauri::async_runtime::spawn(async move {
-                crate::live_game::watch(app_handle, remoting_client).await;
+                crate::live_game::watch(app_handle, remoting_client, app_client).await;
             });
         }
         "ReadyCheck" => {

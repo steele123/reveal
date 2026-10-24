@@ -6,7 +6,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use shaco::rest::RESTClient;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Participant {
     pub cid: String,
     pub game_name: String,
@@ -42,6 +42,9 @@ pub struct Participant {
     /// The user's own entry.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub is_self: bool,
+    /// Locked (or hovered) champion from their slot, used to find them again in game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub champion_id: Option<i64>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

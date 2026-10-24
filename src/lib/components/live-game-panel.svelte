@@ -2,6 +2,7 @@
   import { championIconUrl, formatRank } from "$lib/champ_select";
   import {
     formatGameTime,
+    opggProfileUrl,
     splitTeams,
     teamKills,
     type LiveGame,
@@ -13,6 +14,8 @@
     seenBeforeIndex,
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
+  import { openExternalLink } from "$lib/link_actions";
+  import { logFrontendError } from "$lib/logging";
 
   export let game: LiveGame;
   export let history: LobbyHistoryEntry[] = [];
@@ -33,6 +36,13 @@
             pid: "",
           }),
         );
+
+  function openProfile(url: string | null) {
+    if (!url) return;
+    openExternalLink(url).catch((error) =>
+      logFrontendError("Failed to open OP.GG profile", error),
+    );
+  }
 
   // Inventory slots 0-5 are items, 6 is the trinket; show all seven in place.
   function slots(player: LivePlayer) {
@@ -64,9 +74,18 @@
         {#each side.players as player (player.gameName + player.tagLine + player.championName)}
           {@const rank = player.rank ? formatRank(player.rank, player.recent ?? undefined) : null}
           {@const seen = seenBefore(player)}
-          <div
-            class="reveal-panel flex h-[26px] shrink-0 items-center gap-2 px-2 text-[11px]"
+          {@const profileUrl = opggProfileUrl(game, player)}
+          <button
+            type="button"
+            class="reveal-panel flex h-[26px] shrink-0 items-center gap-2 px-2 text-left text-[11px] transition enabled:hover:border-blue-400/30 enabled:hover:bg-blue-500/[0.06] disabled:cursor-default"
             class:border-blue-400={player.isSelf}
+            disabled={!profileUrl}
+            title={profileUrl
+              ? `Open ${player.gameName}'s OP.GG profile`
+              : player.nameHidden
+                ? "Riot hides this player's name, so there's no profile to open"
+                : ""}
+            on:click={() => openProfile(profileUrl)}
           >
             <div class="relative shrink-0" title="{player.championName} · level {player.level}">
               {#if player.championId}
@@ -94,11 +113,15 @@
             </div>
 
             <div class="flex min-w-0 flex-1 items-center gap-1">
-              <span class="truncate font-medium" class:text-blue-200={player.isSelf}
-                >{player.gameName}<span class="text-muted-foreground"
-                  >{player.tagLine ? `#${player.tagLine}` : ""}</span
-                ></span
-              >
+              {#if player.nameHidden}
+                <span class="truncate italic text-muted-foreground">Hidden player</span>
+              {:else}
+                <span class="truncate font-medium" class:text-blue-200={player.isSelf}
+                  >{player.gameName}<span class="text-muted-foreground"
+                    >{player.tagLine ? `#${player.tagLine}` : ""}</span
+                  ></span
+                >
+              {/if}
               {#if seen}
                 <span
                   class="shrink-0 rounded-full bg-violet-500 px-1 text-[8px] font-bold leading-[12px] text-white"
@@ -133,7 +156,7 @@
                 {/if}
               {/each}
             </div>
-          </div>
+          </button>
         {/each}
       </div>
     {/each}
