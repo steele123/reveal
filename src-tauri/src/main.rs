@@ -12,6 +12,7 @@ mod commands;
 mod config;
 mod lcu;
 mod legacy_install;
+mod live_game;
 mod lobby;
 mod queue_pause;
 mod ranked;

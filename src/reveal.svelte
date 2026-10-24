@@ -12,6 +12,7 @@
   import LegacyInstallBanner from "$lib/components/legacy-install-banner.svelte";
   import DiscordPrompt from "$lib/components/discord-prompt.svelte";
   import { DISCORD_URL, openExternalLink } from "$lib/link_actions";
+  import type { LiveGame } from "$lib/live_game";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
   import { isTauriRuntime } from "$lib/runtime";
   import { getPreviewState } from "$lib/preview";
@@ -35,6 +36,7 @@
   let history: LobbyHistoryEntry[] = [];
   let activeLobbyId: string | null = null;
   let legacyInstall: { version: string } | null = null;
+  let liveGame: LiveGame | null = null;
 
   function setConfig(nextConfig: Config) {
     config = nextConfig;
@@ -93,6 +95,7 @@
       };
       connected = preview.connected;
       state = preview.state;
+      liveGame = preview.liveGame ?? null;
       champSelect = preview.champSelect;
       activePage = preview.activePage;
       if (preview.history.length > 0) history = preview.history;
@@ -130,6 +133,11 @@
         listeners.push(
           await listen<boolean>("lcu_state_update", ({ payload }) => {
             connected = payload;
+          }),
+        );
+        listeners.push(
+          await listen<LiveGame | null>("live_game_update", ({ payload }) => {
+            liveGame = payload;
           }),
         );
         listeners.push(
@@ -220,6 +228,7 @@
           {queuePaused}
           {history}
           {activeLobbyId}
+          {liveGame}
           onConfigChange={setConfig}
         />
       {/if}

@@ -5,6 +5,7 @@ import type {
   RecentForm,
 } from "$lib/champ_select";
 import type { LobbyHistoryEntry } from "$lib/lobby_history";
+import type { LiveGame, LivePlayer } from "$lib/live_game";
 
 interface PreviewState {
   connected: boolean;
@@ -12,6 +13,7 @@ interface PreviewState {
   champSelect: ChampSelect | null;
   activePage: "reveal" | "history";
   history: LobbyHistoryEntry[];
+  liveGame?: LiveGame;
 }
 
 const PREVIEW_RANKS: RankSummary[] = [
@@ -86,6 +88,45 @@ const PREVIEW_PARTICIPANTS = [
   ][index],
   profile_icon_id: [7085, 4553, 29, 5367, undefined][index],
 }));
+
+const ICONS: Record<number, string> = {
+  3020: "3020_class_t2_sorcerersshoes.png",
+  6655: "6655_mage_t4_ludenstempest.png",
+  3340: "3340_class_t1_wardingtotem.png",
+  1056: "1056_mage_t1_doransring.png",
+  3006: "3006_class_t2_berserkersgreaves.png",
+  6672: "6672_marksman_t4_behemothslayer.png",
+  1055: "1055_marksman_t1_doransblade.png",
+  3047: "3047_class_t2_ninjatabi.png",
+  3068: "3068_tank_t4_sunfireaegis.png",
+};
+
+function livePlayer(
+  base: Partial<LivePlayer> & Pick<LivePlayer, "gameName" | "tagLine" | "team" | "championName" | "position">,
+): LivePlayer {
+  return {
+    isSelf: false, isBot: false, championId: null, level: 9, kills: 2, deaths: 2, assists: 3,
+    creepScore: 90, isDead: false, respawnTimer: 0, items: [], puuid: null, rank: null, recent: null,
+    ...base,
+  };
+}
+
+const PREVIEW_LIVE_GAME: LiveGame = {
+  gameTime: 812,
+  gameMode: "CLASSIC",
+  players: [
+    livePlayer({ gameName: "Paper Lantern", tagLine: "NA1", team: "ORDER", championName: "Vayne", championId: 67, position: "TOP", level: 10, kills: 3, deaths: 1, assists: 2, creepScore: 121, rank: PREVIEW_RANKS[0], recent: PREVIEW_RECENT[0], items: [{ id: 1055, name: "Doran's Blade", slot: 0, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[1055]}` }, { id: 3006, name: "Berserker's Greaves", slot: 1, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3006]}` }, { id: 3340, name: "Stealth Ward", slot: 6, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3340]}` }] }),
+    livePlayer({ gameName: "Kindred Spirit", tagLine: "WOLF", team: "ORDER", championName: "Qiyana", championId: 246, position: "JUNGLE", level: 11, kills: 6, deaths: 2, assists: 4, creepScore: 98, rank: PREVIEW_RANKS[1], recent: PREVIEW_RECENT[1] }),
+    livePlayer({ gameName: "spooky", tagLine: "2729", team: "ORDER", championName: "Taliyah", championId: 163, position: "MIDDLE", isSelf: true, level: 11, kills: 4, deaths: 1, assists: 7, creepScore: 142, rank: PREVIEW_RANKS[2], recent: PREVIEW_RECENT[2], items: [{ id: 6655, name: "Luden's Companion", slot: 0, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[6655]}` }, { id: 3020, name: "Sorcerer's Shoes", slot: 1, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3020]}` }, { id: 1056, name: "Doran's Ring", slot: 2, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[1056]}` }, { id: 3340, name: "Stealth Ward", slot: 6, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3340]}` }] }),
+    livePlayer({ gameName: "wanan yuen", tagLine: "chaye", team: "ORDER", championName: "Twisted Fate", championId: 4, position: "BOTTOM", level: 9, kills: 1, deaths: 3, assists: 5, creepScore: 110 }),
+    livePlayer({ gameName: "yuen", tagLine: "vvv", team: "ORDER", championName: "Lux", championId: 99, position: "UTILITY", level: 8, kills: 0, deaths: 2, assists: 11, creepScore: 18, rank: PREVIEW_RANKS[3], recent: PREVIEW_RECENT[3] }),
+    livePlayer({ gameName: "Shopkeeper", tagLine: "123", team: "CHAOS", championName: "Wukong", championId: 62, position: "TOP", level: 10, kills: 2, deaths: 4, assists: 1, creepScore: 104, isDead: true, respawnTimer: 13, rank: PREVIEW_RANKS[2], recent: PREVIEW_RECENT[2], items: [{ id: 3047, name: "Plated Steelcaps", slot: 1, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3047]}` }, { id: 3068, name: "Sunfire Aegis", slot: 0, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3068]}` }] }),
+    livePlayer({ gameName: "Odysseus", tagLine: "KR131", team: "CHAOS", championName: "Lee Sin", championId: 64, position: "JUNGLE", puuid: "enemy-2", level: 11, kills: 5, deaths: 3, assists: 3, creepScore: 95, rank: PREVIEW_RANKS[1], recent: PREVIEW_RECENT[0] }),
+    livePlayer({ gameName: "SeTab", tagLine: "123", team: "CHAOS", championName: "Ahri", championId: 103, position: "MIDDLE", level: 10, kills: 2, deaths: 4, assists: 2, creepScore: 130, rank: PREVIEW_RANKS[0], recent: PREVIEW_RECENT[1] }),
+    livePlayer({ gameName: "Clozer", tagLine: "0727", team: "CHAOS", championName: "Jinx", championId: 222, position: "BOTTOM", level: 9, kills: 1, deaths: 2, assists: 1, creepScore: 118, items: [{ id: 6672, name: "Kraken Slayer", slot: 0, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[6672]}` }, { id: 3006, name: "Berserker's Greaves", slot: 1, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3006]}` }] }),
+    livePlayer({ gameName: "Simsons", tagLine: "spfd", team: "CHAOS", championName: "Thresh", championId: 412, position: "UTILITY", isBot: false, level: 8, kills: 0, deaths: 2, assists: 5, creepScore: 12 }),
+  ],
+};
 
 export function getPreviewState(): PreviewState {
   const preview = new URLSearchParams(window.location.search).get("preview");
@@ -162,7 +203,15 @@ export function getPreviewState(): PreviewState {
       state: "InProgress",
       champSelect: null,
       activePage: "reveal",
-      history: [],
+      history: [
+        {
+          id: "preview-seen-enemy",
+          revealedAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+          gameStartedAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+          participants: [{ ...PREVIEW_PARTICIPANTS[0], puuid: "enemy-2", game_name: "Odysseus", game_tag: "KR131" }],
+        },
+      ],
+      liveGame: PREVIEW_LIVE_GAME,
     };
   }
 

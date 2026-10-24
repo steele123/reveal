@@ -73,6 +73,13 @@ pub async fn handle_client_state(
                 .await;
             });
         }
+        "InProgress" | "Reconnect" => {
+            let app_handle = app_handle.clone();
+            let remoting_client = remoting_client.clone();
+            tauri::async_runtime::spawn(async move {
+                crate::live_game::watch(app_handle, remoting_client).await;
+            });
+        }
         "ReadyCheck" => {
             if let (true, Some(generation)) = (cfg.auto_accept, phase_update.ready_check_generation)
             {

@@ -4,6 +4,8 @@
   import RevealCount from "./reveal-count.svelte";
   import type { ChampSelect } from "$lib/champ_select";
   import ChampSelectPanel from "./champ-select-panel.svelte";
+  import LiveGamePanel from "./live-game-panel.svelte";
+  import type { LiveGame } from "$lib/live_game";
   import SettingsPanel from "./settings-panel.svelte";
   import { logFrontendError } from "$lib/logging";
   import type { LobbyHistoryEntry } from "$lib/lobby_history";
@@ -15,6 +17,7 @@
   export let queuePaused = false;
   export let history: LobbyHistoryEntry[] = [];
   export let activeLobbyId: string | null = null;
+  export let liveGame: LiveGame | null = null;
   export let onConfigChange: (config: Config) => void = () => {};
 
   async function handleConfigChange(nextConfig: Config) {
@@ -29,10 +32,11 @@
     }
   }
 
-  // Champ Select needs the height for five teammates in pick order, so settings collapse to a
-  // one-line summary there (changes made mid-select only apply next game anyway).
+  // Champ Select and the live scoreboard need the height, so settings collapse to a one-line
+  // summary there (changes made mid-select only apply next game anyway).
   let settingsExpanded = false;
-  $: inChampSelect = state === "ChampSelect";
+  $: showingLiveGame = state === "InProgress" && liveGame !== null;
+  $: inChampSelect = state === "ChampSelect" || showingLiveGame;
   $: if (!inChampSelect) settingsExpanded = false;
   $: settingsSummary = config
     ? [
@@ -89,6 +93,10 @@
         {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
       />
+    </div>
+  {:else if showingLiveGame && liveGame}
+    <div in:fade class="flex min-h-0 flex-1 flex-col">
+      <LiveGamePanel game={liveGame} {history} />
     </div>
   {:else}
     <div class="grid grid-cols-2 gap-3">
