@@ -93,6 +93,7 @@
         {history}
         {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
+        provider={config?.multiProvider ?? "opgg"}
       />
     </div>
   {:else if showingLiveGame && liveGame}

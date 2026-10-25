@@ -45,6 +45,9 @@ pub struct Participant {
     /// Locked (or hovered) champion from their slot, used to find them again in game.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub champion_id: Option<i64>,
+    /// On the other team (lobbies where the enemy team is visible, like ranked 5-stacks).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_enemy: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

@@ -149,7 +149,11 @@
           await listen<ChampSelect>("champ_select_started", ({ payload }) => {
             champSelect = payload;
             activeLobbyId ??= createLobbyHistoryId();
-            history = recordLobbyReveal(activeLobbyId, payload);
+            // History is about your own team.
+            history = recordLobbyReveal(activeLobbyId, {
+              ...payload,
+              participants: payload.participants.filter((participant) => !participant.is_enemy),
+            });
           }),
         );
 

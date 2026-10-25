@@ -5,7 +5,7 @@ use crate::{
 use serde::Deserialize;
 use shaco::rest::RESTClient;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
@@ -45,6 +45,8 @@ pub struct ChampSelectSession {
     pub timer: Timer,
     #[serde(default)]
     pub my_team: Vec<ChampSelectTeamMember>,
+    #[serde(default)]
+    pub their_team: Vec<ChampSelectTeamMember>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +68,10 @@ pub struct ChampSelectTeamMember {
     pub champion_pick_intent: i64,
     #[serde(default)]
     pub is_autofilled: bool,
+    #[serde(default)]
+    pub game_name: String,
+    #[serde(default)]
+    pub tag_line: String,
 }
 
 impl ChampSelectTeamMember {
@@ -164,6 +170,8 @@ pub async fn handle_champ_select_start(
                 session_warning_logged = false;
                 apply_champ_select_context(&mut team, &session.my_team);
                 mark_local_player(&mut team, &session.my_team, session.local_player_cell_id);
+                add_visible_enemies(&mut team, &session.their_team);
+                mark_enemies(&mut team, &session.my_team, &session.their_team);
                 Some(session)
             }
             Err(error) => {
@@ -182,7 +190,16 @@ pub async fn handle_champ_select_start(
             guess_hidden_positions(&mut team, &session.my_team, &players);
         }
         players.apply_role_fit(&mut team);
-        let participant_count = team.participants.len();
+        // Auto-open, counts and analytics are about your own team.
+        let allies = lobby::Lobby {
+            participants: team
+                .participants
+                .iter()
+                .filter(|p| !p.is_enemy)
+                .cloned()
+                .collect(),
+        };
+        let participant_count = allies.participants.len();
 
         if participant_count > 0 && first_participant_seen_at.is_none() {
             first_participant_seen_at = Some(Instant::now());
@@ -219,7 +236,7 @@ pub async fn handle_champ_select_start(
             auto_open_elapsed,
             auto_open_max_wait,
         ) {
-            if let Err(error) = display_champ_select(&team, region, &config.multi_provider) {
+            if let Err(error) = display_champ_select(&allies, region, &config.multi_provider) {
                 log_error!("Automatic multi-search open failed: {error}");
             } else {
                 log_info!(
@@ -440,6 +457,102 @@ fn apply_champ_select_context(
     mapped_count
 }
 
+/// Adds enemies whose Riot IDs the session shows (e.g. 5-stack queues, where chat only has
+/// your own team but the other team's slots include their names).
+fn add_visible_enemies(lobby: &mut lobby::Lobby, their_team: &[ChampSelectTeamMember]) {
+    let region = lobby
+        .participants
+        .first()
+        .map(|p| p.region.clone())
+        .unwrap_or_default();
+    for member in their_team {
+        if member.puuid.is_empty()
+            || member.game_name.is_empty()
+            || lobby.participants.iter().any(|p| p.puuid == member.puuid)
+        {
+            continue;
+        }
+        lobby.participants.push(lobby::Participant {
+            cid: "champ-select-enemy".to_string(),
+            game_name: member.game_name.clone(),
+            game_tag: member.tag_line.clone(),
+            name: member.game_name.clone(),
+            pid: member.puuid.clone(),
+            puuid: member.puuid.clone(),
+            region: region.clone(),
+            ..Default::default()
+        });
+    }
+}
+
+/// Marks players on the other team, for lobbies where Riot shows both teams (ranked 5-stacks).
+/// Teams are told apart by puuid when the slots include them; otherwise the lobby is split in
+/// half, with your half being the one you're in. Enemies matched to a slot get its role and
+/// their pick order within their team.
+fn mark_enemies(
+    lobby: &mut lobby::Lobby,
+    my_team: &[ChampSelectTeamMember],
+    their_team: &[ChampSelectTeamMember],
+) {
+    for participant in &mut lobby.participants {
+        participant.is_enemy = false;
+    }
+    let team_size = my_team.len().max(EXPECTED_PARTICIPANT_COUNT);
+    if lobby.participants.len() <= team_size {
+        return;
+    }
+
+    let allies: HashSet<&str> = my_team
+        .iter()
+        .map(|member| member.puuid.as_str())
+        .filter(|puuid| !puuid.is_empty())
+        .collect();
+    let enemy_slots: HashMap<&str, &ChampSelectTeamMember> = their_team
+        .iter()
+        .filter(|member| !member.puuid.is_empty())
+        .map(|member| (member.puuid.as_str(), member))
+        .collect();
+
+    if allies.is_empty() && enemy_slots.is_empty() {
+        // No puuids to go on: the first and second halves of the lobby are the two teams.
+        let half = lobby.participants.len() / 2;
+        let self_in_second_half = lobby
+            .participants
+            .iter()
+            .position(|participant| participant.is_self)
+            .is_some_and(|index| index >= half);
+        for (index, participant) in lobby.participants.iter_mut().enumerate() {
+            participant.is_enemy = (index >= half) != self_in_second_half;
+        }
+        return;
+    }
+
+    let mut ally_count = 0;
+    for participant in &mut lobby.participants {
+        if allies.contains(participant.puuid.as_str()) {
+            ally_count += 1;
+        } else if let Some(slot) = enemy_slots.get(participant.puuid.as_str()) {
+            participant.is_enemy = true;
+            participant.cell_id = Some(slot.cell_id);
+            participant.pick_turn = Some(pick_order(their_team, slot.cell_id));
+            participant.assigned_position =
+                (!slot.assigned_position.is_empty()).then(|| slot.assigned_position.clone());
+            participant.champion_id = slot.champion();
+        }
+    }
+    // Players neither list identifies: fill your team up first, the rest are enemies.
+    for participant in &mut lobby.participants {
+        let known = allies.contains(participant.puuid.as_str()) || participant.is_enemy;
+        if !known {
+            if ally_count < my_team.len() {
+                ally_count += 1;
+            } else {
+                participant.is_enemy = true;
+            }
+        }
+    }
+}
+
 /// Marks the user's own entry; the local player's slot is never hidden from them.
 fn mark_local_player(
     lobby: &mut lobby::Lobby,
@@ -483,7 +596,10 @@ fn guess_hidden_positions(
     }
 
     let unplaced: Vec<usize> = (0..lobby.participants.len())
-        .filter(|&index| lobby.participants[index].cell_id.is_none())
+        .filter(|&index| {
+            let participant = &lobby.participants[index];
+            participant.cell_id.is_none() && !participant.is_enemy
+        })
         .collect();
     let no_mains = Vec::new();
     let candidates: Vec<roles::Candidate> = unplaced
@@ -615,6 +731,7 @@ mod tests {
             role_fit: None,
             is_self: false,
             champion_id: None,
+            is_enemy: false,
         }
     }
 
@@ -628,6 +745,8 @@ mod tests {
             champion_id: 0,
             champion_pick_intent: 0,
             is_autofilled: false,
+            game_name: String::new(),
+            tag_line: String::new(),
         }
     }
 
@@ -656,6 +775,116 @@ mod tests {
             .map(|participant| (participant.puuid.as_str(), participant.pick_turn))
             .collect();
         assert_eq!(order, vec![("a", Some(0)), ("b", Some(1)), ("c", Some(2))]);
+    }
+
+    fn five_stack_lobby() -> lobby::Lobby {
+        lobby::Lobby {
+            participants: (0..10)
+                .map(|i| participant(&format!("p{i}"), &format!("P{i}")))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn splits_a_five_stack_lobby_by_puuid_and_orders_enemies_by_their_slots() {
+        let mut team = five_stack_lobby();
+        let slot = |cell_id, puuid: &str, position: &str| ChampSelectTeamMember {
+            cell_id,
+            puuid: puuid.to_string(),
+            assigned_position: position.to_string(),
+            ..member_defaults()
+        };
+        let mine: Vec<_> = (0..5).map(|i| slot(i, &format!("p{i}"), "")).collect();
+        let theirs = vec![slot(9, "p5", "top"), slot(5, "p6", "jungle")];
+
+        mark_enemies(&mut team, &mine, &theirs);
+
+        let enemies: Vec<&str> = team
+            .participants
+            .iter()
+            .filter(|p| p.is_enemy)
+            .map(|p| p.puuid.as_str())
+            .collect();
+        assert_eq!(enemies, vec!["p5", "p6", "p7", "p8", "p9"]);
+        let p6 = team.participants.iter().find(|p| p.puuid == "p6").unwrap();
+        assert_eq!(
+            (p6.pick_turn, p6.assigned_position.as_deref()),
+            (Some(0), Some("jungle"))
+        );
+        let p5 = team.participants.iter().find(|p| p.puuid == "p5").unwrap();
+        assert_eq!(p5.pick_turn, Some(1));
+    }
+
+    #[test]
+    fn adds_enemies_the_session_names_when_chat_only_has_your_team() {
+        let mut team = lobby::Lobby {
+            participants: (0..5).map(|i| participant(&format!("p{i}"), "P")).collect(),
+        };
+        let mine: Vec<_> = (0..5)
+            .map(|i| ChampSelectTeamMember {
+                cell_id: 5 + i,
+                puuid: format!("p{i}"),
+                ..member_defaults()
+            })
+            .collect();
+        let theirs: Vec<_> = (0..5)
+            .map(|i| ChampSelectTeamMember {
+                cell_id: 4 - i,
+                puuid: format!("e{i}"),
+                game_name: format!("Enemy{i}"),
+                tag_line: "NA1".into(),
+                ..member_defaults()
+            })
+            .collect();
+
+        add_visible_enemies(&mut team, &theirs);
+        add_visible_enemies(&mut team, &theirs);
+        mark_enemies(&mut team, &mine, &theirs);
+
+        assert_eq!(team.participants.len(), 10, "added once");
+        let enemies: Vec<_> = team.participants.iter().filter(|p| p.is_enemy).collect();
+        assert_eq!(enemies.len(), 5);
+        assert_eq!(
+            (enemies[0].game_name.as_str(), enemies[0].game_tag.as_str()),
+            ("Enemy0", "NA1")
+        );
+        assert_eq!(enemies[0].pick_turn, Some(4), "cell 4 is last of cells 0-4");
+        assert!(team.participants[..5].iter().all(|p| !p.is_enemy));
+    }
+
+    #[test]
+    fn splits_a_five_stack_lobby_in_half_without_puuids() {
+        let mut team = five_stack_lobby();
+        team.participants[7].is_self = true;
+        let hidden: Vec<_> = (0..5)
+            .map(|i| ChampSelectTeamMember {
+                cell_id: i,
+                ..member_defaults()
+            })
+            .collect();
+
+        mark_enemies(&mut team, &hidden, &[]);
+
+        let allies: Vec<&str> = team
+            .participants
+            .iter()
+            .filter(|p| !p.is_enemy)
+            .map(|p| p.puuid.as_str())
+            .collect();
+        assert_eq!(
+            allies,
+            vec!["p5", "p6", "p7", "p8", "p9"],
+            "your half is the one you're in"
+        );
+    }
+
+    #[test]
+    fn leaves_a_normal_lobby_alone() {
+        let mut team = lobby::Lobby {
+            participants: (0..5).map(|i| participant(&format!("p{i}"), "P")).collect(),
+        };
+        mark_enemies(&mut team, &[], &[]);
+        assert!(team.participants.iter().all(|p| !p.is_enemy));
     }
 
     #[test]

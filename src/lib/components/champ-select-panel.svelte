@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { invoke } from "@tauri-apps/api/tauri";
   import {
     championIconUrl,
     describeMain,
@@ -16,11 +15,12 @@
   import { logFrontendError } from "$lib/logging";
   import {
     copyLink,
+    createMultiSearchLink,
     createOpggProfileLink,
     formatRiotIds,
     openExternalLink,
   } from "$lib/link_actions";
-  import type { PlayerClickAction } from "$lib/config";
+  import type { MultiProvider, PlayerClickAction } from "$lib/config";
   import PlayerDetails from "./player-details.svelte";
   import {
     describeSeenBefore,
@@ -31,6 +31,17 @@
 
   export let champSelect: ChampSelect | null = null;
   export let clickAction: PlayerClickAction = "details";
+  export let provider: MultiProvider = "opgg";
+
+  $: allies = champSelect?.participants.filter((participant) => !participant.is_enemy) ?? [];
+  $: enemies = champSelect?.participants.filter((participant) => participant.is_enemy) ?? [];
+  // Both teams side by side when the enemy team is visible (ranked 5-stacks).
+  $: sections = enemies.length
+    ? [
+        { label: "Your team", tone: "text-blue-300", players: allies },
+        { label: "Enemy team", tone: "text-red-300", players: enemies },
+      ]
+    : [{ label: "", tone: "", players: allies }];
   export let history: LobbyHistoryEntry[] = [];
   export let activeLobbyId: string | null = null;
 
@@ -66,7 +77,7 @@
   async function copyNames() {
     if (!champSelect) return;
     try {
-      await copyLink(formatRiotIds(champSelect.participants));
+      await copyLink(formatRiotIds(allies));
       copyStatus = "copied";
     } catch (error) {
       logFrontendError("Failed to copy teammate names", error);
@@ -80,8 +91,9 @@
     if (copyTimer) clearTimeout(copyTimer);
   });
 
-  function openMultiLink() {
-    void invoke<void>("open_opgg_link").catch((error) => {
+  function openMultiLink(players: Participant[]) {
+    if (!players.length) return;
+    openExternalLink(createMultiSearchLink(players, provider)).catch((error) => {
       logFrontendError("Failed to open multi link", error);
     });
   }
@@ -98,14 +110,19 @@
     <div
       class="rounded-full border border-blue-400/20 bg-blue-500/10 px-2 py-1 text-[10px] font-medium text-blue-300"
     >
-      {champSelect?.participants.length ?? 0}/5 found
+      {allies.length}/5 found
     </div>
   </div>
 
-  <!-- One column, top to bottom in pick order, like the League client. -->
-  <div class="-mr-1 flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 text-sm">
+  <!-- Top to bottom in pick order, like the League client; enemies get their own column. -->
+  <div class="-mr-1 grid min-h-0 gap-2 overflow-y-auto pr-1 text-sm" class:grid-cols-2={enemies.length > 0}>
     {#if champSelect}
-      {#each champSelect.participants as participant, index (participant.puuid)}
+      {#each sections as section}
+      <div class="flex min-w-0 flex-col gap-1.5">
+      {#if section.label}
+        <div class="px-1 text-[10px] font-medium uppercase tracking-[0.12em] {section.tone}">{section.label}</div>
+      {/if}
+      {#each section.players as participant, index (participant.puuid)}
         {@const offRole = offRoleReason(participant)}
         {@const seen = seenBefore(participant)}
         {@const badgeTitle = [
@@ -206,6 +223,8 @@
           {/if}
         </button>
       {/each}
+      </div>
+      {/each}
     {:else}
       {#each Array.from({ length: 5 }) as _, index (index)}
         <div
@@ -240,9 +259,9 @@
     <Button
       class="h-9 flex-1 bg-blue-500 text-sm shadow-[0_8px_24px_rgba(59,130,246,0.18)] hover:bg-blue-400"
       disabled={!champSelect}
-      on:click={openMultiLink}
+      on:click={() => openMultiLink(allies)}
     >
-      Open team multi-search
+      {enemies.length ? "Open team" : "Open team multi-search"}
       <svg
         viewBox="0 0 16 16"
         class="ml-2 h-3.5 w-3.5"
@@ -258,6 +277,24 @@
         />
       </svg>
     </Button>
+    {#if enemies.length}
+      <Button
+        class="h-9 flex-1 bg-red-500/80 text-sm hover:bg-red-500"
+        on:click={() => openMultiLink(enemies)}
+      >
+        Open enemies
+        <svg viewBox="0 0 16 16" class="ml-2 h-3.5 w-3.5" aria-hidden="true">
+          <path
+            d="M6 3h7v7m0-7L6.5 9.5M11 9v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.25"
+          />
+        </svg>
+      </Button>
+    {/if}
   </div>
 </section>
 

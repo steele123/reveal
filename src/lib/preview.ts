@@ -129,6 +129,26 @@ const PREVIEW_LIVE_GAME: LiveGame = {
   ],
 };
 
+const PREVIEW_ENEMIES = [
+  ["Shopkeeper", "123", "top"],
+  ["Odysseus", "KR131", "jungle"],
+  ["SeTab", "123", "middle"],
+  ["Clozer", "0727", "bottom"],
+  ["Simsons", "spfd", "utility"],
+].map(([game_name, game_tag, position], index) => ({
+  ...PREVIEW_PARTICIPANTS[index],
+  game_name,
+  game_tag,
+  name: game_name,
+  puuid: `enemy-${index}`,
+  pid: `enemy-${index}`,
+  assigned_position: position,
+  position_guessed: false,
+  autofilled: false,
+  is_self: false,
+  is_enemy: true,
+}));
+
 export function getPreviewState(): PreviewState {
   const preview = new URLSearchParams(window.location.search).get("preview");
 
@@ -164,7 +184,11 @@ export function getPreviewState(): PreviewState {
     return {
       connected: true,
       state: "ChampSelect",
-      champSelect: { participants: PREVIEW_PARTICIPANTS },
+      champSelect: {
+        participants: new URLSearchParams(window.location.search).has("enemies")
+          ? [...PREVIEW_PARTICIPANTS, ...PREVIEW_ENEMIES]
+          : PREVIEW_PARTICIPANTS,
+      },
       activePage: "reveal",
       history: [
         {

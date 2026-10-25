@@ -25,6 +25,8 @@ export interface Participant {
   role_fit?: RoleFit;
   /** The user's own entry. */
   is_self?: boolean;
+  /** On the other team (lobbies where both teams are visible, like ranked 5-stacks). */
+  is_enemy?: boolean;
 }
 
 export interface RoleFit {

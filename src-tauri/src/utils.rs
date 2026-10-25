@@ -171,6 +171,7 @@ mod tests {
                 role_fit: None,
                 is_self: false,
                 champion_id: None,
+                is_enemy: false,
             }],
         }
     }
@@ -221,6 +222,7 @@ mod tests {
             role_fit: None,
             is_self: false,
             champion_id: None,
+            is_enemy: false,
         });
 
         assert_eq!(
