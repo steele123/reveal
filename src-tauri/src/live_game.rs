@@ -134,6 +134,8 @@ pub struct LiveGame {
     pub game_mode: String,
     /// Web region for profile links, e.g. "NA"; empty if the League Client is closed.
     pub region: String,
+    /// The queue's display name, e.g. "Ranked Solo/Duo", when the League Client is reachable.
+    pub queue_name: Option<String>,
     pub players: Vec<LivePlayer>,
 }
 
@@ -200,6 +202,10 @@ pub async fn watch(
     let mut assets = Assets::default();
     let mut lookups = PlayerLookups::default();
     let mut session_players: Vec<SessionPlayer> = Vec::new();
+    let queue_name = match &remoting_client {
+        Some(client) => crate::queue::current_queue_name(client).await,
+        None => None,
+    };
     let region = match &app_client {
         Some(app_client) => web_region(app_client).await,
         None => None,
@@ -231,6 +237,7 @@ pub async fn watch(
                 assets.load_once().await;
                 let mut live = parse_live_game(&data, &assets);
                 live.region = region.clone();
+                live.queue_name = queue_name.clone();
                 if session_players.is_empty() {
                     if let Some(client) = &remoting_client {
                         session_players = game_session_players(client).await;
@@ -341,6 +348,7 @@ fn parse_live_game(data: &Value, assets: &Assets) -> LiveGame {
         game_time: data["gameData"]["gameTime"].as_f64().unwrap_or(0.0).floor(),
         game_mode: text(&data["gameData"]["gameMode"]),
         region: String::new(),
+        queue_name: None,
         players,
     }
 }

@@ -14,6 +14,7 @@ mod lcu;
 mod legacy_install;
 mod live_game;
 mod lobby;
+mod queue;
 mod queue_pause;
 mod ranked;
 mod region;

@@ -115,6 +115,7 @@ const PREVIEW_LIVE_GAME: LiveGame = {
   gameTime: 812,
   gameMode: "CLASSIC",
   region: "NA",
+  queueName: "Ranked Solo/Duo",
   players: [
     livePlayer({ gameName: "Paper Lantern", tagLine: "NA1", team: "ORDER", championName: "Vayne", championId: 67, position: "TOP", level: 10, kills: 3, deaths: 1, assists: 2, creepScore: 121, rank: PREVIEW_RANKS[0], recent: PREVIEW_RECENT[0], items: [{ id: 1055, name: "Doran's Blade", slot: 0, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[1055]}` }, { id: 3006, name: "Berserker's Greaves", slot: 1, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3006]}` }, { id: 3340, name: "Stealth Ward", slot: 6, icon: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/items/icons2d/${ICONS[3340]}` }] }),
     livePlayer({ gameName: "Kindred Spirit", tagLine: "WOLF", team: "ORDER", championName: "Qiyana", championId: 246, position: "JUNGLE", level: 11, kills: 6, deaths: 2, assists: 4, creepScore: 98, rank: PREVIEW_RANKS[1], recent: PREVIEW_RECENT[1] }),

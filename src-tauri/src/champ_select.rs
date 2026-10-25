@@ -131,6 +131,8 @@ pub async fn handle_champ_select_start(
     let mut first_participant_seen_at: Option<Instant> = None;
     let mut session_warning_logged = false;
     let mut players = PlayerCache::default();
+    let queue_name = crate::queue::current_queue_name(remoting_client).await;
+    let _ = app_handle.emit_all("queue_name", &queue_name);
     let mut analytics_sent = false;
 
     // Poll until champ select ends: slots, spells and picks keep changing, which updates

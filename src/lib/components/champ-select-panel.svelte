@@ -32,6 +32,7 @@
   export let champSelect: ChampSelect | null = null;
   export let clickAction: PlayerClickAction = "details";
   export let provider: MultiProvider = "opgg";
+  export let queueName: string | null = null;
 
   $: allies = champSelect?.participants.filter((participant) => !participant.is_enemy) ?? [];
   $: enemies = champSelect?.participants.filter((participant) => participant.is_enemy) ?? [];
@@ -102,7 +103,16 @@
 <section class="flex min-h-0 flex-1 flex-col gap-2">
   <div class="flex items-center justify-between">
     <div>
-      <div class="text-sm font-semibold">Champ Select</div>
+      <div class="flex items-center gap-2">
+        <div class="text-sm font-semibold">Champ Select</div>
+        {#if queueName}
+          <div
+            class="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          >
+            {queueName}
+          </div>
+        {/if}
+      </div>
       <div class="text-[11px] text-muted-foreground">
         Teammate identities are ready.
       </div>

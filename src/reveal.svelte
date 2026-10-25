@@ -37,6 +37,7 @@
   let activeLobbyId: string | null = null;
   let legacyInstall: { version: string } | null = null;
   let liveGame: LiveGame | null = null;
+  let queueName: string | null = null;
 
   function setConfig(nextConfig: Config) {
     config = nextConfig;
@@ -96,6 +97,7 @@
       connected = preview.connected;
       state = preview.state;
       liveGame = preview.liveGame ?? null;
+      queueName = preview.champSelect ? "Ranked Solo/Duo" : null;
       champSelect = preview.champSelect;
       activePage = preview.activePage;
       if (preview.history.length > 0) history = preview.history;
@@ -133,6 +135,11 @@
         listeners.push(
           await listen<boolean>("lcu_state_update", ({ payload }) => {
             connected = payload;
+          }),
+        );
+        listeners.push(
+          await listen<string | null>("queue_name", ({ payload }) => {
+            queueName = payload;
           }),
         );
         listeners.push(
@@ -233,6 +240,7 @@
           {history}
           {activeLobbyId}
           {liveGame}
+          {queueName}
           onConfigChange={setConfig}
         />
       {/if}

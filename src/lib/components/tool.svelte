@@ -18,6 +18,7 @@
   export let history: LobbyHistoryEntry[] = [];
   export let activeLobbyId: string | null = null;
   export let liveGame: LiveGame | null = null;
+  export let queueName: string | null = null;
   export let onConfigChange: (config: Config) => void = () => {};
 
   async function handleConfigChange(nextConfig: Config) {
@@ -94,6 +95,7 @@
         {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
         provider={config?.multiProvider ?? "opgg"}
+        {queueName}
       />
     </div>
   {:else if showingLiveGame && liveGame}

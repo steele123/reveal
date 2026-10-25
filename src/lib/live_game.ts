@@ -6,6 +6,8 @@ export interface LiveGame {
   gameMode: string;
   /** Web region for profile links, e.g. "NA"; empty if the League Client is closed. */
   region: string;
+  /** e.g. "Ranked Solo/Duo"; null when the League Client couldn't be reached. */
+  queueName: string | null;
   players: LivePlayer[];
 }
 

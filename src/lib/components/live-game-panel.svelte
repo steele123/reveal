@@ -56,7 +56,7 @@
   <div class="flex items-center justify-between px-1">
     <div class="text-xs text-muted-foreground">
       <span class="font-semibold text-foreground">Live game</span>
-      · {game.gameMode === "CLASSIC" ? "Summoner's Rift" : game.gameMode} · {formatGameTime(game.gameTime)}
+      · {game.queueName ?? (game.gameMode === "CLASSIC" ? "Summoner's Rift" : game.gameMode)} · {formatGameTime(game.gameTime)}
     </div>
     <div class="flex items-center gap-2 text-sm font-semibold tabular-nums">
       <span class="text-blue-300">{teamKills(teams.ally)}</span>
