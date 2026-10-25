@@ -6,9 +6,33 @@ import { isTauriRuntime } from "$lib/runtime";
 
 export const DISCORD_URL = "https://lobbyreveal.app/discord";
 
+// Lobby chat reports Riot platform IDs ("NA1", "EUN1", "LA2"); sites want web regions.
+const WEB_REGIONS: Record<string, string> = {
+  NA1: "NA",
+  EUW1: "EUW",
+  EUN1: "EUNE",
+  BR1: "BR",
+  JP1: "JP",
+  OC1: "OCE",
+  TR1: "TR",
+  LA1: "LAN",
+  LA2: "LAS",
+  ME1: "ME",
+  SG2: "SG",
+  PH2: "PH",
+  TH2: "TH",
+  TW2: "TW",
+  VN2: "VN",
+};
+
+/** "na1" -> "NA", "LA2" -> "LAS"; web regions like "EUW" pass through. */
+export function webRegion(region: string): string {
+  const upper = (region || "NA").toUpperCase();
+  return WEB_REGIONS[upper] ?? upper;
+}
+
 function lobbyRegion(participants: Participant[]): string {
-  const region = participants[0]?.region || "NA";
-  return region === "SG2" ? "SG" : region;
+  return webRegion(participants[0]?.region || "NA");
 }
 
 // Maps League's web region (e.g. "NA", "EUNE", "LAS") to Riot's platform ID, which U.GG uses.
@@ -126,7 +150,7 @@ export function formatRiotIds(participants: Participant[]): string {
 }
 
 export function createOpggProfileLink(participant: Participant): string {
-  const region = participant.region === "SG2" ? "SG" : participant.region;
+  const region = webRegion(participant.region);
   const profile = `${participant.game_name}-${participant.game_tag}`;
   return `https://op.gg/lol/summoners/${region.toLowerCase()}/${encodeURIComponent(profile)}`;
 }
