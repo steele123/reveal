@@ -65,7 +65,7 @@
     </div>
   </div>
 
-  <div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
+  <div class="reveal-scrollbar -mr-1 flex min-h-0 flex-col gap-1 overflow-y-auto pr-1">
     {#each [{ label: "Your team", players: teams.ally, tone: "text-blue-300" }, { label: "Enemy team", players: teams.enemy, tone: "text-red-300" }] as side}
       <div class="flex flex-col gap-0.5">
         <div class="px-1 text-[10px] font-medium uppercase tracking-[0.12em] {side.tone}">

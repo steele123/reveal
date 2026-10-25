@@ -115,7 +115,7 @@
   </div>
 
   <!-- Top to bottom in pick order, like the League client; enemies get their own column. -->
-  <div class="-mr-1 grid min-h-0 gap-2 overflow-y-auto pr-1 text-sm" class:grid-cols-2={enemies.length > 0}>
+  <div class="reveal-scrollbar -mr-1 grid min-h-0 gap-2 overflow-y-auto pr-1 text-sm" class:grid-cols-2={enemies.length > 0}>
     {#if champSelect}
       {#each sections as section}
       <div class="flex min-w-0 flex-col gap-1.5">
