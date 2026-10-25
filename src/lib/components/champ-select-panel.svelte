@@ -167,14 +167,14 @@
               {/if}
               <span
                 class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#0b1220] px-1 text-[7px] font-semibold leading-[10px] ring-1 {offRole
-                  ? 'text-amber-300 ring-amber-400/40'
+                  ? 'text-red-300 ring-red-400/50'
                   : 'text-blue-300 ring-blue-400/20'}">{badgeLabel}</span
               >
             </div>
           {:else}
             <div
               class="relative grid h-6 min-w-7 shrink-0 place-items-center rounded-md px-1 text-[9px] font-semibold {offRole
-                ? 'bg-amber-500/10 text-amber-300'
+                ? 'bg-red-500/15 text-red-300'
                 : 'bg-blue-500/10 text-blue-300'}"
               title={badgeTitle}
             >
@@ -188,10 +188,19 @@
             </div>
           {/if}
           <div class="min-w-0 flex-1">
-            <div class="truncate text-xs font-medium leading-tight">
-              {participant.game_name}<span class="text-muted-foreground"
-                >#{participant.game_tag}</span
+            <div class="flex min-w-0 items-center gap-1.5 text-xs font-medium leading-tight">
+              <span class="truncate" class:text-red-300={offRole}
+                >{participant.game_name}<span
+                  class={offRole ? "text-red-300/60" : "text-muted-foreground"}
+                  >#{participant.game_tag}</span
+                ></span
               >
+              {#if offRole}
+                <span
+                  class="shrink-0 rounded bg-red-500/15 px-1 text-[8px] font-bold uppercase leading-[13px] tracking-wide text-red-300 ring-1 ring-red-400/30"
+                  title={offRole}>{participant.autofilled ? "Fill" : "Off-role"}</span
+                >
+              {/if}
             </div>
             {#if participant.rank}
               {@const rank = formatRank(participant.rank, participant.recent)}

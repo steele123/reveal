@@ -121,7 +121,7 @@
           <div class="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>
         {/if}
         {#if offRole}
-          <div class="mt-1 text-[11px] font-medium text-amber-300">{offRole}</div>
+          <div class="mt-1 text-[11px] font-medium text-red-300">{offRole}</div>
         {/if}
         {#if seen}
           <div class="mt-1 text-[11px] font-medium text-violet-300">
