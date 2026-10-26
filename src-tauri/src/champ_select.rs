@@ -166,6 +166,10 @@ pub async fn handle_champ_select_start(
                 continue;
             }
         };
+        // Chat reports its own server names ("eu1" for EUW), so use the client's region instead.
+        for participant in &mut team.participants {
+            participant.region = region.to_string();
+        }
 
         let session = match get_champ_select_session(remoting_client).await {
             Ok(session) => {

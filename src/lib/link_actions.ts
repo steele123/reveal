@@ -6,9 +6,12 @@ import { isTauriRuntime } from "$lib/runtime";
 
 export const DISCORD_URL = "https://lobbyreveal.app/discord";
 
-// Lobby chat reports Riot platform IDs ("NA1", "EUN1", "LA2"); sites want web regions.
+// Lobby chat reports Riot platform IDs ("NA1", "LA2") or chat servers ("EU1" for EUW);
+// sites want web regions. Reveal now sends web regions, but saved lobbies may not.
 const WEB_REGIONS: Record<string, string> = {
   NA1: "NA",
+  EU1: "EUW",
+  EU2: "EUNE",
   EUW1: "EUW",
   EUN1: "EUNE",
   BR1: "BR",
