@@ -3016,7 +3016,7 @@ dependencies = [
 
 [[package]]
 name = "reveal"
-version = "1.4.7"
+version = "1.4.8"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
