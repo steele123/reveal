@@ -250,8 +250,8 @@
         <div
           class="reveal-panel flex h-10 shrink-0 animate-pulse items-center gap-2.5 px-3"
         >
-          <div class="h-6 w-6 rounded-md bg-white/5" />
-          <div class="h-2.5 w-28 rounded-full bg-white/5" />
+          <div class="h-6 w-6 rounded-md bg-white/5"></div>
+          <div class="h-2.5 w-28 rounded-full bg-white/5"></div>
         </div>
       {/each}
     {/if}
@@ -262,7 +262,7 @@
       variant="outline"
       class="h-9 shrink-0 border-white/10 bg-white/[0.035] px-3 text-xs shadow-none hover:bg-white/[0.07]"
       disabled={!champSelect}
-      on:click={copyNames}
+      onclick={copyNames}
       title="Copy all Riot IDs"
     >
       <!-- All labels share one grid cell so the button keeps the widest label's size. -->
@@ -279,7 +279,7 @@
     <Button
       class="h-9 flex-1 bg-blue-500 text-sm shadow-[0_8px_24px_rgba(59,130,246,0.18)] hover:bg-blue-400"
       disabled={!champSelect}
-      on:click={() => openMultiLink(allies)}
+      onclick={() => openMultiLink(allies)}
     >
       {enemies.length ? "Open team" : "Open team multi-search"}
       <svg
@@ -300,7 +300,7 @@
     {#if enemies.length}
       <Button
         class="h-9 flex-1 bg-red-500/80 text-sm hover:bg-red-500"
-        on:click={() => openMultiLink(enemies)}
+        onclick={() => openMultiLink(enemies)}
       >
         Open enemies
         <svg viewBox="0 0 16 16" class="ml-2 h-3.5 w-3.5" aria-hidden="true">

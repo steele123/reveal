@@ -12,29 +12,23 @@
   },
   "devDependencies": {
     "@fontsource-variable/inter": "^5.3.0",
-    "@sveltejs/vite-plugin-svelte": "^3.1.2",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tauri-apps/api": "^1.6.0",
     "@tauri-apps/cli": "^1.6.3",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^20.19.43",
     "autoprefixer": "^10.6.2",
-    "bits-ui": "^0.19.7",
+    "bits-ui": "^2.20.2",
     "clsx": "^2.1.1",
     "postcss": "^8.5.32",
-    "svelte": "^4.2.20",
-    "svelte-check": "^3.8.6",
-    "svelte-radix": "^1.1.1",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.7",
     "tailwind-merge": "^2.6.1",
     "tailwind-variants": "^0.2.1",
     "tailwindcss": "^3.4.19",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
-    "vite": "^5.4.21",
-    "vitest": "^3.2.7"
-  },
-  "pnpm": {
-    "overrides": {
-      "tinypool": "^2.1.2"
-    }
+    "vite": "^6.4.5",
+    "vitest": "^4.1.12"
   }
 }

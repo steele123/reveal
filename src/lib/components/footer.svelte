@@ -15,7 +15,7 @@
         in:fade={{ duration: 250 }}
         class="flex items-center gap-2 text-muted-foreground"
       >
-        <div class="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]" />
+        <div class="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]"></div>
         <div class="truncate">In game</div>
       </div>
     {:else if connected}
@@ -23,7 +23,7 @@
         in:fade={{ duration: 250 }}
         class="flex items-center gap-2 text-muted-foreground"
       >
-        <div class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" />
+        <div class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"></div>
         <div class="truncate">League connected</div>
       </div>
     {:else}
@@ -31,7 +31,7 @@
         in:fade={{ duration: 250 }}
         class="flex items-center gap-2 text-muted-foreground"
       >
-        <div class="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <div class="h-1.5 w-1.5 rounded-full bg-amber-400"></div>
         <div class="truncate">League unavailable</div>
       </div>
     {/if}

@@ -1,4 +1,5 @@
 import "./styles.css";
+import { mount } from "svelte";
 import App from "./reveal.svelte";
 import { logFrontendError, logFrontendInfo } from "$lib/logging";
 
@@ -12,7 +13,7 @@ window.addEventListener("unhandledrejection", (event) => {
 
 logFrontendInfo("Frontend bootstrap started");
 
-const app = new App({
+const app = mount(App, {
   target: document.getElementById("app")!,
 });
 

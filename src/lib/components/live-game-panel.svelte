@@ -99,7 +99,7 @@
                   class:opacity-50={player.isDead}
                 />
               {:else}
-                <div class="h-5 w-5 rounded bg-white/5" />
+                <div class="h-5 w-5 rounded bg-white/5"></div>
               {/if}
               {#if player.isDead && player.respawnTimer > 0}
                 <span
@@ -154,7 +154,7 @@
                 {#if item?.icon}
                   <img src={item.icon} alt={item.name} title={item.name} class="h-4 w-4 rounded-sm" class:rounded-full={slot === 6} />
                 {:else}
-                  <div class="h-4 w-4 rounded-sm bg-white/[0.04]" class:rounded-full={slot === 6} />
+                  <div class="h-4 w-4 rounded-sm bg-white/[0.04]" class:rounded-full={slot === 6}></div>
                 {/if}
               {/each}
             </div>

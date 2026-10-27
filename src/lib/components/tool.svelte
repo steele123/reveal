@@ -114,8 +114,7 @@
           <span
             class="h-1.5 w-1.5 rounded-full"
             class:bg-blue-400={connected}
-            class:bg-amber-400={!connected}
-          />
+            class:bg-amber-400={!connected}></span>
           {formatState(state)}
         </div>
       </div>
@@ -150,9 +149,8 @@
           {:else}
             <span class="relative flex h-3 w-3">
               <span
-                class="absolute h-full w-full animate-ping rounded-full bg-current opacity-30"
-              />
-              <span class="relative h-3 w-3 rounded-full bg-current" />
+                class="absolute h-full w-full animate-ping rounded-full bg-current opacity-30"></span>
+              <span class="relative h-3 w-3 rounded-full bg-current"></span>
             </span>
           {/if}
         </div>

@@ -1,19 +1,16 @@
 <script lang="ts">
-	import { Label as LabelPrimitive } from "bits-ui";
+	import type { HTMLLabelAttributes } from "svelte/elements";
 	import { cn } from "$lib/utils";
 
-	type $$Props = LabelPrimitive.Props;
-
-	let className: $$Props["class"] = undefined;
-	export { className as class };
+	let { class: className, children, ...rest }: HTMLLabelAttributes = $props();
 </script>
 
-<LabelPrimitive.Root
+<label
 	class={cn(
 		"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
 		className
 	)}
-	{...$$restProps}
+	{...rest}
 >
-	<slot />
-</LabelPrimitive.Root>
+	{@render children?.()}
+</label>

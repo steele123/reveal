@@ -259,7 +259,7 @@
             </div>
           </div>
           <div class="h-1 w-28 overflow-hidden rounded-full bg-muted">
-            <div class="h-full w-1/2 animate-pulse rounded-full bg-blue-500" />
+            <div class="h-full w-1/2 animate-pulse rounded-full bg-blue-500"></div>
           </div>
         </div>
       </div>

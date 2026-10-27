@@ -169,7 +169,7 @@
             </div>
             {#if winRate !== null}
               <div class="mt-1 h-1 overflow-hidden rounded-full bg-red-400/30">
-                <div class="h-full bg-emerald-400" style="width: {winRate}%" />
+                <div class="h-full bg-emerald-400" style="width: {winRate}%"></div>
               </div>
             {/if}
           {/if}

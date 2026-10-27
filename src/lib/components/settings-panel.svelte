@@ -17,6 +17,10 @@
     { label: "10 sec", value: "10" },
   ];
 
+  function labelOf(options: readonly { label: string; value: string }[], value: string): string {
+    return options.find((option) => option.value === value)?.label ?? value;
+  }
+
   function updateConfig(patch: Partial<Config>) {
     if (!config) return;
     onChange({ ...config, ...patch });
@@ -37,30 +41,24 @@
       Multi-search
     </Label>
     <Select.Root
-      onSelectedChange={(selected) => {
-        const provider = MULTI_PROVIDERS.find(
-          ({ value }) => value === selected?.value,
-        );
+      type="single"
+      items={[...MULTI_PROVIDERS]}
+      value={config?.multiProvider ?? "opgg"}
+      onValueChange={(value) => {
+        const provider = MULTI_PROVIDERS.find((provider) => provider.value === value);
         if (provider) updateConfig({ multiProvider: provider.value });
       }}
-      selected={MULTI_PROVIDERS.find(
-        ({ value }) => value === config?.multiProvider,
-      )}
     >
       <Select.Trigger
         id="multi-provider"
         class="h-9 w-full border-white/10 bg-white/[0.035] shadow-none"
       >
-        <Select.Value />
+        {labelOf(MULTI_PROVIDERS, config?.multiProvider ?? "opgg")}
       </Select.Trigger>
       <Select.Content>
-        <Select.Group>
-          {#each MULTI_PROVIDERS as provider}
-            <Select.Item value={provider.value} label={provider.label}>
-              {provider.label}
-            </Select.Item>
-          {/each}
-        </Select.Group>
+        {#each MULTI_PROVIDERS as provider}
+          <Select.Item value={provider.value} label={provider.label} />
+        {/each}
       </Select.Content>
     </Select.Root>
 
@@ -71,30 +69,24 @@
       Clicking a player
     </Label>
     <Select.Root
-      onSelectedChange={(selected) => {
-        const action = PLAYER_CLICK_ACTIONS.find(
-          ({ value }) => value === selected?.value,
-        );
+      type="single"
+      items={[...PLAYER_CLICK_ACTIONS]}
+      value={config?.playerClickAction ?? "details"}
+      onValueChange={(value) => {
+        const action = PLAYER_CLICK_ACTIONS.find((action) => action.value === value);
         if (action) updateConfig({ playerClickAction: action.value });
       }}
-      selected={PLAYER_CLICK_ACTIONS.find(
-        ({ value }) => value === (config?.playerClickAction ?? "details"),
-      )}
     >
       <Select.Trigger
         id="player-click-action"
         class="h-9 w-full border-white/10 bg-white/[0.035] shadow-none"
       >
-        <Select.Value />
+        {labelOf(PLAYER_CLICK_ACTIONS, config?.playerClickAction ?? "details")}
       </Select.Trigger>
       <Select.Content>
-        <Select.Group>
-          {#each PLAYER_CLICK_ACTIONS as action}
-            <Select.Item value={action.value} label={action.label}>
-              {action.label}
-            </Select.Item>
-          {/each}
-        </Select.Group>
+        {#each PLAYER_CLICK_ACTIONS as action}
+          <Select.Item value={action.value} label={action.label} />
+        {/each}
       </Select.Content>
     </Select.Root>
 
@@ -120,29 +112,22 @@
       </Label>
       <div class="flex shrink-0 items-center gap-2">
         <Select.Root
+          type="single"
           disabled={!config?.autoOpen}
-          onSelectedChange={(selected) => {
-            if (!selected) return;
-            updateConfig({ autoOpenDelaySeconds: Number(selected.value) });
-          }}
-          selected={autoOpenWaitOptions.find(
-            ({ value }) => Number(value) === config?.autoOpenDelaySeconds,
-          )}
+          items={autoOpenWaitOptions}
+          value={String(config?.autoOpenDelaySeconds ?? 6)}
+          onValueChange={(value) => updateConfig({ autoOpenDelaySeconds: Number(value) })}
         >
           <Select.Trigger
             aria-label="Maximum auto-open wait"
             class="h-7 w-[72px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
           >
-            <Select.Value />
+            {labelOf(autoOpenWaitOptions, String(config?.autoOpenDelaySeconds ?? 6))}
           </Select.Trigger>
           <Select.Content>
-            <Select.Group>
-              {#each autoOpenWaitOptions as option}
-                <Select.Item value={option.value} label={option.label}>
-                  {option.label}
-                </Select.Item>
-              {/each}
-            </Select.Group>
+            {#each autoOpenWaitOptions as option}
+              <Select.Item value={option.value} label={option.label} />
+            {/each}
           </Select.Content>
         </Select.Root>
         <Switch
