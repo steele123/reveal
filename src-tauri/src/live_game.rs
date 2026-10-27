@@ -5,6 +5,7 @@
 
 use crate::{
     lobby::{Lobby, Participant},
+    lookup::Lookup,
     ranked::{self, RankSummary, RecentForm},
     region::RegionInfo,
     roles,
@@ -249,7 +250,7 @@ pub async fn watch(
                     .unwrap_or_default();
                 recover_hidden_players(&mut live, &roster, &session_players);
                 if let Some(client) = &remoting_client {
-                    lookups.fill(client, &mut live).await;
+                    lookups.fill(client, &mut live);
                 }
                 if last_sent.as_ref() != Some(&live) {
                     let _ = app_handle.emit_all("live_game_update", &live);
@@ -517,14 +518,16 @@ async fn fetch_json(url: &str) -> anyhow::Result<Value> {
 /// A player's puuid, Solo/Duo rank and recent form.
 type PlayerDetails = (String, Option<RankSummary>, Option<RecentForm>);
 
-/// Ranks and recent form per player, looked up once per game through the League Client.
+/// Ranks and recent form per player, looked up in the background through the League Client.
 #[derive(Default)]
 struct PlayerLookups {
-    done: HashMap<String, Option<PlayerDetails>>,
+    details: Lookup<PlayerDetails>,
 }
 
 impl PlayerLookups {
-    async fn fill(&mut self, remoting_client: &RESTClient, game: &mut LiveGame) {
+    /// Applies the details found so far and starts lookups for players still missing them.
+    fn fill(&mut self, remoting_client: &RESTClient, game: &mut LiveGame) {
+        self.details.collect("Player details");
         for player in &mut game.players {
             if player.is_bot {
                 continue;
@@ -534,17 +537,25 @@ impl PlayerLookups {
                 (None, false) => format!("{}#{}", player.game_name, player.tag_line),
                 (None, true) => continue,
             };
-            if !self.done.contains_key(&key) {
-                let found = match &player.puuid {
-                    Some(puuid) => details_for(remoting_client, puuid.clone()).await,
-                    None => lookup(remoting_client, &player.game_name, &player.tag_line).await,
-                };
-                self.done.insert(key.clone(), found);
-            }
-            if let Some(Some((puuid, rank, recent))) = self.done.get(&key) {
-                player.puuid = Some(puuid.clone());
-                player.rank = rank.clone();
-                player.recent = recent.clone();
+            self.details.spawn(&key, || {
+                let client = remoting_client.clone();
+                let (puuid, game_name, tag_line) = (
+                    player.puuid.clone(),
+                    player.game_name.clone(),
+                    player.tag_line.clone(),
+                );
+                async move {
+                    match puuid {
+                        Some(puuid) => details_for(&client, puuid).await,
+                        None => lookup(&client, &game_name, &tag_line).await,
+                    }
+                    .ok_or_else(|| anyhow::anyhow!("player not found"))
+                }
+            });
+            if let Some((puuid, rank, recent)) = self.details.get(&key) {
+                player.puuid = Some(puuid);
+                player.rank = rank;
+                player.recent = recent;
             }
         }
     }

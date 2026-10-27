@@ -53,7 +53,10 @@ pub async fn get_top_mains(
 ) -> anyhow::Result<Vec<ChampionMain>> {
     let mastery: Vec<MasteryEntry> = serde_json::from_value(
         remoting_client
-            .get(format!("/lol-champion-mastery/v1/{puuid}/champion-mastery"))
+            .get_with_timeout(
+                format!("/lol-champion-mastery/v1/{puuid}/champion-mastery"),
+                crate::lookup::LOOKUP_TIMEOUT,
+            )
             .await?,
     )?;
     Ok(top_mains(mastery, names))

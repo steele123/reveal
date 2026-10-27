@@ -19,6 +19,11 @@ function writeLog(level: LogLevel, message: string) {
   void invoke<void>("write_frontend_log", { level, message }).catch(() => {});
 }
 
+/** Opens the folder with reveal.log, so it can be attached to a bug report. */
+export async function openLogFolder(): Promise<void> {
+  await invoke<void>("open_log_folder");
+}
+
 export function logFrontendInfo(message: string) {
   console.info(message);
   writeLog("info", message);

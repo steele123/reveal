@@ -1,19 +1,21 @@
 use crate::{
-    analytics, champions, config::Config, lobby, ranked, region::RegionInfo, roles, summoner,
-    utils::display_champ_select,
+    analytics, champions, config::Config, lobby, lookup::Lookup, ranked, region::RegionInfo, roles,
+    summoner, utils::display_champ_select,
 };
 use serde::Deserialize;
 use shaco::rest::RESTClient;
 use std::{
     collections::{HashMap, HashSet},
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
 
 const EXPECTED_PARTICIPANT_COUNT: usize = 5;
 const PARTICIPANT_POLL_INTERVAL: Duration = Duration::from_secs(2);
-const MAX_LOOKUP_ATTEMPTS: u8 = 3;
 
 static PARTICIPANT_POLLING: AtomicBool = AtomicBool::new(false);
 
@@ -263,58 +265,6 @@ pub async fn handle_champ_select_start(
     }
 }
 
-/// A per-player lookup that is tried up to `MAX_LOOKUP_ATTEMPTS` times.
-struct Lookup<T> {
-    values: HashMap<String, T>,
-    attempts: HashMap<String, u8>,
-}
-
-impl<T> Default for Lookup<T> {
-    fn default() -> Self {
-        Self {
-            values: HashMap::new(),
-            attempts: HashMap::new(),
-        }
-    }
-}
-
-impl<T: Clone> Lookup<T> {
-    /// Counts an attempt and returns true if this player still needs a lookup.
-    fn start_attempt(&mut self, puuid: &str) -> bool {
-        if puuid.is_empty() || self.values.contains_key(puuid) {
-            return false;
-        }
-        let attempts = self.attempts.entry(puuid.to_string()).or_default();
-        if *attempts >= MAX_LOOKUP_ATTEMPTS {
-            return false;
-        }
-        *attempts += 1;
-        true
-    }
-
-    fn record(&mut self, what: &str, puuid: &str, result: anyhow::Result<T>) {
-        match result {
-            Ok(value) => {
-                self.values.insert(puuid.to_string(), value);
-            }
-            Err(error) => log_warn!(
-                "{what} lookup failed (attempt {}/{MAX_LOOKUP_ATTEMPTS}): {error}",
-                self.attempts.get(puuid).copied().unwrap_or(0)
-            ),
-        }
-    }
-
-    fn get(&self, puuid: &str) -> Option<T> {
-        self.values.get(puuid).cloned()
-    }
-
-    fn is_settled(&self, puuid: &str) -> bool {
-        puuid.is_empty()
-            || self.values.contains_key(puuid)
-            || self.attempts.get(puuid).copied().unwrap_or(0) >= MAX_LOOKUP_ATTEMPTS
-    }
-}
-
 /// Ranks and champion mains, looked up once per player for the current Champ Select.
 #[derive(Default)]
 struct PlayerCache {
@@ -322,41 +272,50 @@ struct PlayerCache {
     mains: Lookup<Vec<champions::ChampionMain>>,
     profile_icons: Lookup<i32>,
     histories: Lookup<roles::PlayerHistory>,
-    champion_names: Option<HashMap<i32, String>>,
+    champion_names: Option<Arc<HashMap<i32, String>>>,
 }
 
 impl PlayerCache {
+    /// Stores finished lookups and starts any still missing, without waiting for them.
     async fn fetch_missing(&mut self, remoting_client: &RESTClient, team: &lobby::Lobby) {
+        self.ranks.collect("Rank");
+        self.histories.collect("Match history");
+        self.profile_icons.collect("Profile icon");
+        self.mains.collect("Champion mastery");
+
+        if self.champion_names.is_none()
+            && team
+                .participants
+                .iter()
+                .any(|p| !self.mains.is_settled(&p.puuid))
+        {
+            match champions::get_champion_names(remoting_client).await {
+                Ok(names) => self.champion_names = Some(Arc::new(names)),
+                Err(error) => log_warn!("Champion name lookup failed: {error}"),
+            }
+        }
+
         for participant in &team.participants {
             let puuid = participant.puuid.as_str();
+            let client = || (remoting_client.clone(), puuid.to_string());
 
-            if self.ranks.start_attempt(puuid) {
-                let result = ranked::get_solo_rank(remoting_client, puuid).await;
-                self.ranks.record("Rank", puuid, result);
-            }
-
-            if self.histories.start_attempt(puuid) {
-                let result = roles::get_player_history(remoting_client, puuid).await;
-                self.histories.record("Match history", puuid, result);
-            }
-
-            if self.profile_icons.start_attempt(puuid) {
-                let result = summoner::get_profile_icon_id(remoting_client, puuid).await;
-                self.profile_icons.record("Profile icon", puuid, result);
-            }
-
-            if self.mains.start_attempt(puuid) {
-                if self.champion_names.is_none() {
-                    match champions::get_champion_names(remoting_client).await {
-                        Ok(names) => self.champion_names = Some(names),
-                        Err(error) => log_warn!("Champion name lookup failed: {error}"),
-                    }
-                }
-                let empty = HashMap::new();
-                let names = self.champion_names.as_ref().unwrap_or(&empty);
-                let result = champions::get_top_mains(remoting_client, puuid, names).await;
-                self.mains.record("Champion mastery", puuid, result);
-            }
+            self.ranks.spawn(puuid, || {
+                let (client, puuid) = client();
+                async move { ranked::get_solo_rank(&client, &puuid).await }
+            });
+            self.histories.spawn(puuid, || {
+                let (client, puuid) = client();
+                async move { roles::get_player_history(&client, &puuid).await }
+            });
+            self.profile_icons.spawn(puuid, || {
+                let (client, puuid) = client();
+                async move { summoner::get_profile_icon_id(&client, &puuid).await }
+            });
+            let names = self.champion_names.clone().unwrap_or_default();
+            self.mains.spawn(puuid, || {
+                let (client, puuid) = client();
+                async move { champions::get_top_mains(&client, &puuid, &names).await }
+            });
         }
     }
 
@@ -1028,7 +987,7 @@ mod tests {
         assert_eq!(team.participants[1].rank, None);
         assert!(!cache.is_settled(&team));
 
-        for _ in 0..MAX_LOOKUP_ATTEMPTS {
+        for _ in 0..crate::lookup::MAX_LOOKUP_ATTEMPTS {
             assert!(cache.ranks.start_attempt("failing"));
             cache
                 .ranks

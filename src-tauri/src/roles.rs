@@ -33,10 +33,13 @@ pub async fn get_player_history(
     puuid: &str,
 ) -> anyhow::Result<PlayerHistory> {
     let history = remoting_client
-        .get(format!(
-            "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={}",
-            HISTORY_GAMES - 1
-        ))
+        .get_with_timeout(
+            format!(
+                "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={}",
+                HISTORY_GAMES - 1
+            ),
+            crate::lookup::LOOKUP_TIMEOUT,
+        )
         .await?;
     if history["games"].is_null() {
         anyhow::bail!("match history unavailable: {}", history["message"]);

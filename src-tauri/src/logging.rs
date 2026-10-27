@@ -90,9 +90,14 @@ fn install_panic_hook() {
     }));
 }
 
+/// The folder holding reveal.log, once logging has started.
+pub fn log_directory() -> Option<PathBuf> {
+    LOG_PATH.get()?.parent().map(PathBuf::from)
+}
+
 pub fn write(level: &str, message: fmt::Arguments<'_>) {
     let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
-    let line = format!("{timestamp} [{level}] {message}");
+    let line = format!("{timestamp} [{level}] {}", redact(&message.to_string()));
 
     if let Some(file) = LOG_FILE.get() {
         let mut file = file.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -102,6 +107,44 @@ pub fn write(level: &str, message: fmt::Arguments<'_>) {
 
     #[cfg(debug_assertions)]
     eprintln!("{line}");
+}
+
+/// Keeps logs shareable: hides player account IDs (puuids, which appear in League Client
+/// request URLs) and the Windows user folder, which often contains a real name.
+fn redact(message: &str) -> String {
+    let message = match std::env::var("USERPROFILE") {
+        Ok(profile) if !profile.is_empty() => message.replace(&profile, "%USERPROFILE%"),
+        _ => message.to_string(),
+    };
+    redact_uuids(&message)
+}
+
+fn redact_uuids(message: &str) -> String {
+    const UUID_LENGTH: usize = 36;
+    let bytes = message.as_bytes();
+    let mut result = String::with_capacity(message.len());
+    let mut start = 0;
+    let mut index = 0;
+    while index + UUID_LENGTH <= bytes.len() {
+        if is_uuid(&bytes[index..index + UUID_LENGTH]) {
+            result.push_str(&message[start..index]);
+            result.push_str("<id>");
+            index += UUID_LENGTH;
+            start = index;
+        } else {
+            index += 1;
+        }
+    }
+    result.push_str(&message[start..]);
+    result
+}
+
+/// "8-4-4-4-12" hex digits, e.g. 0b1f7c2e-1234-5678-9abc-def012345678.
+fn is_uuid(bytes: &[u8]) -> bool {
+    bytes.iter().enumerate().all(|(index, byte)| match index {
+        8 | 13 | 18 | 23 => *byte == b'-',
+        _ => byte.is_ascii_hexdigit(),
+    })
 }
 
 pub fn sanitize_frontend_message(message: &str) -> String {
@@ -131,4 +174,31 @@ macro_rules! log_error {
     ($($arg:tt)*) => {
         $crate::logging::write("ERROR", format_args!($($arg)*))
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redact_uuids;
+
+    #[test]
+    fn hides_account_ids_in_request_urls() {
+        assert_eq!(
+            redact_uuids(
+                "Match history lookup failed: error sending request for url (https://127.0.0.1:62467/lol-match-history/v1/products/lol/0b1f7c2e-1234-5678-9abc-DEF012345678/matches?begIndex=0)"
+            ),
+            "Match history lookup failed: error sending request for url (https://127.0.0.1:62467/lol-match-history/v1/products/lol/<id>/matches?begIndex=0)"
+        );
+    }
+
+    #[test]
+    fn leaves_other_text_alone() {
+        for message in [
+            "Champ Select participant count increased to 5 from 4",
+            "0b1f7c2e-1234-5678-9abc",
+            "not-a-uuid-at-all-but-thirty-six-chars",
+            "Prénom 🎮 0b1f7c2e_1234_5678_9abc_def012345678",
+        ] {
+            assert_eq!(redact_uuids(message), message);
+        }
+    }
 }

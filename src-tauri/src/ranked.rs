@@ -32,7 +32,10 @@ pub async fn get_solo_rank(
     puuid: &str,
 ) -> anyhow::Result<RankSummary> {
     let stats = remoting_client
-        .get(format!("/lol-ranked/v1/ranked-stats/{puuid}"))
+        .get_with_timeout(
+            format!("/lol-ranked/v1/ranked-stats/{puuid}"),
+            crate::lookup::LOOKUP_TIMEOUT,
+        )
         .await?;
     Ok(parse_solo_rank(&stats))
 }

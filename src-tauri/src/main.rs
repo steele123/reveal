@@ -14,6 +14,7 @@ mod lcu;
 mod legacy_install;
 mod live_game;
 mod lobby;
+mod lookup;
 mod queue;
 mod queue_pause;
 mod ranked;
@@ -25,7 +26,7 @@ mod utils;
 
 use app_state::{Lcu, QueuePause};
 use commands::{
-    app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install,
+    app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install, open_log_folder,
     open_opgg_link, remove_legacy_install, set_config, write_frontend_log,
 };
 use config::AppConfig;
@@ -71,6 +72,7 @@ fn main() {
             get_lcu_info,
             get_config,
             set_config,
+            open_log_folder,
             open_opgg_link,
             get_legacy_install,
             remove_legacy_install,

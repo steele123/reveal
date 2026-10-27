@@ -11,7 +11,10 @@ pub async fn get_profile_icon_id(remoting_client: &RESTClient, puuid: &str) -> a
 
     let summoner: Summoner = serde_json::from_value(
         remoting_client
-            .get(format!("/lol-summoner/v2/summoners/puuid/{puuid}"))
+            .get_with_timeout(
+                format!("/lol-summoner/v2/summoners/puuid/{puuid}"),
+                crate::lookup::LOOKUP_TIMEOUT,
+            )
             .await?,
     )?;
     Ok(summoner.profile_icon_id)

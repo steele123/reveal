@@ -172,6 +172,14 @@ pub async fn remove_legacy_install() -> CommandResult<bool> {
 }
 
 #[tauri::command]
+pub fn open_log_folder() -> CommandResult<()> {
+    let directory =
+        crate::logging::log_directory().ok_or_else(|| "Logging is not available".to_string())?;
+    log_info!("Opening the log folder");
+    open::that(directory).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub fn write_frontend_log(level: String, message: String) {
     let message = crate::logging::sanitize_frontend_message(&message);
     match level.as_str() {
