@@ -116,10 +116,7 @@ pub async fn open_opgg_link(app_handle: AppHandle) -> CommandResult<()> {
     )
     .map_err(|error| error.to_string())?;
 
-    let region = match region_info.web_region.as_str() {
-        "SG2" => "SG",
-        _ => &region_info.web_region,
-    };
+    let region = &region_info.web();
 
     display_champ_select(&team, region, &config.multi_provider)
         .map_err(|error| error.to_string())?;

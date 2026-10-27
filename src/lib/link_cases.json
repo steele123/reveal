@@ -1,0 +1,141 @@
+{
+  "_comment": "Expected links for a two-player lobby, keyed by the region Reveal is given: a web region from League (\"EUW\"), a Riot platform ID (\"na1\") or a lobby chat server (\"eu1\"). Checked by src/lib/link_actions.test.ts and src-tauri/src/utils.rs.",
+  "players": [
+    {
+      "gameName": "Player One",
+      "tagLine": "NA1"
+    },
+    {
+      "gameName": "Second Player",
+      "tagLine": "0911"
+    }
+  ],
+  "cases": [
+    {
+      "region": "na1",
+      "profile": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/NA?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/na#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=na1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/na/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=NA1"
+    },
+    {
+      "region": "NA",
+      "profile": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/NA?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/na#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=na1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/na/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=NA1"
+    },
+    {
+      "region": "eu1",
+      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=EUW1"
+    },
+    {
+      "region": "EUW",
+      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=EUW1"
+    },
+    {
+      "region": "euw1",
+      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=EUW1"
+    },
+    {
+      "region": "eu2",
+      "profile": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/EUNE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/eune#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=eun1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/eune/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=EUN1"
+    },
+    {
+      "region": "EUNE",
+      "profile": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/EUNE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/eune#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=eun1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/eune/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=EUN1"
+    },
+    {
+      "region": "LA1",
+      "profile": "https://op.gg/lol/summoners/lan/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/LAN?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/lan#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=la1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/lan/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=LA1"
+    },
+    {
+      "region": "LA2",
+      "profile": "https://op.gg/lol/summoners/las/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/LAS?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/las#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=la2&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/las/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=LA2"
+    },
+    {
+      "region": "OC1",
+      "profile": "https://op.gg/lol/summoners/oce/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/OCE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/oce#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=oc1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/oce/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=OC1"
+    },
+    {
+      "region": "BR1",
+      "profile": "https://op.gg/lol/summoners/br/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/BR?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/br#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=br1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/br/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=BR1"
+    },
+    {
+      "region": "KR",
+      "profile": "https://op.gg/lol/summoners/kr/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/KR?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/kr#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=kr&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/kr/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=KR"
+    },
+    {
+      "region": "SG2",
+      "profile": "https://op.gg/lol/summoners/sg/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/SG?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/sg#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=sg2&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/sg/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=SG2"
+    },
+    {
+      "region": "PH2",
+      "profile": "https://op.gg/lol/summoners/ph/Player%20One-NA1",
+      "opgg": "https://op.gg/lol/multisearch/PH?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
+      "fow": "https://www.fow.lol/multi/ph#Player%20One%23NA1%2CSecond%20Player%230911",
+      "ugg": "https://u.gg/lol/multisearch?region=ph2&summoners=Player%20One-NA1%2CSecond%20Player-0911",
+      "porofessor": "https://porofessor.gg/pregame/ph/Player%20One-NA1,Second%20Player-0911",
+      "laddereye": "https://laddereye.com/multi?q=Player%20One%23NA1%2CSecond%20Player%230911&region=PH2"
+    }
+  ]
+}

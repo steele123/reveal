@@ -110,10 +110,7 @@ pub async fn handle_champ_select_start(
         }
     };
 
-    let region = match region_info.web_region.as_str() {
-        "SG2" => "SG",
-        _ => &region_info.web_region,
-    };
+    let region = &region_info.web();
     crate::live_game::remember_region(region);
 
     let mut auto_opened = false;

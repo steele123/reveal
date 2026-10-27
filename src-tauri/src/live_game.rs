@@ -455,10 +455,7 @@ async fn web_region(app_client: &RESTClient) -> Option<String> {
             .ok()?,
     )
     .ok()?;
-    Some(match info.web_region.as_str() {
-        "SG2" => "SG".to_string(),
-        region => region.to_string(),
-    })
+    Some(info.web())
 }
 
 /// Champion ids and item icons from Community Dragon, fetched once per app run.

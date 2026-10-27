@@ -276,6 +276,37 @@ mod tests {
         );
     }
 
+    /// The same expected links the frontend checks, so the auto-open and in-app links agree.
+    #[test]
+    fn matches_shared_link_cases() {
+        let cases: serde_json::Value =
+            serde_json::from_str(include_str!("../../src/lib/link_cases.json")).unwrap();
+        let lobby = Lobby {
+            participants: cases["players"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|player| Participant {
+                    game_name: player["gameName"].as_str().unwrap().to_string(),
+                    game_tag: player["tagLine"].as_str().unwrap().to_string(),
+                    ..Default::default()
+                })
+                .collect(),
+        };
+
+        for case in cases["cases"].as_array().unwrap() {
+            let region = crate::region::web_region(case["region"].as_str().unwrap());
+            for site in MULTI_PROVIDERS {
+                assert_eq!(
+                    create_multi_link(&lobby, &region, site).unwrap(),
+                    case[*site].as_str().unwrap(),
+                    "{site} for region {}",
+                    case["region"]
+                );
+            }
+        }
+    }
+
     #[test]
     fn maps_web_regions_to_ugg_platform_ids() {
         for (region, platform) in [
