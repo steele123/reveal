@@ -10,6 +10,7 @@ mod champ_select;
 mod champions;
 mod commands;
 mod config;
+mod events;
 mod lcu;
 mod legacy_install;
 mod live_game;

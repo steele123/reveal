@@ -21,7 +21,7 @@ use std::{
     },
     time::Duration,
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const LIVE_CLIENT_URL: &str = "https://127.0.0.1:2999/liveclientdata/allgamedata";
 const LIVE_CLIENT_STATS_URL: &str = "https://127.0.0.1:2999/liveclientdata/gamestats";
@@ -253,7 +253,7 @@ pub async fn watch(
                     lookups.fill(client, &mut live);
                 }
                 if last_sent.as_ref() != Some(&live) {
-                    let _ = app_handle.emit_all("live_game_update", &live);
+                    crate::events::emit(&app_handle, "live_game_update", &live);
                     last_sent = Some(live);
                 }
             }
@@ -266,7 +266,7 @@ pub async fn watch(
         tokio::time::sleep(POLL_INTERVAL).await;
     }
 
-    let _ = app_handle.emit_all("live_game_update", Option::<LiveGame>::None);
+    crate::events::emit(&app_handle, "live_game_update", Option::<LiveGame>::None);
     WATCHING.store(false, Ordering::Release);
     log_info!("Live game ended");
 }

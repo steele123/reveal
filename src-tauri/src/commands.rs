@@ -40,6 +40,9 @@ pub async fn app_ready(
     app_handle
         .emit_all("queue_pause_update", paused)
         .map_err(|error| error.to_string())?;
+    // Catch up on anything sent before the window was listening, e.g. a Champ Select that was
+    // already running when Reveal opened.
+    crate::events::replay(&app_handle);
 
     Ok(cfg.clone())
 }

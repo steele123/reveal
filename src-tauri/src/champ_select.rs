@@ -12,7 +12,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const EXPECTED_PARTICIPANT_COUNT: usize = 5;
 const PARTICIPANT_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -122,7 +122,7 @@ pub async fn handle_champ_select_start(
     let mut session_warning_logged = false;
     let mut players = PlayerCache::default();
     let queue_name = crate::queue::current_queue_name(remoting_client).await;
-    let _ = app_handle.emit_all("queue_name", &queue_name);
+    crate::events::emit(app_handle, "queue_name", &queue_name);
     let mut analytics_sent = false;
 
     // Poll until champ select ends: slots, spells and picks keep changing, which updates
@@ -212,9 +212,7 @@ pub async fn handle_champ_select_start(
             }
 
             crate::live_game::remember_champ_select(&team);
-            if let Err(error) = app_handle.emit_all("champ_select_started", &team) {
-                log_error!("Failed to emit Champ Select participants: {error}");
-            }
+            crate::events::emit(app_handle, "champ_select_started", &team);
             last_emitted_team = Some(team.clone());
         }
 

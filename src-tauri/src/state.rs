@@ -139,9 +139,7 @@ pub async fn handle_client_state(
 }
 
 fn emit_client_state(app_handle: &AppHandle, client_state: String) {
-    if let Err(error) = app_handle.emit_all("client_state_update", client_state) {
-        log_error!("Failed to emit League Client state: {error}");
-    }
+    crate::events::emit(app_handle, "client_state_update", client_state);
 }
 
 async fn stop_matchmaking_after_dodge(app_handle: &AppHandle, remoting_client: &RESTClient) {
