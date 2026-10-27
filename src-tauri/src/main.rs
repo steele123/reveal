@@ -38,7 +38,20 @@ fn main() {
         Err(error) => eprintln!("Failed to initialize Reveal logging: {error:#}"),
     }
 
-    let result = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // A second copy can't open its window while the first holds WebView2's data folder, so hand
+    // the launch to the running copy instead. Dev builds may run next to an installed Reveal.
+    #[cfg(all(windows, not(debug_assertions)))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        log_info!("Reveal was launched again; showing the running window");
+        if let Some(window) = app.get_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+
+    let result = builder
         .manage(Lcu::default())
         .manage(QueuePause::default())
         .setup(|app| {
@@ -82,6 +95,39 @@ fn main() {
 
     match result {
         Ok(()) => log_info!("Reveal process exited normally"),
-        Err(error) => log_error!("Fatal Tauri runtime error: {error}"),
+        Err(error) => {
+            log_error!("Fatal Tauri runtime error: {error}");
+            show_startup_error(&error.to_string());
+        }
     }
 }
+
+/// Reveal has no window to show errors in when Tauri fails, so use a native message box.
+#[cfg(windows)]
+fn show_startup_error(error: &str) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+
+    let hint = if error.contains("WebView2") {
+        "Reveal couldn't open its window because Microsoft Edge WebView2 failed to start.\n\n\
+         Restart your PC, or reinstall WebView2 from\n\
+         https://developer.microsoft.com/microsoft-edge/webview2/"
+    } else {
+        "Reveal couldn't start."
+    };
+    let text =
+        format!("{hint}\n\nDetails are in %LOCALAPPDATA%\\Reveal\\logs\\reveal.log\n\n{error}");
+    let wide = |value: &str| value.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+    let (text, caption) = (wide(&text), wide("Reveal"));
+    // SAFETY: both strings are NUL-terminated UTF-16 buffers that outlive the call.
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn show_startup_error(_error: &str) {}

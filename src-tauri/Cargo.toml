@@ -28,6 +28,8 @@ base64 = "0.21"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
+tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
