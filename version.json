@@ -1,9 +1,9 @@
 {
-    "version": "1.4.8",
+    "version": "1.4.9",
     "platforms": {
         "windows-x86_64": {
-            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRUpNTFlDcDQwRGk3bDhYTEd1Ry9ydHFOSzY3NFFNWk9CK2tzQWpoYlJaWEl6WHNKREFCZFlHNVdva2NjMURYZmUxUytkdW5adHIxWEROcVVYSVAwY3cxZHhjM2QrZVE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg4ODkyCWZpbGU6UmV2ZWFsXzEuNC44X3g2NC1zZXR1cC5uc2lzLnppcAp1d2dsRGZOUUxVMkFRK0tIOFZqajZncVBNaEFMZzFCb2EwclBKYzdoUEQ2MjlTS25KMS9zNWJmQlFXVFVoczhNZ0oxRGhPRG5JN1RRTjVXNk52WFdDUT09Cg==",
-            "url": "https://github.com/steele123/reveal/releases/download/v1.4.8/Reveal_1.4.8_x64-setup.nsis.zip"
+            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRUpNTFlDcDQwRGgrUUJ4bStqdldqNVFxditSR0QvSWJCTHN4Ri9rNkgzTER5c015WGtCb2dneVhGK3pIdlNUSnRNQlBVRjNERytFei9KT0tLYlArWnBVUW9WaWFXZWc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDkxNTk3CWZpbGU6UmV2ZWFsXzEuNC45X3g2NC1zZXR1cC5uc2lzLnppcApaV0o1VlJQUTJNU1JBQUdmOGxIZ1lUUE1NYkZGZUl1dEhyVnMvQ1JqcUJncHY5dXA2ZVpXd3JQZmlUSVdGU3lha0UyOVpOMVdLQUphUnpiZ3ZrS1dCQT09Cg==",
+            "url": "https://github.com/steele123/reveal/releases/download/v1.4.9/Reveal_1.4.9_x64-setup.nsis.zip"
         }
     }
 }
