@@ -1,5 +1,4 @@
-use crate::app_state::{Dodge, Lcu, QueuePause};
-use crate::champ_select::ChampSelectSession;
+use crate::app_state::{Lcu, QueuePause};
 use crate::state;
 use futures_util::StreamExt;
 use shaco::model::ws::{LcuEvent, LcuSubscriptionType::JsonApiEvent};
@@ -61,14 +60,6 @@ pub async fn run(app_handle: AppHandle) {
             .await
         {
             log_error!("Failed to subscribe to gameflow updates: {error}");
-            continue;
-        }
-
-        if let Err(error) = websocket
-            .subscribe(JsonApiEvent("/lol-champ-select/v1/session".to_string()))
-            .await
-        {
-            log_error!("Failed to subscribe to Champ Select updates: {error}");
             continue;
         }
 
@@ -168,55 +159,6 @@ async fn handle_websocket_message(
             let client_state = message.data.to_string().replace('"', "");
             state::handle_client_state(client_state, app_handle, remoting_client, app_client).await;
         }
-        "OnJsonApiEvent_lol-champ-select_v1_session" => {
-            handle_last_second_dodge(message, app_handle, remoting_client).await;
-        }
         _ => log_warn!("Unhandled League websocket message: {message_type}"),
     }
-}
-
-async fn handle_last_second_dodge(
-    message: LcuEvent,
-    app_handle: &AppHandle,
-    remoting_client: &RESTClient,
-) {
-    let champ_select = match serde_json::from_value::<ChampSelectSession>(message.data) {
-        Ok(session) => session,
-        Err(error) => {
-            log_warn!("Failed to parse Champ Select session: {error}");
-            return;
-        }
-    };
-
-    if champ_select.timer.phase != "FINALIZATION" {
-        return;
-    }
-
-    let game_id = champ_select.game_id;
-    let dodge = app_handle.state::<Dodge>();
-    let mut dodge = dodge.0.lock().await;
-    if dodge.last_dodge == Some(game_id) || dodge.enabled != Some(game_id) {
-        return;
-    }
-
-    dodge.last_dodge = Some(game_id);
-    drop(dodge);
-
-    let delay = Duration::from_millis(champ_select.timer.adjusted_time_left_in_phase);
-    let remoting_client = remoting_client.clone();
-    log_warn!("Last-second dodge scheduled after {delay:?}");
-
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(delay).await;
-        log_warn!("Calling the last-second dodge endpoint");
-        if let Err(error) = remoting_client
-            .post(
-                "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
-                serde_json::json!({}),
-            )
-            .await
-        {
-            log_error!("Last-second dodge failed: {error}");
-        }
-    });
 }

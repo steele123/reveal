@@ -23,9 +23,9 @@ mod state;
 mod summoner;
 mod utils;
 
-use app_state::{Dodge, Lcu, QueuePause};
+use app_state::{Lcu, QueuePause};
 use commands::{
-    app_ready, dodge, enable_dodge, get_config, get_lcu_info, get_lcu_state, get_legacy_install,
+    app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install,
     open_opgg_link, remove_legacy_install, set_config, write_frontend_log,
 };
 use config::AppConfig;
@@ -39,7 +39,6 @@ fn main() {
 
     let result = tauri::Builder::default()
         .manage(Lcu::default())
-        .manage(Dodge::default())
         .manage(QueuePause::default())
         .setup(|app| {
             let app_handle = app.handle();
@@ -73,8 +72,6 @@ fn main() {
             get_config,
             set_config,
             open_opgg_link,
-            dodge,
-            enable_dodge,
             get_legacy_install,
             remove_legacy_install,
             write_frontend_log

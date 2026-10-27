@@ -18,20 +18,6 @@ impl Default for Lcu {
     }
 }
 
-pub struct Dodge(pub Mutex<DodgeState>);
-
-#[derive(Default)]
-pub struct DodgeState {
-    pub last_dodge: Option<u64>,
-    pub enabled: Option<u64>,
-}
-
-impl Default for Dodge {
-    fn default() -> Self {
-        Self(Mutex::new(DodgeState::default()))
-    }
-}
-
 pub struct QueuePause(pub Mutex<QueuePauseState>);
 
 impl Default for QueuePause {

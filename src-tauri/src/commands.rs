@@ -1,6 +1,5 @@
 use crate::{
-    app_state::{Dodge, Lcu, QueuePause},
-    champ_select::ChampSelectSession,
+    app_state::{Lcu, QueuePause},
     config::{self, AppConfig, Config},
     legacy_install::{self, LegacyInstall},
     lobby::get_lobby_info,
@@ -134,48 +133,6 @@ pub async fn get_lcu_info(lcu: tauri::State<'_, Lcu>) -> CommandResult<LCUClient
     lcu.data
         .clone()
         .ok_or_else(|| "League Client is not connected".to_string())
-}
-
-#[tauri::command]
-pub async fn dodge(app_handle: AppHandle) -> CommandResult<()> {
-    let lcu_info = current_lcu_info(&app_handle).await?;
-    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
-
-    log_warn!("Manual Champ Select dodge requested");
-    remoting_client
-        .post(
-            "/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=[\"\",\"teambuilder-draft\",\"quitV2\",\"\"]".to_string(),
-            serde_json::json!({}),
-        )
-        .await
-        .map_err(|error| error.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn enable_dodge(app_handle: AppHandle) -> CommandResult<()> {
-    let lcu_info = current_lcu_info(&app_handle).await?;
-    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
-
-    let dodge_state = app_handle.state::<Dodge>();
-    let mut dodge_state = dodge_state.0.lock().await;
-
-    if dodge_state.enabled.is_some() {
-        dodge_state.enabled = None;
-        return Ok(());
-    }
-
-    let champ_select = serde_json::from_value::<ChampSelectSession>(
-        remoting_client
-            .get("/lol-champ-select/v1/session".to_string())
-            .await
-            .map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| error.to_string())?;
-
-    dodge_state.enabled = Some(champ_select.game_id);
-    Ok(())
 }
 
 async fn current_lcu_info(app_handle: &AppHandle) -> CommandResult<LCUClientInfo> {

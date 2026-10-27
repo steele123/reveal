@@ -39,10 +39,8 @@ impl Drop for PollingGuard {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChampSelectSession {
-    pub game_id: u64,
     #[serde(default = "no_cell")]
     pub local_player_cell_id: i64,
-    pub timer: Timer,
     #[serde(default)]
     pub my_team: Vec<ChampSelectTeamMember>,
     #[serde(default)]
@@ -85,13 +83,6 @@ impl ChampSelectTeamMember {
 
 fn no_cell() -> i64 {
     -1
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Timer {
-    pub adjusted_time_left_in_phase: u64,
-    pub phase: String,
 }
 
 pub async fn handle_champ_select_start(
