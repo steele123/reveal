@@ -2,7 +2,7 @@
   import { championIconUrl, formatRank } from "$lib/champ_select";
   import {
     formatGameTime,
-    opggProfileUrl,
+    profileUrl,
     splitTeams,
     teamKills,
     type LiveGame,
@@ -14,11 +14,13 @@
     seenBeforeIndex,
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
-  import { openExternalLink } from "$lib/link_actions";
+  import { openExternalLink, providerLabel } from "$lib/link_actions";
+  import type { MultiProvider } from "$lib/config";
   import { logFrontendError } from "$lib/logging";
 
   export let game: LiveGame;
   export let history: LobbyHistoryEntry[] = [];
+  export let provider: MultiProvider = "opgg";
 
   $: teams = splitTeams(game);
   $: seenIndex = seenBeforeIndex(history, null);
@@ -40,7 +42,7 @@
   function openProfile(url: string | null) {
     if (!url) return;
     openExternalLink(url).catch((error) =>
-      logFrontendError("Failed to open OP.GG profile", error),
+      logFrontendError("Failed to open profile", error),
     );
   }
 
@@ -74,18 +76,18 @@
         {#each side.players as player (player.gameName + player.tagLine + player.championName)}
           {@const rank = player.rank ? formatRank(player.rank, player.recent ?? undefined) : null}
           {@const seen = seenBefore(player)}
-          {@const profileUrl = opggProfileUrl(game, player)}
+          {@const profileLink = profileUrl(game, player, provider)}
           <button
             type="button"
             class="reveal-panel flex h-[26px] shrink-0 items-center gap-2 px-2 text-left text-[11px] transition enabled:hover:border-blue-400/30 enabled:hover:bg-blue-500/[0.06] disabled:cursor-default"
             class:border-blue-400={player.isSelf}
-            disabled={!profileUrl}
-            title={profileUrl
-              ? `Open ${player.gameName}'s OP.GG profile`
+            disabled={!profileLink}
+            title={profileLink
+              ? `Open ${player.gameName}'s ${providerLabel(provider)} profile`
               : player.nameHidden
                 ? "Riot hides this player's name, so there's no profile to open"
                 : ""}
-            on:click={() => openProfile(profileUrl)}
+            on:click={() => openProfile(profileLink)}
           >
             <div class="relative shrink-0" title="{player.championName} · level {player.level}">
               {#if player.championId}

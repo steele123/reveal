@@ -25,7 +25,7 @@ export const PLAYER_CLICK_ACTIONS: ReadonlyArray<{
     value: PlayerClickAction;
 }> = [
     { label: "Show details", value: "details" },
-    { label: "Open OP.GG", value: "opgg" },
+    { label: "Open profile", value: "opgg" },
 ];
 
 export interface Config {

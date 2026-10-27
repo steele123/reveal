@@ -5,7 +5,7 @@
   import {
     copyLink,
     createMultiSearchLink,
-    createOpggProfileLink,
+    createProfileLink,
     formatRiotIds,
     openExternalLink,
   } from "$lib/link_actions";
@@ -71,8 +71,8 @@
 
   async function copyProfile(entry: LobbyHistoryEntry, index: number) {
     try {
-      await copyLink(createOpggProfileLink(entry.participants[index]));
-      showMessage("OP.GG profile link copied");
+      await copyLink(createProfileLink(entry.participants[index], provider));
+      showMessage(`${providerName} profile link copied`);
     } catch (error) {
       logFrontendError("Failed to copy profile link", error);
       showMessage("Could not copy the link");
@@ -236,8 +236,8 @@
                 {/if}
                 <button
                   class="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground transition hover:bg-white/5 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  aria-label={`Copy ${participant.game_name}'s OP.GG profile link`}
-                  title="Copy OP.GG profile link"
+                  aria-label={`Copy ${participant.game_name}'s ${providerName} profile link`}
+                  title={`Copy ${providerName} profile link`}
                   on:click={() => copyProfile(entry, index)}
                 >
                   <svg viewBox="0 0 16 16" class="h-3 w-3" aria-hidden="true">

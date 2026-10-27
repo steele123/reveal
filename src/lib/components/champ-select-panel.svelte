@@ -16,9 +16,10 @@
   import {
     copyLink,
     createMultiSearchLink,
-    createOpggProfileLink,
+    createProfileLink,
     formatRiotIds,
     openExternalLink,
+    providerLabel,
   } from "$lib/link_actions";
   import type { MultiProvider, PlayerClickAction } from "$lib/config";
   import PlayerDetails from "./player-details.svelte";
@@ -57,8 +58,8 @@
 
   function selectPlayer(participant: Participant) {
     if (clickAction === "opgg") {
-      openExternalLink(createOpggProfileLink(participant)).catch((error) =>
-        logFrontendError("Failed to open OP.GG profile", error),
+      openExternalLink(createProfileLink(participant, provider)).catch((error) =>
+        logFrontendError("Failed to open profile", error),
       );
       return;
     }
@@ -158,7 +159,7 @@
           type="button"
           class="reveal-panel flex h-10 min-w-0 shrink-0 items-center gap-2.5 px-3 text-left transition hover:border-blue-400/30 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/50"
           aria-label={clickAction === "opgg"
-            ? `Open ${participant.game_name}'s OP.GG profile`
+            ? `Open ${participant.game_name}'s ${providerLabel(provider)} profile`
             : `Show details for ${participant.game_name}`}
           on:click={() => selectPlayer(participant)}
         >
@@ -321,6 +322,7 @@
   <PlayerDetails
     participant={selectedPlayer}
     seen={seenBefore(selectedPlayer)}
+    {provider}
     onClose={() => (selectedPuuid = null)}
   />
 {/if}

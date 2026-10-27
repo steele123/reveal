@@ -1,5 +1,5 @@
 {
-  "_comment": "Expected links for a two-player lobby, keyed by the region Reveal is given: a web region from League (\"EUW\"), a Riot platform ID (\"na1\") or a lobby chat server (\"eu1\"). Checked by src/lib/link_actions.test.ts and src-tauri/src/utils.rs.",
+  "_comment": "Expected multi-search links for a two-player lobby, and each site's profile link for the first player, keyed by the region Reveal is given: a web region from League (\"EUW\"), a Riot platform ID (\"na1\") or a lobby chat server (\"eu1\"). Checked by src/lib/link_actions.test.ts and src-tauri/src/utils.rs.",
   "players": [
     {
       "gameName": "Player One",
@@ -13,7 +13,13 @@
   "cases": [
     {
       "region": "na1",
-      "profile": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/na/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/na1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/na/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/NA1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/NA?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/na#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=na1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -22,7 +28,13 @@
     },
     {
       "region": "NA",
-      "profile": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/na/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/na/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/na1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/na/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/NA1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/NA?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/na#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=na1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -31,7 +43,13 @@
     },
     {
       "region": "eu1",
-      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/euw/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/euw1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/EUW1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -40,7 +58,13 @@
     },
     {
       "region": "EUW",
-      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/euw/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/euw1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/EUW1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -49,7 +73,13 @@
     },
     {
       "region": "euw1",
-      "profile": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/euw/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/euw/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/euw1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/euw/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/EUW1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/EUW?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/euw#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=euw1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -58,7 +88,13 @@
     },
     {
       "region": "eu2",
-      "profile": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/eune/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/eun1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/eune/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/EUN1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/EUNE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/eune#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=eun1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -67,7 +103,13 @@
     },
     {
       "region": "EUNE",
-      "profile": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/eune/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/eune/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/eun1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/eune/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/EUN1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/EUNE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/eune#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=eun1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -76,7 +118,13 @@
     },
     {
       "region": "LA1",
-      "profile": "https://op.gg/lol/summoners/lan/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/lan/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/lan/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/la1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/lan/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/LA1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/LAN?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/lan#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=la1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -85,7 +133,13 @@
     },
     {
       "region": "LA2",
-      "profile": "https://op.gg/lol/summoners/las/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/las/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/las/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/la2/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/las/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/LA2/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/LAS?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/las#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=la2&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -94,7 +148,13 @@
     },
     {
       "region": "OC1",
-      "profile": "https://op.gg/lol/summoners/oce/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/oce/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/oce/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/oc1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/oce/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/OC1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/OCE?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/oce#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=oc1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -103,7 +163,13 @@
     },
     {
       "region": "BR1",
-      "profile": "https://op.gg/lol/summoners/br/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/br/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/br/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/br1/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/br/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/BR1/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/BR?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/br#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=br1&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -112,7 +178,13 @@
     },
     {
       "region": "KR",
-      "profile": "https://op.gg/lol/summoners/kr/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/kr/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/kr/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/kr/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/kr/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/KR/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/KR?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/kr#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=kr&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -121,7 +193,13 @@
     },
     {
       "region": "SG2",
-      "profile": "https://op.gg/lol/summoners/sg/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/sg/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/sg/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/sg2/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/sg/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/SG2/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/SG?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/sg#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=sg2&summoners=Player%20One-NA1%2CSecond%20Player-0911",
@@ -130,7 +208,13 @@
     },
     {
       "region": "PH2",
-      "profile": "https://op.gg/lol/summoners/ph/Player%20One-NA1",
+      "profile": {
+        "opgg": "https://op.gg/lol/summoners/ph/Player%20One-NA1",
+        "fow": "https://www.fow.lol/find/ph/Player%20One-NA1",
+        "ugg": "https://u.gg/lol/profile/ph2/Player%20One-NA1/overview",
+        "porofessor": "https://porofessor.gg/pregame/ph/Player%20One-NA1",
+        "laddereye": "https://laddereye.com/player/PH2/Player%20One-NA1"
+      },
       "opgg": "https://op.gg/lol/multisearch/PH?summoners=Player%20One%23NA1%2CSecond%20Player%230911",
       "fow": "https://www.fow.lol/multi/ph#Player%20One%23NA1%2CSecond%20Player%230911",
       "ugg": "https://u.gg/lol/multisearch?region=ph2&summoners=Player%20One-NA1%2CSecond%20Player-0911",

@@ -1,7 +1,7 @@
 import { writeText } from "@tauri-apps/api/clipboard";
 import { open } from "@tauri-apps/api/shell";
 import type { Participant } from "$lib/champ_select";
-import type { MultiProvider } from "$lib/config";
+import { MULTI_PROVIDERS, type MultiProvider } from "$lib/config";
 import { isTauriRuntime } from "$lib/runtime";
 
 export const DISCORD_URL = "https://lobbyreveal.app/discord";
@@ -152,10 +152,36 @@ export function formatRiotIds(participants: Participant[]): string {
     .join(", ");
 }
 
-export function createOpggProfileLink(participant: Participant): string {
+export function providerLabel(provider: MultiProvider): string {
+  return MULTI_PROVIDERS.find(({ value }) => value === provider)?.label ?? "OP.GG";
+}
+
+/** One player's page on the chosen site. */
+export function createProfileLink(
+  participant: Participant,
+  provider: MultiProvider,
+): string {
   const region = webRegion(participant.region);
-  const profile = `${participant.game_name}-${participant.game_tag}`;
-  return `https://op.gg/lol/summoners/${region.toLowerCase()}/${encodeURIComponent(profile)}`;
+  const riotId = encodeURIComponent(`${participant.game_name}-${participant.game_tag}`);
+
+  if (provider === "ugg") {
+    return `https://u.gg/lol/profile/${riotPlatformId(region)}/${riotId}/overview`;
+  }
+
+  if (provider === "laddereye") {
+    return `https://laddereye.com/player/${riotPlatformId(region).toUpperCase()}/${riotId}`;
+  }
+
+  // Porofessor has no profile pages, but its pre-game lookup works for a single player.
+  if (provider === "porofessor") {
+    return `https://porofessor.gg/pregame/${porofessorRegion(region)}/${riotId}`;
+  }
+
+  if (provider === "fow") {
+    return `https://www.fow.lol/find/${region.toLowerCase()}/${riotId}`;
+  }
+
+  return `https://op.gg/lol/summoners/${region.toLowerCase()}/${riotId}`;
 }
 
 export async function openExternalLink(link: string): Promise<void> {

@@ -12,15 +12,18 @@
   } from "$lib/champ_select";
   import {
     copyLink,
-    createOpggProfileLink,
+    createProfileLink,
     openExternalLink,
+    providerLabel,
   } from "$lib/link_actions";
   import { logFrontendError } from "$lib/logging";
+  import type { MultiProvider } from "$lib/config";
   import { describeSeenBefore, type SeenBefore } from "$lib/lobby_history";
 
   export let participant: Participant;
   export let onClose: () => void = () => {};
   export let seen: SeenBefore | undefined = undefined;
+  export let provider: MultiProvider = "opgg";
 
   let copied = false;
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -46,9 +49,9 @@
     .filter(Boolean)
     .join(" · ");
 
-  function openOpgg() {
-    openExternalLink(createOpggProfileLink(participant)).catch((error) =>
-      logFrontendError("Failed to open OP.GG profile", error),
+  function openProfile() {
+    openExternalLink(createProfileLink(participant, provider)).catch((error) =>
+      logFrontendError("Failed to open profile", error),
     );
   }
 
@@ -227,9 +230,9 @@
       </button>
       <button
         class="h-9 flex-1 rounded-md bg-blue-500 text-sm font-medium text-white shadow-[0_8px_24px_rgba(59,130,246,0.18)] transition hover:bg-blue-400"
-        on:click={openOpgg}
+        on:click={openProfile}
       >
-        Open OP.GG profile
+        Open {providerLabel(provider)} profile
       </button>
     </div>
   </div>

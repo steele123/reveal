@@ -1,4 +1,6 @@
-import type { RankSummary, RecentForm } from "$lib/champ_select";
+import type { Participant, RankSummary, RecentForm } from "$lib/champ_select";
+import type { MultiProvider } from "$lib/config";
+import { createProfileLink } from "$lib/link_actions";
 
 /** Scoreboard from League's Live Client Data API, sent by the backend every few seconds. */
 export interface LiveGame {
@@ -61,13 +63,25 @@ function rankOf(position: string): number {
   return index === -1 ? POSITION_ORDER.length : index;
 }
 
-/** The player's OP.GG profile, or null when their name is hidden or the region is unknown. */
-export function opggProfileUrl(game: LiveGame, player: LivePlayer): string | null {
+/** The player's page on the chosen site, or null when their name is hidden or the region is unknown. */
+export function profileUrl(
+  game: LiveGame,
+  player: LivePlayer,
+  provider: MultiProvider,
+): string | null {
   if (player.nameHidden || player.isBot || !player.gameName || !player.tagLine || !game.region) {
     return null;
   }
-  const profile = `${player.gameName}-${player.tagLine}`;
-  return `https://op.gg/lol/summoners/${game.region.toLowerCase()}/${encodeURIComponent(profile)}`;
+  const participant = {
+    game_name: player.gameName,
+    game_tag: player.tagLine,
+    region: game.region,
+  } as Participant;
+  // Porofessor's live page shows the game in progress.
+  if (provider === "porofessor") {
+    return createProfileLink(participant, provider).replace("/pregame/", "/live/");
+  }
+  return createProfileLink(participant, provider);
 }
 
 /** 812 -> "13:32". */

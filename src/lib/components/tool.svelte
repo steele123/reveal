@@ -100,7 +100,7 @@
     </div>
   {:else if showingLiveGame && liveGame}
     <div in:fade class="flex min-h-0 flex-1 flex-col">
-      <LiveGamePanel game={liveGame} {history} />
+      <LiveGamePanel game={liveGame} {history} provider={config?.multiProvider ?? "opgg"} />
     </div>
   {:else}
     <div class="grid grid-cols-2 gap-3">
