@@ -63,7 +63,7 @@ fn parse_player_history(history: &Value) -> PlayerHistory {
             continue;
         }
         profile.games += 1;
-        if let Some(position) = position_from_timeline(&player["timeline"]) {
+        if let Some(position) = position_from_game(game, player) {
             *profile.positions.entry(position.to_string()).or_default() += 1;
         }
         if let (Some(d), Some(f)) = (player["spell1Id"].as_i64(), player["spell2Id"].as_i64()) {
@@ -76,16 +76,36 @@ fn parse_player_history(history: &Value) -> PlayerHistory {
     profile
 }
 
-/// Maps match history's lane/role to Champ Select's assigned positions.
-fn position_from_timeline(timeline: &Value) -> Option<&'static str> {
-    match timeline["lane"].as_str()? {
+/// Supports farm well under 2 minions a minute; laners farm several times that.
+const SUPPORT_MAX_CS_PER_MINUTE: f64 = 2.0;
+
+/// Maps a match history game to Champ Select's assigned positions.
+fn position_from_game(game: &Value, player: &Value) -> Option<&'static str> {
+    let timeline = &player["timeline"];
+    let lane = timeline["lane"].as_str()?;
+    // League now reports supports as "SUPPORT" (formerly "DUO_SUPPORT"). In bot lane that's
+    // reliable, but it's also the fallback role when League can't place someone, so elsewhere
+    // only trust it for players who barely farmed.
+    if matches!(timeline["role"].as_str(), Some("SUPPORT" | "DUO_SUPPORT")) {
+        let bot_lane = matches!(lane, "BOTTOM" | "BOT");
+        if bot_lane || cs_per_minute(game, player).is_some_and(|cs| cs < SUPPORT_MAX_CS_PER_MINUTE)
+        {
+            return Some("utility");
+        }
+    }
+    match lane {
         "TOP" => Some("top"),
         "JUNGLE" => Some("jungle"),
         "MIDDLE" | "MID" => Some("middle"),
-        "BOTTOM" | "BOT" if timeline["role"].as_str() == Some("DUO_SUPPORT") => Some("utility"),
         "BOTTOM" | "BOT" => Some("bottom"),
         _ => None,
     }
+}
+
+fn cs_per_minute(game: &Value, player: &Value) -> Option<f64> {
+    let minutes = game["gameDuration"].as_f64()? / 60.0;
+    let minions = player["stats"]["totalMinionsKilled"].as_f64()?;
+    (minutes > 0.0).then(|| minions / minutes)
 }
 
 /// How a player's recent Summoner's Rift games line up with the role they were assigned.
@@ -259,6 +279,27 @@ mod tests {
         assert_eq!(history.spells.get(&(4, 7)), Some(&2));
         assert_eq!(history.champions.get(&99), Some(&2));
         assert_eq!(history.positions.get("middle"), None);
+    }
+
+    #[test]
+    fn counts_supports_by_role_and_farm() {
+        let with_farm = |lane: &str, role: &str, minions: u32| {
+            let mut game = game(420, 11, lane, role, (7, 4), 89, true);
+            game["gameDuration"] = json!(30 * 60);
+            game["participants"][0]["stats"]["totalMinionsKilled"] = json!(minions);
+            game
+        };
+        let history = parse_player_history(&json!({ "games": { "games": [
+            with_farm("BOTTOM", "SUPPORT", 30),
+            with_farm("NONE", "SUPPORT", 25),
+            with_farm("TOP", "SUPPORT", 40),
+            // League's fallback role for someone it couldn't place, who farmed like a laner.
+            with_farm("NONE", "SUPPORT", 210),
+            with_farm("BOTTOM", "CARRY", 240),
+        ]}}));
+        assert_eq!(history.positions.get("utility"), Some(&3));
+        assert_eq!(history.positions.get("bottom"), Some(&1));
+        assert_eq!(history.positions.get("top"), None);
     }
 
     fn profile(position: &str, spells: (i64, i64), champion: i64) -> PlayerHistory {
