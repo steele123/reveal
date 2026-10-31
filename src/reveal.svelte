@@ -20,6 +20,8 @@
     clearLobbyHistory,
     createLobbyHistoryId,
     loadLobbyHistory,
+    lobbyEvent,
+    markLobbyDodged,
     markLobbyGameStarted,
     recordLobbyReveal,
     type LobbyHistoryEntry,
@@ -119,13 +121,15 @@
           await listen<string>(
             "client_state_update",
             ({ payload: newState }) => {
-              if (newState === "ChampSelect" && state !== "ChampSelect") {
+              const event = lobbyEvent(state, newState);
+              if (event === "new-lobby") {
                 activeLobbyId = createLobbyHistoryId();
                 champSelect = null;
-              } else if (newState === "InProgress" && activeLobbyId) {
-                history = markLobbyGameStarted(activeLobbyId);
+              } else if (event === "game-started") {
+                if (activeLobbyId) history = markLobbyGameStarted(activeLobbyId);
                 activeLobbyId = null;
-              } else if (newState !== "ChampSelect") {
+              } else if (event === "left") {
+                if (activeLobbyId) history = markLobbyDodged(activeLobbyId);
                 activeLobbyId = null;
               }
               state = newState;

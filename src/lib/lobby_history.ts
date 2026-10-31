@@ -8,6 +8,9 @@ export interface LobbyHistoryEntry {
   id: string;
   revealedAt: string;
   gameStartedAt?: string;
+  /** Set when the lobby went back to the lobby or queue instead of a game. Lobbies saved before
+   * Reveal 1.4.10 have neither this nor gameStartedAt, so their outcome is unknown. */
+  dodgedAt?: string;
   participants: Participant[];
 }
 
@@ -87,6 +90,7 @@ export function recordLobbyReveal(
     id: lobbyId,
     revealedAt: existing?.revealedAt ?? new Date().toISOString(),
     gameStartedAt: existing?.gameStartedAt,
+    dodgedAt: existing?.dodgedAt,
     participants: mergeParticipants(
       existing?.participants ?? [],
       champSelect.participants,
@@ -96,15 +100,36 @@ export function recordLobbyReveal(
   return persist([entry, ...entries.filter((item) => item.id !== lobbyId)]);
 }
 
+/** What a League Client state change means for the lobby being recorded. */
+export function lobbyEvent(
+  previousState: string,
+  nextState: string,
+): "new-lobby" | "game-started" | "left" | null {
+  if (nextState === "ChampSelect") {
+    return previousState === "ChampSelect" ? null : "new-lobby";
+  }
+  // A game goes ChampSelect -> GameStart -> InProgress; a dodge goes back to Lobby or Matchmaking.
+  if (nextState === "GameStart" || nextState === "InProgress") return "game-started";
+  return "left";
+}
+
 export function markLobbyGameStarted(lobbyId: string): LobbyHistoryEntry[] {
+  return markOutcome(lobbyId, "gameStartedAt");
+}
+
+export function markLobbyDodged(lobbyId: string): LobbyHistoryEntry[] {
+  return markOutcome(lobbyId, "dodgedAt");
+}
+
+function markOutcome(lobbyId: string, outcome: "gameStartedAt" | "dodgedAt"): LobbyHistoryEntry[] {
   const entries = loadLobbyHistory();
-  const startedAt = new Date().toISOString();
+  const at = new Date().toISOString();
   let changed = false;
 
   const nextEntries = entries.map((entry) => {
-    if (entry.id !== lobbyId || entry.gameStartedAt) return entry;
+    if (entry.id !== lobbyId || entry.gameStartedAt || entry.dodgedAt) return entry;
     changed = true;
-    return { ...entry, gameStartedAt: startedAt };
+    return { ...entry, [outcome]: at };
   });
 
   return changed ? persist(nextEntries) : entries;
@@ -113,8 +138,10 @@ export function markLobbyGameStarted(lobbyId: string): LobbyHistoryEntry[] {
 export interface SeenBefore {
   /** Earlier lobbies this player was in. */
   lobbies: number;
-  /** Of those, how many went on to a game (not dodged). */
+  /** Of those, how many went on to a game. */
   games: number;
+  /** And how many were dodged. Older lobbies may be neither, since their outcome is unknown. */
+  dodges: number;
   lastSeen: string;
 }
 
@@ -128,9 +155,15 @@ export function seenBeforeIndex(
     if (entry.id === currentLobbyId) continue;
     for (const participant of entry.participants) {
       const key = participantKey(participant);
-      const seen = index.get(key) ?? { lobbies: 0, games: 0, lastSeen: entry.revealedAt };
+      const seen = index.get(key) ?? {
+        lobbies: 0,
+        games: 0,
+        dodges: 0,
+        lastSeen: entry.revealedAt,
+      };
       seen.lobbies += 1;
       if (entry.gameStartedAt) seen.games += 1;
+      else if (entry.dodgedAt) seen.dodges += 1;
       if (entry.revealedAt > seen.lastSeen) seen.lastSeen = entry.revealedAt;
       index.set(key, seen);
     }
@@ -157,13 +190,14 @@ export function formatTimeAgo(iso: string, now = Date.now()): string {
   return "just now";
 }
 
-/** e.g. "Seen 3× before (2 games together) · last 2 days ago". */
-export function describeSeenBefore(seen: SeenBefore): string {
-  const games =
-    seen.games === seen.lobbies
-      ? `${seen.games} game${seen.games === 1 ? "" : "s"} together`
-      : `${seen.games} game${seen.games === 1 ? "" : "s"} together, ${seen.lobbies - seen.games} dodged`;
-  return `Seen ${seen.lobbies}× before (${games}) · last ${formatTimeAgo(seen.lastSeen)}`;
+/** e.g. "Seen 3× before (2 games together, 1 dodged) · last 2 days ago". */
+export function describeSeenBefore(seen: SeenBefore, now = Date.now()): string {
+  const outcomes = [
+    seen.games > 0 && `${seen.games} game${seen.games === 1 ? "" : "s"} together`,
+    seen.dodges > 0 && `${seen.dodges} dodged`,
+  ].filter(Boolean);
+  const detail = outcomes.length ? ` (${outcomes.join(", ")})` : "";
+  return `Seen ${seen.lobbies}× before${detail} · last ${formatTimeAgo(seen.lastSeen, now)}`;
 }
 
 export function clearLobbyHistory(): void {

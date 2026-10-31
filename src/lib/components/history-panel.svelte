@@ -174,7 +174,7 @@
                   : "border-amber-400/20 bg-amber-500/10 text-amber-300"
               }`}
             >
-              {entry.gameStartedAt ? "Game started" : "Lobby reveal"}
+              {entry.gameStartedAt ? "Game started" : entry.dodgedAt ? "Dodged" : "Lobby reveal"}
             </div>
 
             <button
