@@ -1022,6 +1022,8 @@ fn http() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
+            // U.GG's Cloudflare answers requests without a User-Agent with a 403 challenge.
+            .user_agent(concat!("Reveal/", env!("CARGO_PKG_VERSION")))
             .timeout(REQUEST_TIMEOUT)
             .build()
             .unwrap_or_default()
