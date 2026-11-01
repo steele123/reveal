@@ -28,7 +28,8 @@ pub struct Config {
     /// What clicking a teammate does: "details" (Reveal popup) or "opgg" (open their profile).
     #[serde(default = "default_player_click_action")]
     pub player_click_action: String,
-    /// Which site's win rates the Counters tab shows first: "lolalytics" or "ugg". Both are read.
+    /// Which site's win rates the Counters tab shows first: "lolalytics", "ugg" or
+    /// "laddereye". All are read.
     #[serde(default = "default_counters_provider")]
     pub counters_provider: String,
     /// Queue again a little while after a game ends.

@@ -6,6 +6,8 @@ import {
   focusedEnemy,
   formatLead,
   draftLanes,
+  ladderEyeCountersLink,
+  ladderEyeMatchupLink,
   leadClass,
   leagueOfGraphsCountersLink,
   lolalyticsCountersLink,
@@ -24,6 +26,7 @@ import {
 const leeSin: ChampionRef = { id: 64, name: "Lee Sin", slug: "leesin" };
 const rekSai: ChampionRef = { id: 421, name: "Rek'Sai", slug: "reksai" };
 const jarvan: ChampionRef = { id: 59, name: "Jarvan IV", slug: "jarvaniv" };
+const wukong: ChampionRef = { id: 62, name: "Wukong", slug: "wukong" };
 
 // Rek'Sai into Lee Sin, World Master+ on patch 26.21.
 const stats: MatchupStats = {
@@ -37,6 +40,7 @@ const stats: MatchupStats = {
   killDiff15: 0.14,
   lolalytics: null,
   ugg: { games: 644, winRate: 56.52, winRateDelta: 3.58 },
+  laddereye: null,
   agreement: 1,
   sources: 1,
 };
@@ -68,6 +72,15 @@ describe("matchup links", () => {
       "https://www.leagueofgraphs.com/champions/counters/leesin/adc/master/sr-ranked",
     );
   });
+
+  it("opens LadderEye's pages under League's names for positions and Wukong", () => {
+    expect(ladderEyeCountersLink(leeSin, "utility")).toBe(
+      "https://laddereye.com/champions/leesin?position=UTILITY",
+    );
+    expect(ladderEyeMatchupLink(wukong, leeSin, "jungle")).toBe(
+      "https://laddereye.com/champions/monkeyking/vs/leesin?position=JUNGLE",
+    );
+  });
 });
 
 describe("providers", () => {
@@ -77,6 +90,9 @@ describe("providers", () => {
     );
     expect(matchupLink("lolalytics", rekSai, leeSin, "utility")).toBe(
       "https://lolalytics.com/lol/reksai/vs/leesin/build/?lane=support&vslane=support&tier=master_plus",
+    );
+    expect(matchupLink("laddereye", rekSai, leeSin, "jungle")).toBe(
+      "https://laddereye.com/champions/reksai/vs/leesin?position=JUNGLE",
     );
   });
 
@@ -113,6 +129,19 @@ describe("both sites", () => {
     ]);
     expect(describeMatchup({ ...both, ugg: null }, rekSai, leeSin)).toContain(
       "U.GG: not enough games",
+    );
+  });
+
+  it("adds LadderEye's numbers when it has the matchup", () => {
+    const all: MatchupStats = {
+      ...stats,
+      lolalytics: { games: 715, winRate: 53.29, winRateDelta: 2.99 },
+      laddereye: { games: 988, winRate: 54.45, winRateDelta: 1.5 },
+      agreement: 3,
+      sources: 3,
+    };
+    expect(describeMatchup(all, rekSai, leeSin).split("\n")[3]).toBe(
+      "LadderEye: 54.5% (+1.5 vs expected), 988 games",
     );
   });
 });

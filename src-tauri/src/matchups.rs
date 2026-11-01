@@ -1,11 +1,11 @@
 //! Master+ matchup stats for Champ Select: the best counters to each enemy pick and how your
 //! teammate in that role fares against it.
 //!
-//! The numbers come from the JSON u.gg's and Lolalytics' own pages load (every region, Master and
-//! above, Ranked Solo/Duo), which needs no key or cookies. Both sites are read and weighed
-//! together: a counter both agree on ranks above one only one of them backs. U.GG also has leads
-//! at 15 minutes, and its role stats place the enemy picks. The window links each number back to
-//! the page it comes from.
+//! The numbers come from the JSON u.gg's, Lolalytics' and LadderEye's own pages load (every
+//! region, Master and above, Ranked Solo/Duo), which needs no key or cookies. All three sites are
+//! read and weighed together: a counter they agree on ranks above one only some of them back.
+//! U.GG also has leads at 15 minutes, and its role stats place the enemy picks. The window links
+//! each number back to the page it comes from.
 
 use crate::{
     champions::{self, ChampionInfo},
@@ -28,6 +28,8 @@ const API_VERSIONS_URL: &str =
     "https://static.bigbrain.gg/assets/lol/riot_patch_update/prod/ugg/ugg-api-versions.json";
 const DEFAULT_API_VERSION: &str = "1.5.0";
 const LOLALYTICS_COUNTERS_URL: &str = "https://a1.lolalytics.com/mega/?ep=counter&v=1";
+/// LadderEye's champion pages; adding `/__data.json` gives the data the page is built from.
+const LADDEREYE_CHAMPIONS_URL: &str = "https://laddereye.com/champions";
 /// U.GG's keys for every region together and for Master and above.
 const WORLD: &str = "12";
 const MASTER_PLUS: &str = "14";
@@ -111,9 +113,20 @@ impl Role {
             Role::Utility => "support",
         }
     }
+
+    /// LadderEye's position names, which are League's own.
+    fn laddereye_position(self) -> &'static str {
+        match self {
+            Role::Top => "TOP",
+            Role::Jungle => "JUNGLE",
+            Role::Middle => "MIDDLE",
+            Role::Bottom => "BOTTOM",
+            Role::Utility => "UTILITY",
+        }
+    }
 }
 
-/// A stats site. Both are always read; the one picked in the Counters tab supplies the main win
+/// A stats site. All are always read; the one picked in the Counters tab supplies the main win
 /// rate shown for each matchup.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -121,24 +134,29 @@ pub enum Provider {
     #[default]
     Lolalytics,
     Ugg,
+    LadderEye,
 }
 
 impl Provider {
-    const ALL: [Provider; 2] = [Provider::Lolalytics, Provider::Ugg];
+    const ALL: [Provider; 3] = [Provider::Lolalytics, Provider::Ugg, Provider::LadderEye];
 
     /// The saved setting; anything unknown means Lolalytics.
     pub fn from_setting(setting: &str) -> Self {
         match setting {
             "ugg" => Provider::Ugg,
+            "laddereye" => Provider::LadderEye,
             _ => Provider::Lolalytics,
         }
     }
 
-    /// The download for one enemy pick: U.GG has every role in one file, Lolalytics one per lane.
+    /// The download for one enemy pick: U.GG has every role in one file, the others one per lane.
     fn file_key(self, champion_id: i64, role: Role) -> String {
         match self {
             Provider::Ugg => format!("ugg:{champion_id}"),
             Provider::Lolalytics => format!("lolalytics:{champion_id}:{}", role.lolalytics_lane()),
+            Provider::LadderEye => {
+                format!("laddereye:{champion_id}:{}", role.laddereye_position())
+            }
         }
     }
 }
@@ -268,6 +286,7 @@ pub struct MatchupStats {
     /// Each site's own numbers, when it has enough games of the matchup.
     pub lolalytics: Option<SourceStats>,
     pub ugg: Option<SourceStats>,
+    pub laddereye: Option<SourceStats>,
     /// How many sites see this matchup going better than expected, out of `sources`.
     pub agreement: u8,
     /// How many sites' stats for this enemy pick have loaded.
@@ -328,6 +347,7 @@ impl MatchupLookups {
             return;
         };
         let roles = assign_roles(&picks.enemies, &stats);
+        let patch = display_patch(&stats.patch);
         for (enemy, role) in picks.enemies.iter().zip(roles) {
             let Some(role) = role else { continue };
             let champion_id = enemy.champion_id;
@@ -336,11 +356,18 @@ impl MatchupLookups {
                 .spawn(&Provider::Ugg.file_key(champion_id, role), move || {
                     load_champion(stats, champion_id)
                 });
-            // Lolalytics names champions in its URLs, so it waits for the client's names.
+            // Lolalytics and LadderEye name champions in their URLs, so they wait for the client's
+            // names.
             if let Some(slug) = self.slug(champion_id) {
+                let lolalytics_slug = slug.clone();
                 self.champions
                     .spawn(&Provider::Lolalytics.file_key(champion_id, role), move || {
-                        load_lolalytics(slug, champion_id, role)
+                        load_lolalytics(lolalytics_slug, champion_id, role)
+                    });
+                let patch = patch.clone();
+                self.champions
+                    .spawn(&Provider::LadderEye.file_key(champion_id, role), move || {
+                        load_laddereye(slug, champion_id, role, patch)
                     });
             }
         }
@@ -402,11 +429,16 @@ impl MatchupLookups {
 struct SourceFiles<'a> {
     lolalytics: Option<&'a ChampionMatchups>,
     ugg: Option<&'a ChampionMatchups>,
+    laddereye: Option<&'a ChampionMatchups>,
 }
 
 impl<'a> SourceFiles<'a> {
+    fn all(self) -> [Option<&'a ChampionMatchups>; 3] {
+        [self.lolalytics, self.ugg, self.laddereye]
+    }
+
     fn loaded(self) -> u8 {
-        u8::from(self.lolalytics.is_some()) + u8::from(self.ugg.is_some())
+        self.all().iter().flatten().count() as u8
     }
 
     /// Each site's row for `champion_id` in `role`, if it has at least `min_games` of it.
@@ -420,6 +452,7 @@ impl<'a> SourceFiles<'a> {
         MatchupRows {
             lolalytics: find(self.lolalytics),
             ugg: find(self.ugg),
+            laddereye: find(self.laddereye),
             loaded: self.loaded(),
         }
     }
@@ -430,7 +463,14 @@ impl<'a> SourceFiles<'a> {
 struct MatchupRows<'a> {
     lolalytics: Option<&'a OpponentRow>,
     ugg: Option<&'a OpponentRow>,
+    laddereye: Option<&'a OpponentRow>,
     loaded: u8,
+}
+
+impl<'a> MatchupRows<'a> {
+    fn all(self) -> [Option<&'a OpponentRow>; 3] {
+        [self.lolalytics, self.ugg, self.laddereye]
+    }
 }
 
 fn build_board(
@@ -454,11 +494,11 @@ fn build_board(
             let record = role
                 .zip(stats)
                 .and_then(|(role, stats)| stats.record(role, enemy.champion_id));
+            let file = |provider| files.get(&(provider, enemy.champion_id)).map(Arc::as_ref);
             let sources = SourceFiles {
-                lolalytics: files
-                    .get(&(Provider::Lolalytics, enemy.champion_id))
-                    .map(Arc::as_ref),
-                ugg: files.get(&(Provider::Ugg, enemy.champion_id)).map(Arc::as_ref),
+                lolalytics: file(Provider::Lolalytics),
+                ugg: file(Provider::Ugg),
+                laddereye: file(Provider::LadderEye),
             };
             // Both lists need the role, the patch's records and at least one site's file.
             let ready = match (role, stats) {
@@ -519,8 +559,9 @@ fn build_board(
 ///
 /// Ranked by each site's matchup win rate, pulled towards what an average pick wins against the
 /// enemy by sample size, and averaged over the sites that loaded; a site without enough games of
-/// the matchup counts as that average, so a pick both sites back outranks one only one has seen
-/// enough of. Everyone is pulled towards the same average: pulling towards each pick's own
+/// the matchup (LadderEye only lists each enemy's 40 most common opponents) counts as that
+/// average, so a pick every site backs outranks one only some have seen enough of. Everyone is
+/// pulled towards the same average: pulling towards each pick's own
 /// overall strength let strong champions with few games outrank ones that won more.
 fn counters_for(
     sources: SourceFiles,
@@ -537,7 +578,8 @@ fn counters_for(
     let average = stats
         .win_rate(role, enemy_id)
         .map_or(50.0, |enemy| (1.0 - enemy) * 100.0);
-    let candidates: BTreeSet<i64> = [sources.lolalytics, sources.ugg]
+    let candidates: BTreeSet<i64> = sources
+        .all()
         .into_iter()
         .flatten()
         .flat_map(|file| file.rows(role))
@@ -549,7 +591,8 @@ fn counters_for(
         .into_iter()
         .filter_map(|champion_id| {
             let rows = sources.rows(role, champion_id, min_games);
-            let sides: Vec<SideStats> = [rows.lolalytics, rows.ugg]
+            let sides: Vec<SideStats> = rows
+                .all()
                 .into_iter()
                 .flatten()
                 .map(|row| matchup_stats(row, role, enemy_id, stats))
@@ -579,8 +622,8 @@ fn counters_for(
         .collect()
 }
 
-/// The matchup as both sites see it: the main site's win rate up front, U.GG's leads, and how
-/// many sites agree it goes better than expected. None when neither site has it.
+/// The matchup as every site sees it: the main site's win rate up front, U.GG's leads, and how
+/// many sites agree it goes better than expected. None when no site has it.
 fn combined_stats(
     rows: MatchupRows,
     main: Provider,
@@ -589,10 +632,13 @@ fn combined_stats(
     stats: &PatchStats,
 ) -> Option<MatchupStats> {
     let side = |row: Option<&OpponentRow>| row.map(|row| matchup_stats(row, role, enemy_id, stats));
-    let (lolalytics, ugg) = (side(rows.lolalytics), side(rows.ugg));
+    let (lolalytics, ugg, laddereye) =
+        (side(rows.lolalytics), side(rows.ugg), side(rows.laddereye));
+    // The main site, else the others in the order the setting lists them.
     let shown = match main {
-        Provider::Lolalytics => lolalytics.as_ref().or(ugg.as_ref()),
-        Provider::Ugg => ugg.as_ref().or(lolalytics.as_ref()),
+        Provider::Lolalytics => lolalytics.as_ref().or(ugg.as_ref()).or(laddereye.as_ref()),
+        Provider::Ugg => ugg.as_ref().or(lolalytics.as_ref()).or(laddereye.as_ref()),
+        Provider::LadderEye => laddereye.as_ref().or(lolalytics.as_ref()).or(ugg.as_ref()),
     }?;
     let source = |side: &Option<SideStats>| {
         side.as_ref().map(|side| SourceStats {
@@ -614,7 +660,8 @@ fn combined_stats(
         kill_diff_15: lead(|leads| leads.kills),
         lolalytics: source(&lolalytics),
         ugg: source(&ugg),
-        agreement: [&lolalytics, &ugg]
+        laddereye: source(&laddereye),
+        agreement: [&lolalytics, &ugg, &laddereye]
             .into_iter()
             .flatten()
             .filter(|side| edge(side) > 0.0)
@@ -919,6 +966,39 @@ pub async fn load_lolalytics(
     Ok(matchups)
 }
 
+/// One champion's Master+ matchups in one lane from LadderEye, on the same patch as U.GG's stats
+/// (`patch` is Riot's name for it, e.g. "26.21").
+pub async fn load_laddereye(
+    slug: String,
+    champion_id: i64,
+    role: Role,
+    patch: String,
+) -> anyhow::Result<Arc<ChampionMatchups>> {
+    let position = role.laddereye_position();
+    let key = (format!("laddereye:{patch}:{position}"), champion_id);
+    if let Some(matchups) = cached_champion(&key) {
+        return Ok(matchups);
+    }
+
+    let url = format!(
+        "{LADDEREYE_CHAMPIONS_URL}/{}/__data.json?position={position}&patch={patch}",
+        laddereye_slug(&slug)
+    );
+    let matchups = Arc::new(parse_laddereye(&fetch_json(&url).await?, role)?);
+    lock(&CHAMPION_MATCHUPS)
+        .get_or_insert_with(HashMap::new)
+        .insert(key, Cached::new(matchups.clone()));
+    Ok(matchups)
+}
+
+/// LadderEye names champions like the other sites, except Wukong, which keeps League's own name.
+pub fn laddereye_slug(slug: &str) -> &str {
+    match slug {
+        "wukong" => "monkeyking",
+        _ => slug,
+    }
+}
+
 /// The file version U.GG lists for this patch and kind of file.
 fn api_version(versions: &Value, patch: &str, kind: &str) -> String {
     versions[patch][kind]
@@ -1016,6 +1096,68 @@ fn parse_lolalytics(value: &Value, role: Role) -> anyhow::Result<ChampionMatchup
     Ok(ChampionMatchups {
         rows: HashMap::from([(role, opponents)]),
     })
+}
+
+/// LadderEye's page data, as SvelteKit sends it: `nodes[].data` is one flat array in which
+/// objects and arrays hold indexes into that array. `stats.matchups` lists the champion's 40 most
+/// common opponents as `{champion, position, games, wins}`, from the side of the champion asked
+/// about.
+fn parse_laddereye(value: &Value, role: Role) -> anyhow::Result<ChampionMatchups> {
+    let nodes = value["nodes"]
+        .as_array()
+        .context("LadderEye sent no page data")?;
+    if let Some(node) = nodes.iter().find(|node| node["type"] == "error") {
+        anyhow::bail!(
+            "LadderEye: {}",
+            node["error"]["message"].as_str().unwrap_or("unknown error")
+        );
+    }
+    let data = nodes
+        .iter()
+        .rev()
+        .find_map(|node| node["data"].as_array())
+        .context("LadderEye sent no page data")?;
+    let matchups = data
+        .first()
+        .and_then(|page| devalue_field(data, page, "stats"))
+        .and_then(|stats| devalue_field(data, stats, "matchups"))
+        .and_then(Value::as_array)
+        .context("LadderEye sent no matchups")?;
+
+    let position = role.laddereye_position();
+    let opponents = matchups
+        .iter()
+        .filter_map(|index| devalue_at(data, index))
+        .filter(|row| {
+            devalue_field(data, row, "position")
+                .and_then(Value::as_str)
+                .map_or(true, |row_position| row_position == position)
+        })
+        .filter_map(|row| {
+            let number = |key: &str| devalue_field(data, row, key).and_then(Value::as_f64);
+            let games = number("games").filter(|games| *games > 0.0)?;
+            Some(OpponentRow {
+                champion_id: number("champion")? as i64,
+                wins: games - number("wins")?,
+                games,
+                leads: None,
+                delta: None,
+            })
+        })
+        .collect();
+    Ok(ChampionMatchups {
+        rows: HashMap::from([(role, opponents)]),
+    })
+}
+
+/// The value an index in SvelteKit's flat page data points at; negative indexes stand for
+/// `undefined`, NaN and the like.
+fn devalue_at<'a>(data: &'a [Value], index: &Value) -> Option<&'a Value> {
+    data.get(usize::try_from(index.as_i64()?).ok()?)
+}
+
+fn devalue_field<'a>(data: &'a [Value], object: &Value, key: &str) -> Option<&'a Value> {
+    devalue_at(data, object.get(key)?)
 }
 
 fn http() -> &'static reqwest::Client {
@@ -1153,6 +1295,7 @@ mod tests {
         SourceFiles {
             lolalytics: None,
             ugg: Some(file),
+            laddereye: None,
         }
     }
 
@@ -1193,6 +1336,7 @@ mod tests {
         let sources = SourceFiles {
             lolalytics: Some(&lolalytics),
             ugg: Some(&ugg),
+            laddereye: None,
         };
 
         let counters = counters_for(sources, Role::Jungle, LEE_SIN, &stats, None, Provider::Lolalytics);
@@ -1647,6 +1791,7 @@ mod tests {
             let sources = SourceFiles {
                 lolalytics: Some(&lolalytics),
                 ugg: Some(&ugg),
+                laddereye: None,
             };
             let counters =
                 counters_for(sources, Role::Jungle, LEE_SIN, &stats, None, Provider::Lolalytics);
@@ -1685,6 +1830,7 @@ mod tests {
             let sources = SourceFiles {
                 lolalytics: Some(&lee_sin),
                 ugg: None,
+                laddereye: None,
             };
             let counters = counters_for(
                 sources,
@@ -1740,10 +1886,126 @@ mod tests {
             Provider::Lolalytics.file_key(64, Role::Utility),
             "lolalytics:64:support"
         );
+        assert_eq!(
+            Provider::LadderEye.file_key(64, Role::Utility),
+            "laddereye:64:UTILITY"
+        );
         assert_eq!(Provider::from_setting("ugg"), Provider::Ugg);
+        assert_eq!(Provider::from_setting("laddereye"), Provider::LadderEye);
         assert_eq!(Provider::from_setting("leagueofgraphs"), Provider::Lolalytics);
         assert_eq!(Provider::default(), Provider::Lolalytics);
         assert_eq!(serde_json::to_value(Provider::Ugg).unwrap(), json!("ugg"));
+        assert_eq!(serde_json::to_value(Provider::LadderEye).unwrap(), json!("laddereye"));
+    }
+
+    #[test]
+    fn reads_laddereye_page_data_from_the_counter_picks_side() {
+        // Trimmed from laddereye.com/champions/leesin/__data.json?position=JUNGLE.
+        let response = json!({
+            "type": "data",
+            "nodes": [null, { "type": "data", "data": [
+                { "position": 1, "stats": 2 },
+                "JUNGLE",
+                { "games": 3, "matchups": 4 },
+                48_000,
+                [5, 8, 11],
+                { "champion": 6, "games": 7, "wins": 13, "position": 1, "goldDiff15": 14 },
+                421, 714,
+                { "champion": 9, "games": 10, "wins": 10, "position": 1 },
+                60, 0,
+                { "champion": 12, "games": 7, "wins": 13, "position": 15 },
+                203, 333, -120.5, "TOP"
+            ]}]
+        });
+
+        let matchups = parse_laddereye(&response, Role::Jungle).unwrap();
+        let [rek_sai] = matchups.rows(Role::Jungle) else {
+            panic!("rows without games and other lanes are dropped");
+        };
+        let stats = matchup_stats(rek_sai, Role::Jungle, LEE_SIN, &patch_stats(&[]));
+
+        assert_eq!(rek_sai.champion_id, REK_SAI);
+        assert_eq!(stats.games, 714);
+        assert!((stats.win_rate - 53.36).abs() < 0.01, "Lee Sin won 333 of 714");
+        assert_eq!(stats.leads, None);
+    }
+
+    #[test]
+    fn reports_laddereye_errors() {
+        let not_found = json!({ "type": "data", "nodes": [null, {
+            "type": "error", "error": { "message": "Champion not found" }, "status": 404
+        }]});
+        let error = parse_laddereye(&not_found, Role::Top).unwrap_err();
+        assert_eq!(error.to_string(), "LadderEye: Champion not found");
+        assert!(parse_laddereye(&json!({}), Role::Top).is_err());
+    }
+
+    #[test]
+    fn names_wukong_like_laddereye_does() {
+        assert_eq!(laddereye_slug("wukong"), "monkeyking");
+        assert_eq!(laddereye_slug("leesin"), "leesin");
+    }
+
+    #[test]
+    fn counters_count_every_site_that_loaded() {
+        let stats = patch_stats(&[(Role::Jungle, LEE_SIN, record(24_000.0, 48_000.0))]);
+        let file = |rows| ChampionMatchups {
+            rows: HashMap::from([(Role::Jungle, rows)]),
+        };
+        let ugg = file(vec![with_delta(REK_SAI, 340.0, 600.0, 4.0)]);
+        let lolalytics = file(vec![with_delta(REK_SAI, 380.0, 700.0, 4.0)]);
+        let laddereye = file(vec![row(REK_SAI, 450.0, 800.0), row(ELISE, 600.0, 1_000.0)]);
+        let sources = SourceFiles {
+            lolalytics: Some(&lolalytics),
+            ugg: Some(&ugg),
+            laddereye: Some(&laddereye),
+        };
+
+        let counters = counters_for(sources, Role::Jungle, LEE_SIN, &stats, None, Provider::LadderEye);
+
+        let rek_sai = &counters[0].stats;
+        assert_eq!(counters[0].champion.id, REK_SAI, "backed by all three sites");
+        assert_eq!((rek_sai.agreement, rek_sai.sources), (3, 3));
+        assert_eq!(rek_sai.games, 800, "LadderEye's numbers come first");
+        assert_eq!(rek_sai.laddereye.as_ref().map(|side| side.games), Some(800));
+        let elise = &counters[1].stats;
+        assert_eq!((elise.agreement, elise.sources), (1, 3));
+        assert_eq!(elise.ugg, None);
+    }
+
+    /// Reads LadderEye's real page data: `cargo test live_laddereye -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "downloads LadderEye's live stats"]
+    fn live_laddereye_gives_counters() {
+        tauri::async_runtime::block_on(async {
+            let stats = load_patch_stats().await.expect("patch stats");
+            let patch = display_patch(&stats.patch);
+            let lee_sin = load_laddereye("leesin".to_string(), LEE_SIN, Role::Jungle, patch.clone())
+                .await
+                .expect("Lee Sin matchups");
+            let wukong = load_laddereye("wukong".to_string(), 62, Role::Top, patch)
+                .await
+                .expect("Wukong matchups");
+            let sources = SourceFiles {
+                lolalytics: None,
+                ugg: None,
+                laddereye: Some(&lee_sin),
+            };
+            let counters =
+                counters_for(sources, Role::Jungle, LEE_SIN, &stats, None, Provider::LadderEye);
+            for counter in &counters {
+                println!(
+                    "  {} {:.2}% (delta {:+.2}) in {} games",
+                    counter.champion.id,
+                    counter.stats.win_rate,
+                    counter.stats.win_rate_delta.unwrap_or_default(),
+                    counter.stats.games
+                );
+            }
+            assert!(lee_sin.rows(Role::Jungle).len() > 20);
+            assert!(!wukong.rows(Role::Top).is_empty());
+            assert_eq!(counters.len(), COUNTERS_PER_ENEMY);
+        });
     }
 
     #[test]

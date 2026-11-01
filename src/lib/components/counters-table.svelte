@@ -8,6 +8,7 @@
     describeMatchup,
     formatLead,
     formatWinRate,
+    ladderEyeCountersLink,
     leadClass,
     leagueOfGraphsCountersLink,
     lolalyticsCountersLink,
@@ -28,7 +29,7 @@
   /** The site the numbers came from. */
   export let provider: CountersProvider = "ugg";
 
-  const COLUMNS = "grid-cols-[minmax(0,1fr)_50px_50px_38px_32px_42px_42px_24px]";
+  const COLUMNS = "grid-cols-[minmax(0,1fr)_46px_46px_46px_38px_32px_42px_42px_24px]";
 
   $: providerLabel = COUNTERS_PROVIDERS.find(({ value }) => value === provider)?.label ?? "U.GG";
 
@@ -54,18 +55,18 @@
     if (sources < 2) {
       return { mark: "·", tone: "text-muted-foreground", title: "Only one site has loaded so far" };
     }
-    if (agreement === 2) {
+    if (agreement === sources) {
       return {
         mark: "✓✓",
         tone: "text-emerald-300",
-        title: "A real counter: on both sites it wins this matchup more than its overall strength predicts",
+        title: `A real counter: on all ${sources} sites it wins this matchup more than its overall strength predicts`,
       };
     }
-    if (agreement === 1) {
+    if (agreement > 0) {
       return {
         mark: "✓",
         tone: "text-amber-300",
-        title: "Only one site has it winning more than its overall strength predicts (or only one has enough games)",
+        title: `${agreement} of ${sources} sites have it winning more than its overall strength predicts (the others disagree or lack enough games)`,
       };
     }
     return {
@@ -87,6 +88,11 @@
         label: "Lolalytics",
         title: `${enemy.champion.name} counters on Lolalytics (Master+)`,
         link: lolalyticsCountersLink(enemy.champion, enemy.role),
+      },
+      {
+        label: "LadderEye",
+        title: `${enemy.champion.name} counters on LadderEye (Master+)`,
+        link: ladderEyeCountersLink(enemy.champion, enemy.role),
       },
       {
         label: "League of Graphs",
@@ -124,6 +130,7 @@
     <span>Pick into {enemy.champion.name}</span>
     <span class="text-right" class:text-foreground={provider === "lolalytics"} title="Lolalytics win rate against this enemy">Lola</span>
     <span class="text-right" class:text-foreground={provider === "ugg"} title="U.GG win rate against this enemy">U.GG</span>
+    <span class="text-right" class:text-foreground={provider === "laddereye"} title="LadderEye win rate against this enemy">Ladder</span>
     <span class="text-right" title="U.GG kill lead at 15 minutes">Kills</span>
     <span class="text-right" title="U.GG farm lead at 15 minutes: lane minions plus jungle camps">CS</span>
     <span class="text-right" title="U.GG gold lead at 15 minutes">Gold</span>
@@ -131,7 +138,7 @@
     <span class="text-center"
       ><InfoTip
         align="right"
-        text={`Sorted by how often each pick wins this matchup, averaged over Lolalytics and U.GG, with small samples pulled towards what both champions usually win. ✓✓ marks real counters: they win it more than their overall strength predicts on both sites. Lola and U.GG are each site's win rate; kills, CS and gold are U.GG's leads at 15 minutes; faded rows have under ${MIN_RELIABLE_GAMES} games. Click a pick for its matchup page.`}
+        text={`Sorted by how often each pick wins this matchup, averaged over Lolalytics, U.GG and LadderEye, with small samples pulled towards what both champions usually win. ✓✓ marks real counters: they win it more than their overall strength predicts on every site. Lola, U.GG and Ladder are each site's win rate (LadderEye only lists each enemy's 40 most common opponents); kills, CS and gold are U.GG's leads at 15 minutes; faded rows have under ${MIN_RELIABLE_GAMES} games. Click a pick for its matchup page.`}
       /></span
     >
   </div>
@@ -164,6 +171,11 @@
           class="text-right tabular-nums {siteClass(stats.ugg)}"
           class:font-semibold={provider === "ugg"}
           >{stats.ugg ? formatWinRate(stats.ugg.winRate) : "–"}</span
+        >
+        <span
+          class="text-right tabular-nums {siteClass(stats.laddereye)}"
+          class:font-semibold={provider === "laddereye"}
+          >{stats.laddereye ? formatWinRate(stats.laddereye.winRate) : "–"}</span
         >
         <span class="text-right tabular-nums {leadClass(stats.killDiff15, 0.05)}"
           >{formatLead(stats.killDiff15, 1)}</span

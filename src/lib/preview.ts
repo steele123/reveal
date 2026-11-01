@@ -213,8 +213,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 56.67,
               "winRateDelta": 4.27
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 2916,
+              "winRate": 56.17,
+              "winRateDelta": 3.77
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -242,8 +247,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 57.04,
               "winRateDelta": 5.25
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 854,
+              "winRate": 56.09,
+              "winRateDelta": 4.3
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -271,8 +281,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 59.22,
               "winRateDelta": 5.73
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 544,
+              "winRate": 55.7,
+              "winRateDelta": 2.21
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -300,8 +315,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.72,
               "winRateDelta": 3.09
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1761,
+              "winRate": 55.42,
+              "winRateDelta": 2.79
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -329,8 +349,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.5,
               "winRateDelta": 2.97
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 736,
+              "winRate": 54.08,
+              "winRateDelta": 1.55
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -358,8 +383,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.42,
               "winRateDelta": 2.04
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1026,
+              "winRate": 54.68,
+              "winRateDelta": 1.3
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -387,8 +417,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 54.56,
               "winRateDelta": 2.22
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 915,
+              "winRate": 53.01,
+              "winRateDelta": 0.67
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -416,8 +451,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.31,
               "winRateDelta": 1.58
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 467,
+              "winRate": 54.6,
+              "winRateDelta": 0.87
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -445,8 +485,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.59,
               "winRateDelta": 3.26
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 730,
+              "winRate": 55.34,
+              "winRateDelta": 5.01
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -474,8 +519,9 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.66,
               "winRateDelta": 3.55
             },
+            "laddereye": null,
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -503,8 +549,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.9,
               "winRateDelta": 1.4
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 731,
+              "winRate": 53.76,
+              "winRateDelta": 1.26
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -532,8 +583,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.69,
               "winRateDelta": 2.48
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 616,
+              "winRate": 56.98,
+              "winRateDelta": 5.77
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -561,8 +617,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 54.96,
               "winRateDelta": 1.96
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 578,
+              "winRate": 54.15,
+              "winRateDelta": 1.15
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -590,8 +651,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.11,
               "winRateDelta": 2.14
             },
+            "laddereye": {
+              "games": 320,
+              "winRate": 50.31,
+              "winRateDelta": -2.66
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -619,8 +685,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.22,
               "winRateDelta": 1.2
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1088,
+              "winRate": 53.77,
+              "winRateDelta": 1.75
+            },
+            "agreement": 3,
+            "sources": 3
           }
         }
       ],
@@ -650,8 +721,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
             "winRate": 49.3,
             "winRateDelta": -1.79
           },
+          "laddereye": {
+            "games": 1688,
+            "winRate": 49.7,
+            "winRateDelta": -1.39
+          },
           "agreement": 0,
-          "sources": 2
+          "sources": 3
         }
       }
     },
@@ -692,8 +768,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.32,
               "winRateDelta": 4.97
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 941,
+              "winRate": 53.88,
+              "winRateDelta": 3.53
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -721,8 +802,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.67,
               "winRateDelta": 1.08
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 890,
+              "winRate": 52.25,
+              "winRateDelta": 0.66
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -750,8 +836,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.05,
               "winRateDelta": 4.18
             },
+            "laddereye": {
+              "games": 466,
+              "winRate": 49.79,
+              "winRateDelta": -1.08
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -779,8 +870,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.0,
               "winRateDelta": 3.59
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 316,
+              "winRate": 58.86,
+              "winRateDelta": 7.45
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -808,8 +904,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.74,
               "winRateDelta": 2.29
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 523,
+              "winRate": 54.49,
+              "winRateDelta": 3.04
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -837,8 +938,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.82,
               "winRateDelta": 1.28
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 731,
+              "winRate": 51.98,
+              "winRateDelta": 0.44
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -866,8 +972,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 53.99,
               "winRateDelta": 3.32
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 494,
+              "winRate": 52.63,
+              "winRateDelta": 1.96
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -895,8 +1006,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.67,
               "winRateDelta": 2.38
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1648,
+              "winRate": 52.61,
+              "winRateDelta": 3.32
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -924,8 +1040,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.02,
               "winRateDelta": 0.49
             },
+            "laddereye": {
+              "games": 670,
+              "winRate": 50.45,
+              "winRateDelta": -0.08
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -953,8 +1074,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.94,
               "winRateDelta": -0.36
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 739,
+              "winRate": 52.37,
+              "winRateDelta": 1.07
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -982,8 +1108,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.59,
               "winRateDelta": 0.47
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1239,
+              "winRate": 51.98,
+              "winRateDelta": 1.86
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1011,8 +1142,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.07,
               "winRateDelta": -0.49
             },
+            "laddereye": {
+              "games": 494,
+              "winRate": 50.81,
+              "winRateDelta": -0.75
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1040,8 +1176,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.27,
               "winRateDelta": 1.17
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 465,
+              "winRate": 52.26,
+              "winRateDelta": 2.16
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1069,8 +1210,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.81,
               "winRateDelta": 2.36
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 372,
+              "winRate": 54.03,
+              "winRateDelta": 4.58
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1098,8 +1244,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.0,
               "winRateDelta": 0.17
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 628,
+              "winRate": 50.48,
+              "winRateDelta": 0.65
+            },
+            "agreement": 3,
+            "sources": 3
           }
         }
       ],
@@ -1129,8 +1280,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
             "winRate": 43.87,
             "winRateDelta": -3.44
           },
+          "laddereye": {
+            "games": 1670,
+            "winRate": 43.53,
+            "winRateDelta": -3.78
+          },
           "agreement": 0,
-          "sources": 2
+          "sources": 3
         }
       }
     },
@@ -1171,8 +1327,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 54.34,
               "winRateDelta": 3.85
             },
+            "laddereye": {
+              "games": 486,
+              "winRate": 50.0,
+              "winRateDelta": -0.49
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1200,8 +1361,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.27,
               "winRateDelta": 2.53
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 2706,
+              "winRate": 50.59,
+              "winRateDelta": 1.85
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1229,8 +1395,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.3,
               "winRateDelta": 3.08
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 741,
+              "winRate": 51.15,
+              "winRateDelta": 1.93
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1258,8 +1429,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.9,
               "winRateDelta": 1.63
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 844,
+              "winRate": 52.13,
+              "winRateDelta": 1.86
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1287,8 +1463,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.09,
               "winRateDelta": 2.06
             },
+            "laddereye": {
+              "games": 1253,
+              "winRate": 49.32,
+              "winRateDelta": -0.71
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1316,8 +1497,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.05,
               "winRateDelta": 1.24
             },
+            "laddereye": {
+              "games": 1151,
+              "winRate": 49.17,
+              "winRateDelta": -0.64
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1345,8 +1531,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.68,
               "winRateDelta": 2.79
             },
+            "laddereye": {
+              "games": 507,
+              "winRate": 49.51,
+              "winRateDelta": -0.38
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1374,8 +1565,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.94,
               "winRateDelta": 0.09
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1421,
+              "winRate": 50.95,
+              "winRateDelta": 1.1
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1403,8 +1599,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.46,
               "winRateDelta": 2.26
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1811,
+              "winRate": 51.91,
+              "winRateDelta": 3.71
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1432,8 +1633,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.04,
               "winRateDelta": 1.37
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1494,
+              "winRate": 51.67,
+              "winRateDelta": 2.0
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1461,8 +1667,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.08,
               "winRateDelta": 1.47
             },
+            "laddereye": {
+              "games": 781,
+              "winRate": 49.3,
+              "winRateDelta": -1.31
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1490,8 +1701,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.11,
               "winRateDelta": 4.77
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 530,
+              "winRate": 49.62,
+              "winRateDelta": 2.28
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1515,8 +1731,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRateDelta": 1.86
             },
             "ugg": null,
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 308,
+              "winRate": 53.25,
+              "winRateDelta": null
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -1544,8 +1765,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.22,
               "winRateDelta": 1.04
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1644,
+              "winRate": 49.33,
+              "winRateDelta": 0.15
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1573,8 +1799,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.89,
               "winRateDelta": 0.71
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1397,
+              "winRate": 51.18,
+              "winRateDelta": 2.0
+            },
+            "agreement": 3,
+            "sources": 3
           }
         }
       ],
@@ -1604,8 +1835,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
             "winRate": 47.24,
             "winRateDelta": -3.13
           },
+          "laddereye": {
+            "games": 760,
+            "winRate": 49.34,
+            "winRateDelta": -1.03
+          },
           "agreement": 0,
-          "sources": 2
+          "sources": 3
         }
       }
     },
@@ -1646,8 +1882,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 59.26,
               "winRateDelta": 7.61
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 265,
+              "winRate": 62.64,
+              "winRateDelta": 10.99
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1675,8 +1916,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 55.22,
               "winRateDelta": 5.03
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1739,
+              "winRate": 56.12,
+              "winRateDelta": 5.93
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1700,8 +1946,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRateDelta": 8.7
             },
             "ugg": null,
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 206,
+              "winRate": 58.74,
+              "winRateDelta": null
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -1729,8 +1980,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 54.55,
               "winRateDelta": 3.42
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 295,
+              "winRate": 52.2,
+              "winRateDelta": 1.07
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1754,8 +2010,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRateDelta": 7.52
             },
             "ugg": null,
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 263,
+              "winRate": 54.37,
+              "winRateDelta": null
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -1783,8 +2044,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.04,
               "winRateDelta": 1.69
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 386,
+              "winRate": 52.85,
+              "winRateDelta": 2.5
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1808,8 +2074,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRateDelta": 2.84
             },
             "ugg": null,
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 280,
+              "winRate": 56.79,
+              "winRateDelta": null
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -1837,8 +2108,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.59,
               "winRateDelta": -0.54
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 446,
+              "winRate": 50.67,
+              "winRateDelta": 0.54
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -1866,8 +2142,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.26,
               "winRateDelta": 1.19
             },
+            "laddereye": {
+              "games": 1264,
+              "winRate": 48.18,
+              "winRateDelta": -1.89
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1895,8 +2176,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.67,
               "winRateDelta": -0.45
             },
+            "laddereye": {
+              "games": 2335,
+              "winRate": 50.32,
+              "winRateDelta": -0.8
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1924,8 +2210,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.75,
               "winRateDelta": -5.35
             },
+            "laddereye": {
+              "games": 261,
+              "winRate": 52.87,
+              "winRateDelta": -2.23
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -1953,8 +2244,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.65,
               "winRateDelta": 1.81
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 5855,
+              "winRate": 49.44,
+              "winRateDelta": 0.6
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -1982,8 +2278,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.59,
               "winRateDelta": -0.81
             },
+            "laddereye": {
+              "games": 1936,
+              "winRate": 49.07,
+              "winRateDelta": -1.33
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2011,8 +2312,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 48.54,
               "winRateDelta": -2.31
             },
+            "laddereye": {
+              "games": 305,
+              "winRate": 50.49,
+              "winRateDelta": -0.36
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2040,8 +2346,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.86,
               "winRateDelta": -2.02
             },
-            "agreement": 0,
-            "sources": 2
+            "laddereye": {
+              "games": 585,
+              "winRate": 52.14,
+              "winRateDelta": 0.26
+            },
+            "agreement": 1,
+            "sources": 3
           }
         }
       ],
@@ -2071,8 +2382,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
             "winRate": 48.21,
             "winRateDelta": 0.95
           },
-          "agreement": 2,
-          "sources": 2
+          "laddereye": {
+            "games": 3596,
+            "winRate": 48.75,
+            "winRateDelta": 1.49
+          },
+          "agreement": 3,
+          "sources": 3
         }
       }
     },
@@ -2113,8 +2429,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 54.06,
               "winRateDelta": 2.43
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 2243,
+              "winRate": 53.23,
+              "winRateDelta": 1.6
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2142,8 +2463,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 52.56,
               "winRateDelta": 2.69
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 2422,
+              "winRate": 51.94,
+              "winRateDelta": 2.07
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2171,8 +2497,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.72,
               "winRateDelta": 2.07
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 3285,
+              "winRate": 51.23,
+              "winRateDelta": 1.58
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2200,8 +2531,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.09,
               "winRateDelta": 3.09
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 785,
+              "winRate": 51.46,
+              "winRateDelta": 3.46
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2229,8 +2565,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.32,
               "winRateDelta": 1.65
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1021,
+              "winRate": 50.83,
+              "winRateDelta": 1.16
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2258,8 +2599,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.19,
               "winRateDelta": -0.14
             },
+            "laddereye": {
+              "games": 3409,
+              "winRate": 49.9,
+              "winRateDelta": -0.43
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2287,8 +2633,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.11,
               "winRateDelta": 1.79
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1978,
+              "winRate": 49.39,
+              "winRateDelta": 1.07
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2316,8 +2667,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.57,
               "winRateDelta": 1.31
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 477,
+              "winRate": 50.52,
+              "winRateDelta": 2.26
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2345,8 +2701,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.62,
               "winRateDelta": 3.04
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 383,
+              "winRate": 48.83,
+              "winRateDelta": 1.25
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2374,8 +2735,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 51.44,
               "winRateDelta": 4.49
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 722,
+              "winRate": 48.48,
+              "winRateDelta": 1.53
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2403,8 +2769,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 50.25,
               "winRateDelta": 0.78
             },
+            "laddereye": {
+              "games": 576,
+              "winRate": 45.14,
+              "winRateDelta": -4.33
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2432,8 +2803,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.92,
               "winRateDelta": 1.48
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1061,
+              "winRate": 49.48,
+              "winRateDelta": 1.04
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2461,8 +2837,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.86,
               "winRateDelta": 0.93
             },
+            "laddereye": {
+              "games": 599,
+              "winRate": 47.91,
+              "winRateDelta": -1.02
+            },
             "agreement": 2,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2490,8 +2871,9 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.09,
               "winRateDelta": -0.59
             },
+            "laddereye": null,
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2519,8 +2901,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
               "winRate": 49.87,
               "winRateDelta": 2.16
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 1100,
+              "winRate": 49.09,
+              "winRateDelta": 1.38
+            },
+            "agreement": 3,
+            "sources": 3
           }
         }
       ],
@@ -2550,8 +2937,13 @@ const PREVIEW_MATCHUPS: MatchupBoard = {
             "winRate": 47.43,
             "winRateDelta": 0.87
           },
-          "agreement": 2,
-          "sources": 2
+          "laddereye": {
+            "games": 1645,
+            "winRate": 47.05,
+            "winRateDelta": 0.49
+          },
+          "agreement": 3,
+          "sources": 3
         }
       }
     }
@@ -2598,8 +2990,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 60.0,
               "winRateDelta": 4.69
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 431,
+              "winRate": 57.54,
+              "winRateDelta": 2.23
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2627,8 +3024,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 59.22,
               "winRateDelta": 6.42
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 265,
+              "winRate": 54.34,
+              "winRateDelta": 1.54
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2656,8 +3058,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 56.55,
               "winRateDelta": 4.56
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 758,
+              "winRate": 53.83,
+              "winRateDelta": 1.84
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2685,8 +3092,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 54.0,
               "winRateDelta": -1.16
             },
+            "laddereye": {
+              "games": 273,
+              "winRate": 54.95,
+              "winRateDelta": -0.21
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2714,8 +3126,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 53.42,
               "winRateDelta": -0.82
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 277,
+              "winRate": 57.04,
+              "winRateDelta": 2.8
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -2743,8 +3160,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 54.37,
               "winRateDelta": 0.98
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 294,
+              "winRate": 53.4,
+              "winRateDelta": 0.01
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -2772,8 +3194,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 52.81,
               "winRateDelta": -0.9
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 446,
+              "winRate": 57.4,
+              "winRateDelta": 3.69
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -2797,8 +3224,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRateDelta": -1.69
             },
             "ugg": null,
-            "agreement": 0,
-            "sources": 2
+            "laddereye": {
+              "games": 259,
+              "winRate": 50.19,
+              "winRateDelta": null
+            },
+            "agreement": 1,
+            "sources": 3
           }
         },
         {
@@ -2826,8 +3258,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 52.97,
               "winRateDelta": 0.27
             },
-            "agreement": 2,
-            "sources": 2
+            "laddereye": {
+              "games": 549,
+              "winRate": 55.92,
+              "winRateDelta": 3.22
+            },
+            "agreement": 3,
+            "sources": 3
           }
         },
         {
@@ -2855,8 +3292,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 53.45,
               "winRateDelta": 0.84
             },
-            "agreement": 1,
-            "sources": 2
+            "laddereye": {
+              "games": 685,
+              "winRate": 53.43,
+              "winRateDelta": 0.82
+            },
+            "agreement": 2,
+            "sources": 3
           }
         },
         {
@@ -2884,8 +3326,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 51.77,
               "winRateDelta": -1.24
             },
+            "laddereye": {
+              "games": 476,
+              "winRate": 49.58,
+              "winRateDelta": -3.43
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2913,8 +3360,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 51.39,
               "winRateDelta": -2.68
             },
+            "laddereye": {
+              "games": 305,
+              "winRate": 53.77,
+              "winRateDelta": -0.3
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2938,8 +3390,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRateDelta": -3.98
             },
             "ugg": null,
+            "laddereye": {
+              "games": 294,
+              "winRate": 45.92,
+              "winRateDelta": null
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2967,8 +3424,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 52.34,
               "winRateDelta": 0.22
             },
+            "laddereye": {
+              "games": 487,
+              "winRate": 50.92,
+              "winRateDelta": -1.2
+            },
             "agreement": 1,
-            "sources": 2
+            "sources": 3
           }
         },
         {
@@ -2996,8 +3458,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
               "winRate": 51.8,
               "winRateDelta": -0.07
             },
+            "laddereye": {
+              "games": 307,
+              "winRate": 47.56,
+              "winRateDelta": -4.31
+            },
             "agreement": 0,
-            "sources": 2
+            "sources": 3
           }
         }
       ],
@@ -3027,8 +3494,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
             "winRate": 51.83,
             "winRateDelta": 0.81
           },
+          "laddereye": {
+            "games": 588,
+            "winRate": 50.85,
+            "winRateDelta": -0.17
+          },
           "agreement": 2,
-          "sources": 2
+          "sources": 3
         }
       }
     }
@@ -3068,8 +3540,13 @@ const PREVIEW_ALTERNATES: Record<number, Partial<Record<Role, EnemyMatchups>>> =
             "winRate": 0.0,
             "winRateDelta": -44.28
           },
-          "agreement": 0,
-          "sources": 2
+          "laddereye": {
+            "games": 3,
+            "winRate": 66.67,
+            "winRateDelta": 22.39
+          },
+          "agreement": 1,
+          "sources": 3
         }
       }
     }
@@ -3117,10 +3594,13 @@ export function previewForProvider(board: MatchupBoard, provider: CountersProvid
   if (provider === board.provider) return board;
   const withMain = <T extends { stats: MatchupStats | null }>(entry: T): T => {
     if (!entry.stats) return entry;
+    const { lolalytics, ugg, laddereye } = entry.stats;
     const main =
       provider === "ugg"
-        ? (entry.stats.ugg ?? entry.stats.lolalytics)
-        : (entry.stats.lolalytics ?? entry.stats.ugg);
+        ? (ugg ?? lolalytics ?? laddereye)
+        : provider === "laddereye"
+          ? (laddereye ?? lolalytics ?? ugg)
+          : (lolalytics ?? ugg ?? laddereye);
     return { ...entry, stats: main ? { ...entry.stats, ...main } : entry.stats };
   };
   return {

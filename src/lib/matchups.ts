@@ -3,8 +3,8 @@ import type { Participant } from "$lib/champ_select";
 import { isTauriRuntime } from "$lib/runtime";
 
 /**
- * Master+ counters and lane matchups for the enemy picks, as the backend sends them. Both
- * Lolalytics and U.GG are read (World, Master and above, Ranked Solo/Duo) and weighed together;
+ * Master+ counters and lane matchups for the enemy picks, as the backend sends them. Lolalytics,
+ * U.GG and LadderEye are read (World, Master and above, Ranked Solo/Duo) and weighed together;
  * links go back to the main site, with the others alongside to compare.
  */
 
@@ -12,14 +12,15 @@ import { isTauriRuntime } from "$lib/runtime";
 export type Role = "top" | "jungle" | "middle" | "bottom" | "utility";
 
 /**
- * The site whose win rate is shown first; both are always read. League of Graphs blocks apps,
+ * The site whose win rate is shown first; all are always read. League of Graphs blocks apps,
  * so it's only a link.
  */
-export type CountersProvider = "ugg" | "lolalytics";
+export type CountersProvider = "ugg" | "lolalytics" | "laddereye";
 
 export const COUNTERS_PROVIDERS: ReadonlyArray<{ label: string; value: CountersProvider }> = [
   { label: "Lolalytics", value: "lolalytics" },
   { label: "U.GG", value: "ugg" },
+  { label: "LadderEye", value: "laddereye" },
 ];
 
 export interface ChampionRef {
@@ -56,6 +57,7 @@ export interface MatchupStats {
   killDiff15: number | null;
   lolalytics: SourceStats | null;
   ugg: SourceStats | null;
+  laddereye: SourceStats | null;
   /** How many sites see the matchup going better than expected, out of `sources`. */
   agreement: number;
   /** How many sites' stats for the enemy pick have loaded. */
@@ -239,6 +241,19 @@ const LOLALYTICS_LANES: Record<Role, string> = {
   utility: "support",
 };
 
+const LADDEREYE_POSITIONS: Record<Role, string> = {
+  top: "TOP",
+  jungle: "JUNGLE",
+  middle: "MIDDLE",
+  bottom: "BOTTOM",
+  utility: "UTILITY",
+};
+
+/** LadderEye names champions like the other sites, except Wukong, which keeps League's own name. */
+function ladderEyeSlug(champion: ChampionRef): string {
+  return champion.slug === "wukong" ? "monkeyking" : champion.slug;
+}
+
 const LEAGUE_OF_GRAPHS_ROLES: Record<Role, string> = {
   top: "top",
   jungle: "jungle",
@@ -267,6 +282,15 @@ export function lolalyticsMatchupLink(
   return `https://lolalytics.com/lol/${champion.slug}/vs/${opponent.slug}/build/?lane=${lane}&vslane=${lane}&tier=master_plus`;
 }
 
+/** LadderEye's Master+ page for `champion` into `opponent`, with that matchup's numbers. */
+export function ladderEyeMatchupLink(
+  champion: ChampionRef,
+  opponent: ChampionRef,
+  role: Role,
+): string {
+  return `https://laddereye.com/champions/${ladderEyeSlug(champion)}/vs/${ladderEyeSlug(opponent)}?position=${LADDEREYE_POSITIONS[role]}`;
+}
+
 /** The matchup's page on the site the numbers came from. */
 export function matchupLink(
   provider: CountersProvider,
@@ -274,13 +298,18 @@ export function matchupLink(
   opponent: ChampionRef,
   role: Role,
 ): string {
-  return provider === "lolalytics"
-    ? lolalyticsMatchupLink(champion, opponent, role)
-    : uggMatchupLink(champion, opponent, role);
+  if (provider === "lolalytics") return lolalyticsMatchupLink(champion, opponent, role);
+  if (provider === "laddereye") return ladderEyeMatchupLink(champion, opponent, role);
+  return uggMatchupLink(champion, opponent, role);
 }
 
 export function lolalyticsCountersLink(enemy: ChampionRef, role: Role): string {
   return `https://lolalytics.com/lol/${enemy.slug}/counters/?lane=${LOLALYTICS_LANES[role]}&tier=master_plus`;
+}
+
+/** LadderEye's Master+ page for `enemy` in the role, with its counters. */
+export function ladderEyeCountersLink(enemy: ChampionRef, role: Role): string {
+  return `https://laddereye.com/champions/${ladderEyeSlug(enemy)}?position=${LADDEREYE_POSITIONS[role]}`;
 }
 
 export function leagueOfGraphsCountersLink(enemy: ChampionRef, role: Role): string {
@@ -336,6 +365,7 @@ export function describeMatchup(
     `${champion.name} vs ${opponent.name}: ${formatWinRate(stats.winRate)} win rate${delta}, ${stats.games.toLocaleString("en-US")} Master+ games`,
     stats.sources > 1 ? site("Lolalytics", stats.lolalytics) : "",
     stats.sources > 1 ? site("U.GG", stats.ugg) : "",
+    stats.sources > 1 ? site("LadderEye", stats.laddereye) : "",
     stats.goldDiff15 === null
       ? "No U.GG leads at 15 min"
       : `At 15 min: ${formatLead(stats.killDiff15, 2)} kills, ${formatLead(csLead(stats), 1)} CS (${formatLead(stats.jungleCsDiff15, 1)} jungle), ${formatLead(stats.goldDiff15)} gold, ${formatLead(stats.xpDiff15)} XP`,
