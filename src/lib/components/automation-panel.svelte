@@ -23,7 +23,7 @@
   /** How each setting decides what to do, for its info icon. */
   const TIPS = {
     autoAccept:
-      "When the ready check pops, Reveal accepts it a moment later. It leaves it alone while the queue is paused after a dodge.",
+      "When the ready check pops, Reveal waits the time you pick, then accepts it. If you accept or decline it yourself while it waits, Reveal leaves it alone. It also leaves it alone while the queue is paused after a dodge.",
     autoRequeue:
       "When the game ends and the client reaches the post-game screen, Reveal waits 30 seconds, clicks Play Again and starts the same queue. If by then you've queued yourself, left the lobby or the queue is paused after a dodge, it does nothing. Only the party leader can start a queue.",
     requeuePastEstimate:
@@ -45,6 +45,16 @@
     { label: "10 sec", value: "10" },
   ];
   $: autoOpenWait = String(config?.autoOpenDelaySeconds ?? 6);
+
+  /** How long auto accept waits, in milliseconds, so you can still decline. */
+  const acceptWaitOptions = [
+    { label: "Right away", value: "0" },
+    { label: "After 2 sec", value: "2000" },
+    { label: "After 4 sec", value: "4000" },
+    { label: "After 6 sec", value: "6000" },
+    { label: "After 8 sec", value: "8000" },
+  ];
+  $: acceptWait = String(config?.acceptDelay ?? 2000);
 
   /** When to ban or lock in, as seconds left on League's timer. */
   const secondsLeftOptions = [
@@ -88,9 +98,29 @@
       <Label for="auto-accept" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Accept matches automatically<InfoTip text={TIPS.autoAccept} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          When League shows a ready check
+          Waits first, so you can still decline it yourself
         </span>
       </Label>
+      <Select.Root
+        type="single"
+        disabled={!config?.autoAccept}
+        items={acceptWaitOptions}
+        value={acceptWait}
+        onValueChange={(value) => update({ acceptDelay: Number(value) })}
+      >
+        <Select.Trigger
+          aria-label="How long to wait before accepting"
+          class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
+        >
+          {acceptWaitOptions.find((option) => option.value === acceptWait)?.label ??
+            `After ${Number(acceptWait) / 1000} sec`}
+        </Select.Trigger>
+        <Select.Content>
+          {#each acceptWaitOptions as option}
+            <Select.Item value={option.value} label={option.label} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
       <Switch
         id="auto-accept"
         checked={config?.autoAccept ?? false}

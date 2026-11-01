@@ -185,7 +185,13 @@
     <dl class="mt-2 space-y-2 text-[11px]">
       <div class="flex items-center justify-between gap-2">
         <dt class="text-muted-foreground">Accept matches</dt>
-        <dd class:text-emerald-300={config?.autoAccept}>{config?.autoAccept ? "On" : "Off"}</dd>
+        <dd class:text-emerald-300={config?.autoAccept}>
+          {#if config?.autoAccept}
+            {config.acceptDelay > 0 ? `After ${Math.round(config.acceptDelay / 1000)} sec` : "Right away"}
+          {:else}
+            Off
+          {/if}
+        </dd>
       </div>
       <div class="flex items-center justify-between gap-2">
         <dt class="text-muted-foreground">Queue again after a game</dt>
