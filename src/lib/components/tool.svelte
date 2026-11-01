@@ -195,6 +195,6 @@
       </div>
     </div>
 
-    <IdleOverview {history} {config} {onOpenPage} />
+    <IdleOverview {history} {config} {connected} {onOpenPage} />
   {/if}
 </div>

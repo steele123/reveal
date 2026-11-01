@@ -135,6 +135,16 @@ pub async fn get_lcu_info(lcu: tauri::State<'_, Lcu>) -> CommandResult<LCUClient
         .ok_or_else(|| "League Client is not connected".to_string())
 }
 
+/// The player signed in to the League Client, with their ranks, for the idle screen.
+#[tauri::command]
+pub async fn get_own_profile(app_handle: AppHandle) -> CommandResult<crate::summoner::OwnProfile> {
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
+    crate::summoner::get_own_profile(&remoting_client)
+        .await
+        .map_err(|error| format!("{error:#}"))
+}
+
 async fn current_lcu_info(app_handle: &AppHandle) -> CommandResult<LCUClientInfo> {
     let lcu = app_handle.state::<Lcu>();
     let lcu = lcu.0.lock().await;

@@ -5,6 +5,7 @@ import type {
   RecentForm,
 } from "$lib/champ_select";
 import type { LobbyHistoryEntry } from "$lib/lobby_history";
+import type { OwnProfile } from "$lib/profile";
 import type { LiveGame, LivePlayer } from "$lib/live_game";
 import type {
   ChampionRef,
@@ -3613,6 +3614,17 @@ export function previewForProvider(board: MatchupBoard, provider: CountersProvid
     })),
   };
 }
+
+/** The signed-in player on the idle screen, for the browser preview. */
+export const PREVIEW_OWN_PROFILE: OwnProfile = {
+  gameName: "Blue Sentinel",
+  gameTag: "MID",
+  puuid: "preview-self",
+  profileIconId: 5367,
+  level: 312,
+  solo: { tier: "EMERALD", division: "I", leaguePoints: 62, wins: 118, losses: 97, provisional: false },
+  flex: { tier: "PLATINUM", division: "II", leaguePoints: 30, wins: 21, losses: 18, provisional: false },
+};
 
 export function getPreviewState(): PreviewState {
   const preview = new URLSearchParams(window.location.search).get("preview");

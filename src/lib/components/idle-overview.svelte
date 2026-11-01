@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { championIconUrl, positionBadge } from "$lib/champ_select";
+  import {
+    championIconUrl,
+    formatRank,
+    positionBadge,
+    profileIconUrl,
+  } from "$lib/champ_select";
   import type { Config } from "$lib/config";
   import {
     formatTimeAgo,
@@ -8,14 +13,47 @@
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
   import { LANES } from "$lib/matchups";
+  import { logFrontendError } from "$lib/logging";
   import { isDiscordWebhook, isNtfyTopic } from "$lib/notifications";
+  import { PREVIEW_OWN_PROFILE } from "$lib/preview";
+  import { formatRecord, getOwnProfile, recordWinRate, type OwnProfile } from "$lib/profile";
+  import { isTauriRuntime } from "$lib/runtime";
 
   /** Between Champ Selects: your last lobbies and what Reveal will do for you. */
   export let history: LobbyHistoryEntry[] = [];
   export let config: Config | null = null;
   export let onOpenPage: (page: "history" | "auto") => void = () => {};
+  export let connected = false;
 
-  const RECENT_LOBBIES = 4;
+  /** You, as signed in to League. Read again each time this screen shows, e.g. after a game. */
+  let profile: OwnProfile | null = null;
+  let profileLoading = false;
+  let profileFailed = false;
+  $: if (!connected) {
+    // Another account may sign in next.
+    profile = null;
+    profileFailed = false;
+  }
+  $: if (connected && !profile && !profileLoading && !profileFailed) void loadProfile();
+
+  async function loadProfile() {
+    profileLoading = true;
+    try {
+      profile = isTauriRuntime() ? await getOwnProfile() : PREVIEW_OWN_PROFILE;
+    } catch (error) {
+      profileFailed = true;
+      logFrontendError("Failed to read your profile from League", error);
+    } finally {
+      profileLoading = false;
+    }
+  }
+
+  const QUEUES: ReadonlyArray<{ label: string; key: "solo" | "flex" }> = [
+    { label: "Solo/Duo", key: "solo" },
+    { label: "Flex", key: "flex" },
+  ];
+
+  const RECENT_LOBBIES = 3;
   const BAN_ICONS = 4;
 
   $: recent = history.slice(0, RECENT_LOBBIES);
@@ -42,6 +80,49 @@
     ].filter((channel): channel is string => Boolean(channel));
   }
 </script>
+
+{#if connected}
+  <section class="reveal-panel flex shrink-0 items-center gap-3 px-3 py-2">
+    {#if profile}
+      <img
+        src={profileIconUrl(profile.profileIconId)}
+        alt=""
+        class="h-8 w-8 shrink-0 rounded-lg border border-white/10 bg-white/5 object-cover"
+      />
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-xs font-semibold">
+          {profile.gameName}<span class="font-normal text-muted-foreground">#{profile.gameTag}</span>
+        </div>
+        <div class="text-[10px] text-muted-foreground">Level {profile.level}</div>
+      </div>
+      {#each QUEUES as queue (queue.key)}
+        {@const rank = formatRank(profile[queue.key])}
+        {@const record = formatRecord(profile[queue.key])}
+        {@const winRate = recordWinRate(profile[queue.key])}
+        <div class="shrink-0 text-right" title={record ? `${rank.tier} · ${record}` : rank.tier}>
+          <div class="text-[9px] uppercase tracking-[0.08em] text-muted-foreground">{queue.label}</div>
+          <div class="flex items-center justify-end gap-1 text-[11px]">
+            <img src={rank.icon} alt="" class="h-4 w-4" />
+            <span class={rank.tierClass}>{rank.shortTier}</span>
+            <span class="text-[10px] text-muted-foreground"
+              >{[rank.details[0], winRate].filter(Boolean).join(" · ")}</span
+            >
+          </div>
+        </div>
+      {/each}
+    {:else if profileFailed}
+      <div class="flex-1 text-[11px] text-muted-foreground">Couldn't read your rank from League.</div>
+      <button
+        type="button"
+        class="shrink-0 text-[10px] text-muted-foreground transition hover:text-foreground"
+        on:click={() => (profileFailed = false)}>Retry</button
+      >
+    {:else}
+      <div class="h-8 w-8 animate-pulse rounded-lg bg-white/[0.05]"></div>
+      <div class="h-3 w-32 animate-pulse rounded bg-white/[0.05]"></div>
+    {/if}
+  </section>
+{/if}
 
 <div class="grid min-h-0 flex-1 grid-cols-2 gap-3">
   <section class="reveal-panel flex min-h-0 flex-col p-3">
@@ -74,8 +155,8 @@
               {#each entry.participants as participant, index (participantKey(participant))}
                 {@const lobbies = appearances.get(participantKey(participant))?.lobbies ?? 1}
                 {#if index > 0}<span class="text-muted-foreground">{" · "}</span>{/if}<span
-                  class:text-blue-300={lobbies > 1}
-                  title={lobbies > 1 ? `In ${lobbies} of your stored lobbies` : undefined}
+                  class:text-blue-300={lobbies > 1 && !participant.is_self}
+                  title={lobbies > 1 && !participant.is_self ? `In ${lobbies} of your stored lobbies` : undefined}
                   >{participant.game_name}</span
                 >
               {/each}

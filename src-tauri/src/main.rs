@@ -30,7 +30,8 @@ mod utils;
 
 use app_state::{Lcu, QueuePause};
 use commands::{
-    app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install, notify_lobby_revealed,
+    app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install, get_own_profile,
+    notify_lobby_revealed,
     open_log_folder, open_opgg_link, remove_legacy_install, send_test_notification, set_config,
     set_enemy_role, write_frontend_log,
 };
@@ -97,7 +98,8 @@ fn main() {
             write_frontend_log,
             set_enemy_role,
             send_test_notification,
-            notify_lobby_revealed
+            notify_lobby_revealed,
+            get_own_profile
         ])
         .run(tauri::generate_context!());
 

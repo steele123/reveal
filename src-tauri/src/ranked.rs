@@ -40,11 +40,32 @@ pub async fn get_solo_rank(
     Ok(parse_solo_rank(&stats))
 }
 
+/// A player's Solo/Duo and Flex standings, from one request.
+pub async fn get_ranks(
+    remoting_client: &RESTClient,
+    puuid: &str,
+) -> anyhow::Result<(RankSummary, RankSummary)> {
+    let stats = remoting_client
+        .get_with_timeout(
+            format!("/lol-ranked/v1/ranked-stats/{puuid}"),
+            crate::lookup::LOOKUP_TIMEOUT,
+        )
+        .await?;
+    Ok((
+        parse_solo_rank(&stats),
+        parse_queue_rank(&stats, "RANKED_FLEX_SR"),
+    ))
+}
+
 fn parse_solo_rank(stats: &Value) -> RankSummary {
-    let solo = &stats["queueMap"]["RANKED_SOLO_5x5"];
-    let number = |key: &str| solo[key].as_u64().unwrap_or(0) as u32;
-    let tier = solo["tier"].as_str().unwrap_or_default();
-    let provisional = solo["isProvisional"].as_bool().unwrap_or(false);
+    parse_queue_rank(stats, "RANKED_SOLO_5x5")
+}
+
+fn parse_queue_rank(stats: &Value, queue: &str) -> RankSummary {
+    let entry = &stats["queueMap"][queue];
+    let number = |key: &str| entry[key].as_u64().unwrap_or(0) as u32;
+    let tier = entry["tier"].as_str().unwrap_or_default();
+    let provisional = entry["isProvisional"].as_bool().unwrap_or(false);
 
     if tier.is_empty() || tier == "NONE" {
         return RankSummary {
@@ -57,7 +78,7 @@ fn parse_solo_rank(stats: &Value) -> RankSummary {
         };
     }
 
-    let division = solo["division"]
+    let division = entry["division"]
         .as_str()
         .filter(|division| !division.is_empty() && *division != "NA")
         .map(str::to_string);
@@ -101,6 +122,18 @@ mod tests {
         assert_eq!(rank.tier, "MASTER");
         assert_eq!(rank.division, None);
         assert_eq!(rank.league_points, 155);
+    }
+
+    #[test]
+    fn reads_flex_from_its_own_queue() {
+        let stats = json!({ "queueMap": {
+            "RANKED_SOLO_5x5": { "tier": "DIAMOND", "division": "II", "leaguePoints": 45 },
+            "RANKED_FLEX_SR": { "tier": "PLATINUM", "division": "I", "leaguePoints": 20 }
+        }});
+        let flex = parse_queue_rank(&stats, "RANKED_FLEX_SR");
+        assert_eq!(flex.tier, "PLATINUM");
+        assert_eq!(flex.league_points, 20);
+        assert_eq!(parse_solo_rank(&stats).tier, "DIAMOND");
     }
 
     #[test]
