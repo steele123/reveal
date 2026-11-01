@@ -1,0 +1,247 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import type { Config } from "$lib/config";
+  import { formatAssignedPosition, positionBadge } from "$lib/champ_select";
+  import { loadChampionNames, type ChampionName } from "$lib/champions";
+  import { logFrontendError } from "$lib/logging";
+  import { LANES, type Role } from "$lib/matchups";
+  import ChampionList from "./champion-list.svelte";
+  import InfoTip from "./info-tip.svelte";
+  import { Label } from "./ui/label";
+  import * as Select from "./ui/select";
+  import { Switch } from "./ui/switch";
+
+  export let config: Config | null = null;
+  export let onChange: (config: Config) => void = () => {};
+
+  let champions: ChampionName[] = [];
+  let championsFailed = false;
+  let role: Role = "jungle";
+
+  /** How each setting decides what to do, for its info icon. */
+  const TIPS = {
+    autoAccept:
+      "When the ready check pops, Reveal accepts it a moment later. It leaves it alone while the queue is paused after a dodge.",
+    autoRequeue:
+      "When the game ends and the client reaches the post-game screen, Reveal waits 30 seconds, clicks Play Again and starts the same queue. If by then you've queued yourself, left the lobby or the queue is paused after a dodge, it does nothing. Only the party leader can start a queue.",
+    requeuePastEstimate:
+      "While you're in queue, Reveal compares your time in queue with League's estimated time every 2 seconds. Once you've waited longer than the estimate, it leaves the queue, waits 30 seconds and queues again. It never touches a match that's already been found.",
+    pauseAfterDodge:
+      "If champ select ends without the game starting (someone dodged), Reveal stops League from queueing you again and keeps you in the lobby until you press Find Match yourself. The automatic queue options wait too.",
+    autoOpen:
+      "In champ select, Reveal opens your multi-search site (set on the Reveal tab) with your teammates' names as soon as all five are revealed, or after the wait you pick here with whoever is known by then.",
+    autoBan:
+      "In your ban turn, once only 3 seconds are left and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
+    autoPick:
+      "In your pick turn, once only 3 seconds are left and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
+  };
+
+  const autoOpenWaitOptions = [
+    { label: "Now", value: "0" },
+    { label: "4 sec", value: "4" },
+    { label: "6 sec", value: "6" },
+    { label: "10 sec", value: "10" },
+  ];
+  $: autoOpenWait = String(config?.autoOpenDelaySeconds ?? 6);
+
+  onMount(() => {
+    loadChampionNames()
+      .then((list) => (champions = list))
+      .catch((error) => {
+        championsFailed = true;
+        logFrontendError("Failed to load the champion list", error);
+      });
+  });
+
+  function update(patch: Partial<Config>) {
+    if (!config) return;
+    onChange({ ...config, ...patch });
+  }
+
+  function setPicks(ids: number[]) {
+    if (!config) return;
+    update({ pickChampions: { ...config.pickChampions, [role]: ids } });
+  }
+</script>
+
+<div class="reveal-scrollbar -mr-1 flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-1">
+  <section class="reveal-panel shrink-0 divide-y divide-white/10 p-1">
+    <div class="px-3 pb-1.5 pt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+      Queue
+    </div>
+    <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <Label for="auto-accept" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Accept matches automatically<InfoTip text={TIPS.autoAccept} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          When League shows a ready check
+        </span>
+      </Label>
+      <Switch
+        id="auto-accept"
+        checked={config?.autoAccept ?? false}
+        disabled={!config}
+        onCheckedChange={(autoAccept) => update({ autoAccept })}
+      />
+    </div>
+    <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <Label for="auto-requeue" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Queue again after a game<InfoTip text={TIPS.autoRequeue} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          30 seconds after the game ends, back to the lobby and into the same queue
+        </span>
+      </Label>
+      <Switch
+        id="auto-requeue"
+        checked={config?.autoRequeue ?? false}
+        disabled={!config}
+        onCheckedChange={(autoRequeue) => update({ autoRequeue })}
+      />
+    </div>
+    <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <Label for="requeue-past-estimate" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Restart long queues<InfoTip text={TIPS.requeuePastEstimate} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          Once you've waited past League's estimated time, leave the queue and rejoin 30 seconds
+          later
+        </span>
+      </Label>
+      <Switch
+        id="requeue-past-estimate"
+        checked={config?.requeuePastEstimate ?? false}
+        disabled={!config}
+        onCheckedChange={(requeuePastEstimate) => update({ requeuePastEstimate })}
+      />
+    </div>
+    <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <Label for="pause-after-dodge" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Pause queue after a dodge<InfoTip text={TIPS.pauseAfterDodge} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          Return to the lobby until you queue again yourself; the automatic requeues wait too
+        </span>
+      </Label>
+      <Switch
+        id="pause-after-dodge"
+        checked={config?.pauseQueueAfterDodge ?? false}
+        disabled={!config}
+        onCheckedChange={(pauseQueueAfterDodge) => update({ pauseQueueAfterDodge })}
+      />
+    </div>
+  </section>
+
+  <section class="reveal-panel shrink-0 divide-y divide-white/10 p-1">
+    <div class="px-3 pb-1.5 pt-2">
+      <div class="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        Champ Select
+      </div>
+    </div>
+    <div class="flex items-center gap-3 px-3 py-2">
+      <Label for="auto-open" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Open lookup automatically<InfoTip text={TIPS.autoOpen} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          Opens your multi-search site once all five names are in, waiting up to
+        </span>
+      </Label>
+      <div class="flex shrink-0 items-center gap-2">
+        <Select.Root
+          type="single"
+          disabled={!config?.autoOpen}
+          items={autoOpenWaitOptions}
+          value={autoOpenWait}
+          onValueChange={(value) => update({ autoOpenDelaySeconds: Number(value) })}
+        >
+          <Select.Trigger
+            aria-label="Maximum auto-open wait"
+            class="h-7 w-[72px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
+          >
+            {autoOpenWaitOptions.find((option) => option.value === autoOpenWait)?.label ??
+              autoOpenWait}
+          </Select.Trigger>
+          <Select.Content>
+            {#each autoOpenWaitOptions as option}
+              <Select.Item value={option.value} label={option.label} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
+        <Switch
+          id="auto-open"
+          checked={config?.autoOpen ?? false}
+          disabled={!config}
+          onCheckedChange={(autoOpen) => update({ autoOpen })}
+        />
+      </div>
+    </div>
+    <div class="flex flex-col gap-2 px-3 py-2">
+      <div class="flex items-center gap-3">
+        <Label for="auto-ban" class="min-w-0 flex-1 cursor-pointer">
+          <span class="block text-xs font-medium">Ban automatically<InfoTip text={TIPS.autoBan} /></span>
+          <span class="mt-0.5 block text-[10px] text-muted-foreground">
+            The first available champion from this list
+          </span>
+        </Label>
+        <Switch
+          id="auto-ban"
+          checked={config?.autoBan ?? false}
+          disabled={!config}
+          onCheckedChange={(autoBan) => update({ autoBan })}
+        />
+      </div>
+      <ChampionList
+        id="ban-champions"
+        ids={config?.banChampions ?? []}
+        {champions}
+        disabled={!config?.autoBan}
+        placeholder="Add a ban"
+        onChange={(banChampions) => update({ banChampions })}
+      />
+    </div>
+    <div class="flex flex-col gap-2 px-3 py-2">
+      <div class="flex items-center gap-3">
+        <Label for="auto-pick" class="min-w-0 flex-1 cursor-pointer">
+          <span class="block text-xs font-medium">Lock in automatically<InfoTip text={TIPS.autoPick} /></span>
+          <span class="mt-0.5 block text-[10px] text-muted-foreground">
+            Your hover, or else the first available champion for the role you got
+          </span>
+        </Label>
+        <Switch
+          id="auto-pick"
+          checked={config?.autoPick ?? false}
+          disabled={!config}
+          onCheckedChange={(autoPick) => update({ autoPick })}
+        />
+      </div>
+      <div class="flex items-center gap-1" role="tablist" aria-label="Role">
+        {#each LANES as lane (lane)}
+          {@const count = config?.pickChampions[lane]?.length ?? 0}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={role === lane}
+            title={formatAssignedPosition(lane)}
+            class="rounded-md px-2 py-0.5 text-[10px] font-semibold transition {role === lane
+              ? 'bg-blue-500/15 text-blue-300'
+              : 'text-muted-foreground hover:text-foreground'}"
+            on:click={() => (role = lane)}
+          >
+            {positionBadge(lane)}{#if count}<span class="ml-1 opacity-60">{count}</span>{/if}
+          </button>
+        {/each}
+      </div>
+      {#key role}
+        <ChampionList
+          id={`pick-champions-${role}`}
+          ids={config?.pickChampions[role] ?? []}
+          {champions}
+          disabled={!config?.autoPick}
+          placeholder={`Add a ${formatAssignedPosition(role)} pick`}
+          onChange={setPicks}
+        />
+      {/key}
+    </div>
+  </section>
+
+  {#if championsFailed}
+    <div class="text-[10px] text-red-300">
+      Couldn't load the champion list from Community Dragon, so names can't be searched right now.
+    </div>
+  {/if}
+</div>

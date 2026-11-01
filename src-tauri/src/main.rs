@@ -6,6 +6,7 @@ mod logging;
 
 mod analytics;
 mod app_state;
+mod automation;
 mod champ_select;
 mod champions;
 mod commands;
@@ -16,6 +17,7 @@ mod legacy_install;
 mod live_game;
 mod lobby;
 mod lookup;
+mod matchups;
 mod queue;
 mod queue_pause;
 mod ranked;
@@ -28,7 +30,7 @@ mod utils;
 use app_state::{Lcu, QueuePause};
 use commands::{
     app_ready, get_config, get_lcu_info, get_lcu_state, get_legacy_install, open_log_folder,
-    open_opgg_link, remove_legacy_install, set_config, write_frontend_log,
+    open_opgg_link, remove_legacy_install, set_config, set_enemy_role, write_frontend_log,
 };
 use config::AppConfig;
 use tauri::Manager;
@@ -90,7 +92,8 @@ fn main() {
             open_opgg_link,
             get_legacy_install,
             remove_legacy_install,
-            write_frontend_log
+            write_frontend_log,
+            set_enemy_role
         ])
         .run(tauri::generate_context!());
 

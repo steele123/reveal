@@ -7,6 +7,7 @@ Reveal is a simple, lightweight, and fast tool for League of Legends to reveal y
 ### Features
 
 - Reveal your team mates names in champ select
+- Master+ counters for every enemy pick, with kill, CS and gold leads at 15 minutes and links to U.GG, Lolalytics and League of Graphs
 - Auto acceptor
 - Dodging & Last Second Dodging
 

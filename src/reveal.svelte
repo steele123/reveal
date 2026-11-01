@@ -5,17 +5,19 @@
   import { DEFAULT_CONFIG, updateConfig, type Config } from "$lib/config";
   import "@fontsource-variable/inter";
   import type { ChampSelect } from "$lib/champ_select";
+  import { setPreviewRoleHandler, type MatchupBoard } from "$lib/matchups";
   import Tool from "$lib/components/tool.svelte";
   import Navbar from "$lib/components/navbar.svelte";
   import Footer from "$lib/components/footer.svelte";
   import HistoryPanel from "$lib/components/history-panel.svelte";
+  import AutomationPanel from "$lib/components/automation-panel.svelte";
   import LegacyInstallBanner from "$lib/components/legacy-install-banner.svelte";
   import DiscordPrompt from "$lib/components/discord-prompt.svelte";
   import { DISCORD_URL, openExternalLink } from "$lib/link_actions";
   import type { LiveGame } from "$lib/live_game";
   import { runUpdater, type UpdateStatus } from "$lib/updater";
   import { isTauriRuntime } from "$lib/runtime";
-  import { getPreviewState } from "$lib/preview";
+  import { getPreviewState, previewForProvider, previewWithRole } from "$lib/preview";
   import {
     clearLobbyHistory,
     createLobbyHistoryId,
@@ -32,9 +34,15 @@
   let connected = false;
   let queuePaused = false;
   let champSelect: ChampSelect | null = null;
+  let matchups: MatchupBoard | null = null;
   let config: Config | null = null;
   let updateStatus: UpdateStatus = "Checking";
-  let activePage: "reveal" | "history" = "reveal";
+  let activePage: "reveal" | "history" | "auto" = "reveal";
+  /** The browser preview's sample board, shown as the chosen provider would. */
+  let previewMatchups: MatchupBoard | null = null;
+  $: if (previewMatchups) {
+    matchups = previewForProvider(previewMatchups, config?.countersProvider ?? "ugg");
+  }
   let history: LobbyHistoryEntry[] = [];
   let activeLobbyId: string | null = null;
   let legacyInstall: { version: string } | null = null;
@@ -43,6 +51,19 @@
 
   function setConfig(nextConfig: Config) {
     config = nextConfig;
+  }
+
+  /** Applies a settings change right away and saves it, undoing it if saving fails. */
+  async function changeConfig(nextConfig: Config) {
+    const previousConfig = config;
+    config = nextConfig;
+    if (!isTauriRuntime()) return;
+    try {
+      await updateConfig(nextConfig);
+    } catch (error) {
+      logFrontendError("Failed to save config", error);
+      config = previousConfig;
+    }
   }
 
   // Shown once, never over Champ Select or the update screen.
@@ -76,7 +97,7 @@
     history = [];
   }
 
-  function navigate(page: "reveal" | "history") {
+  function navigate(page: "reveal" | "history" | "auto") {
     activePage = page;
   }
 
@@ -87,7 +108,19 @@
     UpToDate: "Ready",
   }[updateStatus];
 
+  // Grow the whole window's content with the window, from the size it opens at up to twice that.
+  const BASE_SIZE = 680;
+  const MAX_SCALE = 2;
+  let scale = 1;
+  function fitScale() {
+    const fit = Math.min(window.innerWidth, window.innerHeight) / BASE_SIZE;
+    scale = Math.min(MAX_SCALE, Math.max(1, fit));
+  }
+
   onMount(() => {
+    fitScale();
+    window.addEventListener("resize", fitScale);
+    const stopScaling = () => window.removeEventListener("resize", fitScale);
     history = loadLobbyHistory();
 
     if (!isTauriRuntime()) {
@@ -101,13 +134,17 @@
       liveGame = preview.liveGame ?? null;
       queueName = preview.champSelect ? "Ranked Solo/Duo" : null;
       champSelect = preview.champSelect;
+      previewMatchups = preview.matchups ?? null;
+      setPreviewRoleHandler((championId, role) => {
+        if (previewMatchups) previewMatchups = previewWithRole(previewMatchups, championId, role);
+      });
       activePage = preview.activePage;
       if (preview.history.length > 0) history = preview.history;
       if (new URLSearchParams(location.search).has("legacy")) {
         legacyInstall = { version: "1.4.3" };
       }
       updateStatus = "UpToDate";
-      return;
+      return stopScaling;
     }
 
     let disposed = false;
@@ -125,6 +162,7 @@
               if (event === "new-lobby") {
                 activeLobbyId = createLobbyHistoryId();
                 champSelect = null;
+                matchups = null;
               } else if (event === "game-started") {
                 if (activeLobbyId) history = markLobbyGameStarted(activeLobbyId);
                 activeLobbyId = null;
@@ -154,6 +192,11 @@
         listeners.push(
           await listen<boolean>("queue_pause_update", ({ payload }) => {
             queuePaused = payload;
+          }),
+        );
+        listeners.push(
+          await listen<MatchupBoard | null>("champ_select_matchups", ({ payload }) => {
+            matchups = payload;
           }),
         );
         listeners.push(
@@ -205,6 +248,7 @@
     void initialize();
 
     return () => {
+      stopScaling();
       disposed = true;
       unlisten.forEach((stopListening) => stopListening());
     };
@@ -212,7 +256,8 @@
 </script>
 
 <main
-  class="reveal-shell relative flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+  class="reveal-shell relative flex flex-col overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+  style="zoom: {scale}; width: calc(100vw / {scale}); height: calc(100vh / {scale});"
 >
   <Navbar
     {activePage}
@@ -228,7 +273,9 @@
   {/if}
   <div class="min-h-0 flex-1 px-5 py-3">
     {#if updateStatus === "UpToDate"}
-      {#if activePage === "history"}
+      {#if activePage === "auto"}
+        <AutomationPanel {config} onChange={changeConfig} />
+      {:else if activePage === "history"}
         <HistoryPanel
           {history}
           provider={config?.multiProvider ?? "opgg"}
@@ -239,6 +286,7 @@
           {config}
           {state}
           {champSelect}
+          {matchups}
           {connected}
           {queuePaused}
           {history}

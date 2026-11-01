@@ -8,14 +8,18 @@ use tauri::{AppHandle, Manager};
 
 /// Replayed in this order: the client state goes first, because the window starts a fresh
 /// lobby (and clears the team) when it sees Champ Select begin.
-const REPLAYED: [&str; 4] = [
+const REPLAYED: [&str; 5] = [
     "client_state_update",
     "queue_name",
     "champ_select_started",
+    "champ_select_matchups",
     "live_game_update",
 ];
 
-static LATEST: Mutex<[Option<Value>; 4]> = Mutex::new([None, None, None, None]);
+/// The Champ Select events, which must not outlive it.
+const CHAMP_SELECT_EVENTS: [usize; 2] = [2, 3];
+
+static LATEST: Mutex<[Option<Value>; 5]> = Mutex::new([None, None, None, None, None]);
 
 /// Sends an event to the window and remembers it for `replay`.
 pub fn emit<P: Serialize + Clone>(app_handle: &AppHandle, event: &'static str, payload: P) {
@@ -43,13 +47,15 @@ pub fn replay(app_handle: &AppHandle) {
     }
 }
 
-fn remember(latest: &mut [Option<Value>; 4], event: &str, value: Value) {
+fn remember(latest: &mut [Option<Value>; 5], event: &str, value: Value) {
     let Some(index) = REPLAYED.iter().position(|replayed| *replayed == event) else {
         return;
     };
     // A team from a Champ Select that has ended must not come back on the next replay.
     if event == "client_state_update" && value != "ChampSelect" {
-        latest[2] = None;
+        for stale in CHAMP_SELECT_EVENTS {
+            latest[stale] = None;
+        }
     }
     latest[index] = Some(value);
 }
@@ -77,9 +83,22 @@ mod tests {
         let mut latest = Default::default();
         remember(&mut latest, "client_state_update", json!("ChampSelect"));
         remember(&mut latest, "champ_select_started", json!({ "participants": [1] }));
+        remember(&mut latest, "champ_select_matchups", json!({ "enemies": [] }));
         remember(&mut latest, "client_state_update", json!("InProgress"));
 
         assert_eq!(latest[0], Some(json!("InProgress")));
         assert_eq!(latest[2], None);
+        assert_eq!(latest[3], None, "matchups go with the team");
+    }
+
+    #[test]
+    fn replays_matchups_after_the_team() {
+        let team = REPLAYED.iter().position(|event| *event == "champ_select_started");
+        let matchups = REPLAYED.iter().position(|event| *event == "champ_select_matchups");
+        assert!(team < matchups);
+        assert_eq!(
+            CHAMP_SELECT_EVENTS.map(|index| REPLAYED[index]),
+            ["champ_select_started", "champ_select_matchups"]
+        );
     }
 }

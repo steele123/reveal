@@ -1,7 +1,10 @@
 use crate::utils::MULTI_PROVIDERS;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 use tauri::AppHandle;
 use tokio::sync::Mutex;
 
@@ -25,6 +28,28 @@ pub struct Config {
     /// What clicking a teammate does: "details" (Reveal popup) or "opgg" (open their profile).
     #[serde(default = "default_player_click_action")]
     pub player_click_action: String,
+    /// Which site's win rates the Counters tab shows first: "lolalytics" or "ugg". Both are read.
+    #[serde(default = "default_counters_provider")]
+    pub counters_provider: String,
+    /// Queue again a little while after a game ends.
+    #[serde(default)]
+    pub auto_requeue: bool,
+    /// Leave and rejoin the queue once the wait passes League's estimate.
+    #[serde(default)]
+    pub requeue_past_estimate: bool,
+    /// In the last seconds of your ban, ban the first available of `ban_champions` unless you
+    /// already chose one.
+    #[serde(default)]
+    pub auto_ban: bool,
+    #[serde(default)]
+    pub ban_champions: Vec<i64>,
+    /// In the last seconds of your pick, lock in your hover, or else the first available of
+    /// your role's `pick_champions`.
+    #[serde(default)]
+    pub auto_pick: bool,
+    /// Champion ids in order of preference, by League position ("top" ... "utility").
+    #[serde(default)]
+    pub pick_champions: HashMap<String, Vec<i64>>,
 }
 
 impl Default for Config {
@@ -38,6 +63,13 @@ impl Default for Config {
             multi_provider: default_provider(),
             discord_prompt_seen: false,
             player_click_action: default_player_click_action(),
+            counters_provider: default_counters_provider(),
+            auto_requeue: false,
+            requeue_past_estimate: false,
+            auto_ban: false,
+            ban_champions: Vec::new(),
+            auto_pick: false,
+            pick_champions: HashMap::new(),
         }
     }
 }
@@ -63,6 +95,10 @@ fn default_player_click_action() -> String {
 
 fn default_provider() -> String {
     "opgg".to_string()
+}
+
+fn default_counters_provider() -> String {
+    "lolalytics".to_string()
 }
 
 pub struct AppConfig(pub Mutex<Config>);
@@ -166,6 +202,35 @@ mod tests {
         assert!(!config.pause_queue_after_dodge);
         assert!(!config.discord_prompt_seen);
         assert_eq!(config.player_click_action, "details");
+        assert_eq!(config.counters_provider, "lolalytics");
+        assert!(!config.auto_requeue && !config.requeue_past_estimate);
+        assert!(!config.auto_ban && !config.auto_pick);
+        assert!(config.ban_champions.is_empty() && config.pick_champions.is_empty());
+    }
+
+    #[test]
+    fn automation_settings_round_trip_with_the_frontend_names() {
+        let config: Config = serde_json::from_str(
+            r#"{
+                "autoOpen": true,
+                "autoAccept": true,
+                "acceptDelay": 2000,
+                "countersProvider": "lolalytics",
+                "autoRequeue": true,
+                "requeuePastEstimate": true,
+                "autoBan": true,
+                "banChampions": [64, 421],
+                "autoPick": true,
+                "pickChampions": { "jungle": [59, 104] }
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(config.counters_provider, "lolalytics");
+        assert!(config.auto_requeue && config.requeue_past_estimate);
+        assert_eq!(config.ban_champions, vec![64, 421]);
+        assert_eq!(config.pick_champions["jungle"], vec![59, 104]);
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains(r#""pickChampions":{"jungle":[59,104]}"#));
     }
 
     fn temp_config_path(name: &str) -> PathBuf {

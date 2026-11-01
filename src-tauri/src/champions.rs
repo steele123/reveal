@@ -28,12 +28,21 @@ struct MasteryEntry {
 struct ChampionSummary {
     id: i32,
     name: String,
+    /// The language-independent name, e.g. "MonkeyKing" for Wukong.
+    #[serde(default)]
+    alias: String,
 }
 
-/// Champion names by id, from the League Client's local game data.
-pub async fn get_champion_names(
+/// A champion's name in the client's language, and the name stats sites use in URLs.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChampionInfo {
+    pub name: String,
+    pub slug: String,
+}
+
+async fn get_champion_summary(
     remoting_client: &RESTClient,
-) -> anyhow::Result<HashMap<i32, String>> {
+) -> anyhow::Result<Vec<ChampionSummary>> {
     let summary: Vec<ChampionSummary> = serde_json::from_value(
         remoting_client
             .get("/lol-game-data/assets/v1/champion-summary.json".to_string())
@@ -42,8 +51,44 @@ pub async fn get_champion_names(
     Ok(summary
         .into_iter()
         .filter(|champion| champion.id > 0)
+        .collect())
+}
+
+/// Champion names by id, from the League Client's local game data.
+pub async fn get_champion_names(
+    remoting_client: &RESTClient,
+) -> anyhow::Result<HashMap<i32, String>> {
+    Ok(get_champion_summary(remoting_client)
+        .await?
+        .into_iter()
         .map(|champion| (champion.id, champion.name))
         .collect())
+}
+
+/// Champion names and URL slugs by id, from the League Client's local game data.
+pub async fn get_champion_info(
+    remoting_client: &RESTClient,
+) -> anyhow::Result<HashMap<i32, ChampionInfo>> {
+    Ok(get_champion_summary(remoting_client)
+        .await?
+        .into_iter()
+        .map(|champion| {
+            let info = ChampionInfo {
+                slug: champion_slug(&champion.alias),
+                name: champion.name,
+            };
+            (champion.id, info)
+        })
+        .collect())
+}
+
+/// "LeeSin" -> "leesin", "MonkeyKing" -> "wukong": how U.GG, Lolalytics and League of Graphs
+/// name champions in their URLs.
+pub fn champion_slug(alias: &str) -> String {
+    match alias {
+        "MonkeyKing" => "wukong".to_string(),
+        _ => alias.to_lowercase(),
+    }
 }
 
 pub async fn get_top_mains(
@@ -115,6 +160,15 @@ mod tests {
         );
         assert_eq!(mains[0].name, "Yasuo");
         assert_eq!(mains[2].name, "Champion 238");
+    }
+
+    #[test]
+    fn slugs_champions_like_stats_sites_do() {
+        assert_eq!(champion_slug("LeeSin"), "leesin");
+        assert_eq!(champion_slug("JarvanIV"), "jarvaniv");
+        assert_eq!(champion_slug("MonkeyKing"), "wukong");
+        assert_eq!(champion_slug("Nunu"), "nunu");
+        assert_eq!(champion_slug(""), "");
     }
 
     #[test]

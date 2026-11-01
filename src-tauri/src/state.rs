@@ -52,6 +52,8 @@ pub async fn handle_client_state(
         });
     }
 
+    crate::automation::on_phase(&client_state, app_handle, remoting_client);
+
     match client_state.as_str() {
         "ChampSelect" => {
             let Some(polling_guard) = PollingGuard::acquire() else {

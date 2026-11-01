@@ -182,6 +182,16 @@ pub fn open_log_folder() -> CommandResult<()> {
     open::that(directory).map_err(|error| error.to_string())
 }
 
+/// Puts an enemy pick in another lane, after the user dragged it there.
+#[tauri::command]
+pub fn set_enemy_role(champion_id: i64, role: String) -> CommandResult<()> {
+    let role = crate::matchups::Role::from_position(&role)
+        .ok_or_else(|| format!("Unknown role {role}"))?;
+    log_info!("Enemy pick {champion_id} moved to {role:?}");
+    crate::matchups::set_role_override(champion_id, role);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn write_frontend_log(level: String, message: String) {
     let message = crate::logging::sanitize_frontend_message(&message);
