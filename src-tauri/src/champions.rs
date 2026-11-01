@@ -43,14 +43,19 @@ pub struct ChampionInfo {
 async fn get_champion_summary(
     remoting_client: &RESTClient,
 ) -> anyhow::Result<Vec<ChampionSummary>> {
+    // A few hundred champions take longer than the client's default 500 ms on a busy client.
     let summary: Vec<ChampionSummary> = serde_json::from_value(
         remoting_client
-            .get("/lol-game-data/assets/v1/champion-summary.json".to_string())
+            .get_with_timeout(
+                "/lol-game-data/assets/v1/champion-summary.json".to_string(),
+                crate::lookup::LOOKUP_TIMEOUT,
+            )
             .await?,
     )?;
     Ok(summary
         .into_iter()
-        .filter(|champion| champion.id > 0)
+        // Game modes add copies from 60000 up, and -1 is "None".
+        .filter(|champion| champion.id > 0 && champion.id < 10_000)
         .collect())
 }
 

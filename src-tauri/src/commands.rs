@@ -135,6 +135,28 @@ pub async fn get_lcu_info(lcu: tauri::State<'_, Lcu>) -> CommandResult<LCUClient
         .ok_or_else(|| "League Client is not connected".to_string())
 }
 
+/// Every champion's id and name in the client's language, for the ban and pick lists.
+#[tauri::command]
+pub async fn get_champion_list(app_handle: AppHandle) -> CommandResult<Vec<ChampionName>> {
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
+    let names = crate::champions::get_champion_names(&remoting_client)
+        .await
+        .map_err(|error| format!("{error:#}"))?;
+    let mut champions: Vec<ChampionName> = names
+        .into_iter()
+        .map(|(id, name)| ChampionName { id, name })
+        .collect();
+    champions.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(champions)
+}
+
+#[derive(serde::Serialize)]
+pub struct ChampionName {
+    id: i32,
+    name: String,
+}
+
 /// The player signed in to the League Client, with their ranks, for the idle screen.
 #[tauri::command]
 pub async fn get_own_profile(app_handle: AppHandle) -> CommandResult<crate::summoner::OwnProfile> {
