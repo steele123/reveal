@@ -9,7 +9,8 @@
   export let historyCount = 0;
   export let onNavigate: (page: "reveal" | "history" | "auto") => void = () => {};
 
-  let version = "Preview";
+  /** Empty in the browser preview, which has no app version. */
+  let version = "";
 
   onMount(() => {
     if (!isTauriRuntime()) return;
@@ -38,11 +39,13 @@
     </div>
     <div data-tauri-drag-region class="flex items-baseline gap-2">
       <div class="text-sm font-semibold tracking-tight">Reveal</div>
-      <div
-        class="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-      >
-        {version}
-      </div>
+      {#if version}
+        <div
+          class="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >
+          {version}
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -70,10 +73,10 @@
       class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
         activePage === "auto" ? "bg-white/10 text-foreground" : ""
       }`}
-      title="Automatic requeue, bans and picks"
+      title="Queue, champ select and alert settings"
       on:click={() => onNavigate("auto")}
     >
-      Auto
+      Settings
     </button>
   </nav>
 

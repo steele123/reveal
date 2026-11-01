@@ -8,10 +8,8 @@
   import ChampionList from "./champion-list.svelte";
   import InfoTip from "./info-tip.svelte";
   import NotificationSettings from "./notification-settings.svelte";
-  import WaitSelect from "./wait-select.svelte";
+  import TimedToggle from "./timed-toggle.svelte";
   import { Label } from "./ui/label";
-  import * as Select from "./ui/select";
-  import { Switch } from "./ui/switch";
 
   export let config: Config | null = null;
   export let onChange: (config: Config) => void = () => {};
@@ -39,58 +37,43 @@
       "In your pick turn, once only the time you set is left (the last second, by default) and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
   };
 
-  const autoOpenWaitOptions = [
-    { label: "Now", value: "0" },
-    { label: "4 sec", value: "4" },
-    { label: "6 sec", value: "6" },
-    { label: "10 sec", value: "10" },
+  // Times for each on/off setting; `short` shows in the control, `label` in its menu.
+  const acceptTimes = [
+    { value: 0, label: "Right away", short: "0s" },
+    { value: 2000, label: "After 2 sec", short: "2s" },
+    { value: 4000, label: "After 4 sec", short: "4s" },
+    { value: 6000, label: "After 6 sec", short: "6s" },
+    { value: 8000, label: "After 8 sec", short: "8s" },
+    { value: 9000, label: "Last second", short: "9s" },
   ];
-  $: autoOpenWait = String(config?.autoOpenDelaySeconds ?? 6);
-
-  /** How long auto accept waits, in milliseconds, so you can still decline. */
-  const acceptWaitOptions = [
-    { label: "Right away", value: "0" },
-    { label: "After 2 sec", value: "2000" },
-    { label: "After 4 sec", value: "4000" },
-    { label: "After 6 sec", value: "6000" },
-    { label: "After 8 sec", value: "8000" },
-    { label: "Last second", value: "9000" },
+  const requeueTimes = [
+    { value: 0, label: "Right away", short: "0s" },
+    { value: 10, label: "After 10 sec", short: "10s" },
+    { value: 20, label: "After 20 sec", short: "20s" },
+    { value: 30, label: "After 30 sec", short: "30s" },
+    { value: 60, label: "After 60 sec", short: "60s" },
   ];
-  $: acceptWait = String(config?.acceptDelay ?? 2000);
-
-  /** How long to wait before queueing again, in seconds. */
-  const requeueWaitOptions = [
-    { label: "Right away", value: "0" },
-    { label: "After 10 sec", value: "10" },
-    { label: "After 20 sec", value: "20" },
-    { label: "After 30 sec", value: "30" },
-    { label: "After 60 sec", value: "60" },
+  const dodgeTimes = [
+    { value: 0, label: "Until I queue", short: "∞" },
+    { value: 10, label: "10 sec", short: "10s" },
+    { value: 30, label: "30 sec", short: "30s" },
+    { value: 60, label: "60 sec", short: "60s" },
+    { value: 120, label: "2 min", short: "2m" },
   ];
-  $: requeueWait = config?.requeueDelaySeconds ?? 30;
-  $: longQueueWait = config?.longQueueRequeueDelaySeconds ?? 30;
-
-  /** How long a pause after a dodge lasts, in seconds; 0 waits for you. */
-  const dodgePauseOptions = [
-    { label: "Manual", value: "0" },
-    { label: "10 sec", value: "10" },
-    { label: "30 sec", value: "30" },
-    { label: "60 sec", value: "60" },
-    { label: "2 min", value: "120" },
+  const openTimes = [
+    { value: 0, label: "Now", short: "0s" },
+    { value: 4, label: "Up to 4 sec", short: "4s" },
+    { value: 6, label: "Up to 6 sec", short: "6s" },
+    { value: 10, label: "Up to 10 sec", short: "10s" },
   ];
-  $: dodgePause = config?.dodgePauseSeconds ?? 0;
 
   /** When to ban or lock in, as seconds left on League's timer. */
-  const secondsLeftOptions = [
-    { label: "Last second", value: "1" },
-    { label: "3 sec left", value: "3" },
-    { label: "5 sec left", value: "5" },
-    { label: "10 sec left", value: "10" },
+  const secondsLeftTimes = [
+    { value: 1, label: "Last second", short: "Last" },
+    { value: 3, label: "3 sec left", short: "3s" },
+    { value: 5, label: "5 sec left", short: "5s" },
+    { value: 10, label: "10 sec left", short: "10s" },
   ];
-
-  function secondsLeftLabel(seconds: number | undefined): string {
-    const value = String(seconds ?? 1);
-    return secondsLeftOptions.find((option) => option.value === value)?.label ?? `${value} sec left`;
-  }
 
   onMount(() => {
     loadChampionNames()
@@ -124,53 +107,33 @@
           Waits first, so you can still decline it yourself
         </span>
       </Label>
-      <Select.Root
-        type="single"
-        disabled={!config?.autoAccept}
-        items={acceptWaitOptions}
-        value={acceptWait}
-        onValueChange={(value) => update({ acceptDelay: Number(value) })}
-      >
-        <Select.Trigger
-          aria-label="How long to wait before accepting"
-          class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
-        >
-          {acceptWaitOptions.find((option) => option.value === acceptWait)?.label ??
-            `After ${Number(acceptWait) / 1000} sec`}
-        </Select.Trigger>
-        <Select.Content>
-          {#each acceptWaitOptions as option}
-            <Select.Item value={option.value} label={option.label} />
-          {/each}
-        </Select.Content>
-      </Select.Root>
-      <Switch
+      <TimedToggle
+        label="Accept matches automatically"
         id="auto-accept"
-        checked={config?.autoAccept ?? false}
+        enabled={config?.autoAccept ?? false}
+        value={config?.acceptDelay ?? 2000}
+        options={acceptTimes}
         disabled={!config}
-        onCheckedChange={(autoAccept) => update({ autoAccept })}
+        onToggle={(autoAccept) => update({ autoAccept })}
+        onChange={(acceptDelay) => update({ acceptDelay })}
       />
     </div>
     <div class="flex items-center gap-3 rounded-lg px-3 py-2">
       <Label for="auto-requeue" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Queue again after a game<InfoTip text={TIPS.autoRequeue} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          {requeueWait === 0 ? "Right after" : `${requeueWait} seconds after`} the game ends,
-          back to the lobby and into the same queue
+          Once the game ends, back to the lobby and into the same queue
         </span>
       </Label>
-      <WaitSelect
-        options={requeueWaitOptions}
-        seconds={requeueWait}
-        label="How long to wait after a game before queueing again"
-        disabled={!config?.autoRequeue}
-        onChange={(requeueDelaySeconds) => update({ requeueDelaySeconds })}
-      />
-      <Switch
+      <TimedToggle
+        label="Queue again after a game"
         id="auto-requeue"
-        checked={config?.autoRequeue ?? false}
+        enabled={config?.autoRequeue ?? false}
+        value={config?.requeueDelaySeconds ?? 0}
+        options={requeueTimes}
         disabled={!config}
-        onCheckedChange={(autoRequeue) => update({ autoRequeue })}
+        onToggle={(autoRequeue) => update({ autoRequeue })}
+        onChange={(requeueDelaySeconds) => update({ requeueDelaySeconds })}
       />
     </div>
     <div class="flex items-center gap-3 rounded-lg px-3 py-2">
@@ -178,45 +141,35 @@
         <span class="block text-xs font-medium">Restart long queues<InfoTip text={TIPS.requeuePastEstimate} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
           Once you've waited well past League's estimated time, leave the queue and rejoin
-          {longQueueWait === 0 ? "right away" : `${longQueueWait} seconds later`}
         </span>
       </Label>
-      <WaitSelect
-        options={requeueWaitOptions}
-        seconds={longQueueWait}
-        label="How long to wait before rejoining a long queue"
-        disabled={!config?.requeuePastEstimate}
-        onChange={(longQueueRequeueDelaySeconds) => update({ longQueueRequeueDelaySeconds })}
-      />
-      <Switch
+      <TimedToggle
+        label="Restart long queues"
         id="requeue-past-estimate"
-        checked={config?.requeuePastEstimate ?? false}
+        enabled={config?.requeuePastEstimate ?? false}
+        value={config?.longQueueRequeueDelaySeconds ?? 0}
+        options={requeueTimes}
         disabled={!config}
-        onCheckedChange={(requeuePastEstimate) => update({ requeuePastEstimate })}
+        onToggle={(requeuePastEstimate) => update({ requeuePastEstimate })}
+        onChange={(longQueueRequeueDelaySeconds) => update({ longQueueRequeueDelaySeconds })}
       />
     </div>
     <div class="flex items-center gap-3 rounded-lg px-3 py-2">
       <Label for="pause-after-dodge" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Pause queue after a dodge<InfoTip text={TIPS.pauseAfterDodge} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          {dodgePause === 0
-            ? "Return to the lobby until you queue again yourself"
-            : `Return to the lobby, then queue again ${dodgePause} seconds later unless you do`};
-          the automatic requeues wait too
+          Return to the lobby and wait before queueing again; the automatic requeues wait too
         </span>
       </Label>
-      <WaitSelect
-        options={dodgePauseOptions}
-        seconds={dodgePause}
-        label="How long the pause after a dodge lasts"
-        disabled={!config?.pauseQueueAfterDodge}
-        onChange={(dodgePauseSeconds) => update({ dodgePauseSeconds })}
-      />
-      <Switch
+      <TimedToggle
+        label="Pause queue after a dodge"
         id="pause-after-dodge"
-        checked={config?.pauseQueueAfterDodge ?? false}
+        enabled={config?.pauseQueueAfterDodge ?? false}
+        value={config?.dodgePauseSeconds ?? 0}
+        options={dodgeTimes}
         disabled={!config}
-        onCheckedChange={(pauseQueueAfterDodge) => update({ pauseQueueAfterDodge })}
+        onToggle={(pauseQueueAfterDodge) => update({ pauseQueueAfterDodge })}
+        onChange={(dodgePauseSeconds) => update({ dodgePauseSeconds })}
       />
     </div>
   </section>
@@ -231,35 +184,19 @@
       <Label for="auto-open" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Open lookup automatically<InfoTip text={TIPS.autoOpen} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          Opens your multi-search site once all five names are in, waiting up to
+          Opens your multi-search site once all five names are in, or after the wait
         </span>
       </Label>
       <div class="flex shrink-0 items-center gap-2">
-        <Select.Root
-          type="single"
-          disabled={!config?.autoOpen}
-          items={autoOpenWaitOptions}
-          value={autoOpenWait}
-          onValueChange={(value) => update({ autoOpenDelaySeconds: Number(value) })}
-        >
-          <Select.Trigger
-            aria-label="Maximum auto-open wait"
-            class="h-7 w-[72px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
-          >
-            {autoOpenWaitOptions.find((option) => option.value === autoOpenWait)?.label ??
-              autoOpenWait}
-          </Select.Trigger>
-          <Select.Content>
-            {#each autoOpenWaitOptions as option}
-              <Select.Item value={option.value} label={option.label} />
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        <Switch
+        <TimedToggle
+          label="Open lookup automatically"
           id="auto-open"
-          checked={config?.autoOpen ?? false}
+          enabled={config?.autoOpen ?? false}
+          value={config?.autoOpenDelaySeconds ?? 6}
+          options={openTimes}
           disabled={!config}
-          onCheckedChange={(autoOpen) => update({ autoOpen })}
+          onToggle={(autoOpen) => update({ autoOpen })}
+          onChange={(autoOpenDelaySeconds) => update({ autoOpenDelaySeconds })}
         />
       </div>
     </div>
@@ -271,30 +208,15 @@
             Your hover, or else the first available champion from this list
           </span>
         </Label>
-        <Select.Root
-          type="single"
-          disabled={!config?.autoBan}
-          items={secondsLeftOptions}
-          value={String(config?.autoBanSecondsLeft ?? 1)}
-          onValueChange={(value) => update({ autoBanSecondsLeft: Number(value) })}
-        >
-          <Select.Trigger
-            aria-label="When to ban"
-            class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
-          >
-            {secondsLeftLabel(config?.autoBanSecondsLeft)}
-          </Select.Trigger>
-          <Select.Content>
-            {#each secondsLeftOptions as option}
-              <Select.Item value={option.value} label={option.label} />
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        <Switch
+        <TimedToggle
           id="auto-ban"
-          checked={config?.autoBan ?? false}
+          label="Ban automatically"
+          enabled={config?.autoBan ?? false}
+          value={config?.autoBanSecondsLeft ?? 1}
+          options={secondsLeftTimes}
           disabled={!config}
-          onCheckedChange={(autoBan) => update({ autoBan })}
+          onToggle={(autoBan) => update({ autoBan })}
+          onChange={(autoBanSecondsLeft) => update({ autoBanSecondsLeft })}
         />
       </div>
       <ChampionList
@@ -314,30 +236,15 @@
             Your hover, or else the first available champion for the role you got
           </span>
         </Label>
-        <Select.Root
-          type="single"
-          disabled={!config?.autoPick}
-          items={secondsLeftOptions}
-          value={String(config?.autoPickSecondsLeft ?? 1)}
-          onValueChange={(value) => update({ autoPickSecondsLeft: Number(value) })}
-        >
-          <Select.Trigger
-            aria-label="When to lock in"
-            class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
-          >
-            {secondsLeftLabel(config?.autoPickSecondsLeft)}
-          </Select.Trigger>
-          <Select.Content>
-            {#each secondsLeftOptions as option}
-              <Select.Item value={option.value} label={option.label} />
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        <Switch
+        <TimedToggle
           id="auto-pick"
-          checked={config?.autoPick ?? false}
+          label="Lock in automatically"
+          enabled={config?.autoPick ?? false}
+          value={config?.autoPickSecondsLeft ?? 1}
+          options={secondsLeftTimes}
           disabled={!config}
-          onCheckedChange={(autoPick) => update({ autoPick })}
+          onToggle={(autoPick) => update({ autoPick })}
+          onChange={(autoPickSecondsLeft) => update({ autoPickSecondsLeft })}
         />
       </div>
       <div
