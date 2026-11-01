@@ -35,9 +35,18 @@ pub struct Config {
     /// Queue again a little while after a game ends.
     #[serde(default)]
     pub auto_requeue: bool,
+    /// How long to wait before queueing again after a game; 0 is right away.
+    #[serde(default = "default_requeue_delay_seconds")]
+    pub requeue_delay_seconds: u32,
     /// Leave and rejoin the queue once the wait passes League's estimate.
     #[serde(default)]
     pub requeue_past_estimate: bool,
+    /// How long to wait between leaving a long queue and joining it again; 0 is right away.
+    #[serde(default = "default_requeue_delay_seconds")]
+    pub long_queue_requeue_delay_seconds: u32,
+    /// How long a pause after a dodge lasts before Reveal queues again; 0 waits for you.
+    #[serde(default)]
+    pub dodge_pause_seconds: u32,
     /// In the last seconds of your ban, ban the first available of `ban_champions` unless you
     /// already chose one.
     #[serde(default)]
@@ -120,7 +129,10 @@ impl Default for Config {
             player_click_action: default_player_click_action(),
             counters_provider: default_counters_provider(),
             auto_requeue: false,
+            requeue_delay_seconds: default_requeue_delay_seconds(),
             requeue_past_estimate: false,
+            long_queue_requeue_delay_seconds: default_requeue_delay_seconds(),
+            dodge_pause_seconds: 0,
             auto_ban: false,
             ban_champions: Vec::new(),
             auto_ban_seconds_left: default_seconds_left(),
@@ -141,6 +153,10 @@ impl Config {
         self.multi_provider = default_provider();
         true
     }
+}
+
+fn default_requeue_delay_seconds() -> u32 {
+    30
 }
 
 fn default_auto_open_delay_seconds() -> u32 {
@@ -266,6 +282,9 @@ mod tests {
         assert_eq!(config.player_click_action, "details");
         assert_eq!(config.counters_provider, "lolalytics");
         assert!(!config.auto_requeue && !config.requeue_past_estimate);
+        assert_eq!(config.requeue_delay_seconds, 30);
+        assert_eq!(config.long_queue_requeue_delay_seconds, 30);
+        assert_eq!(config.dodge_pause_seconds, 0);
         assert!(!config.auto_ban && !config.auto_pick);
         assert!(config.ban_champions.is_empty() && config.pick_champions.is_empty());
     }

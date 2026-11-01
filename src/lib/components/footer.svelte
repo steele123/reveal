@@ -1,42 +1,107 @@
 <script lang="ts">
-  import { fade } from "svelte/transition";
+  import { Popover } from "bits-ui";
   import { DISCORD_URL } from "$lib/link_actions";
+  import { logFrontendError, openLogFolder } from "$lib/logging";
+  import { isTauriRuntime } from "$lib/runtime";
 
   export let connected = false;
   export let inGame = false;
+  /** League's gameflow phase, such as "Lobby" or "ChampSelect". */
+  export let state = "Unknown";
+  export let queuePaused = false;
+
+  $: status = describe(state, connected, inGame, queuePaused);
+
+  function describe(state: string, connected: boolean, inGame: boolean, queuePaused: boolean) {
+    if (inGame || state === "InProgress")
+      return {
+        title: "Game in progress",
+        dot: "bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]",
+        detail: "Reveal is standing by and will be ready for your next lobby.",
+      };
+    if (!connected)
+      return {
+        title: "Looking for League",
+        dot: "bg-amber-400",
+        detail:
+          "Start League, or restart it and run Reveal as administrator if it is already open.",
+      };
+    if (queuePaused)
+      return {
+        title: "Queue paused after a dodge",
+        dot: "bg-amber-400",
+        detail: "Reveal stopped the next search. Queue again in League when you're ready.",
+      };
+    if (state === "ChampSelect")
+      return {
+        title: "In Champ Select",
+        dot: "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]",
+        detail: "Your teammates' names and the enemy counters are on the Reveal tab.",
+      };
+    return {
+      title: "Ready for Champ Select",
+      dot: "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]",
+      detail: "Join a lobby and queue normally. Teammate names will appear automatically.",
+    };
+  }
+
+  function formatState(value: string): string {
+    if (value === "InProgress") return "In game";
+    if (value === "ChampSelect") return "Champ Select";
+    if (value === "Unknown" || value === "None") return "Not in a lobby";
+    return value.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
+
+  function openLogs() {
+    if (!isTauriRuntime()) return;
+    openLogFolder().catch((error) => logFrontendError("Failed to open the log folder", error));
+  }
 </script>
 
 <footer
   class="flex h-10 shrink-0 items-center border-t border-white/10 px-5 text-xs"
 >
-  <div class="min-w-0">
-    {#if inGame}
-      <div
-        in:fade={{ duration: 250 }}
-        class="flex items-center gap-2 text-muted-foreground"
+  <Popover.Root>
+    <Popover.Trigger
+      class="-ml-2 flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-muted-foreground transition hover:bg-white/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 data-[state=open]:bg-white/5 data-[state=open]:text-foreground"
+    >
+      <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`}></span>
+      <span class="truncate">{status.title}</span>
+    </Popover.Trigger>
+    <Popover.Portal>
+      <Popover.Content
+        side="top"
+        align="start"
+        sideOffset={8}
+        collisionPadding={8}
+        class="z-50 w-[280px] rounded-lg border border-white/10 bg-[#0f1726] p-3 text-xs shadow-2xl focus:outline-none"
       >
-        <div class="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.7)]"></div>
-        <div class="truncate">In game</div>
-      </div>
-    {:else if connected}
-      <div
-        in:fade={{ duration: 250 }}
-        class="flex items-center gap-2 text-muted-foreground"
-      >
-        <div class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"></div>
-        <div class="truncate">League connected</div>
-      </div>
-    {:else}
-      <div
-        in:fade={{ duration: 250 }}
-        class="flex items-center gap-2 text-muted-foreground"
-      >
-        <div class="h-1.5 w-1.5 rounded-full bg-amber-400"></div>
-        <div class="truncate">League unavailable</div>
-      </div>
-    {/if}
-  </div>
+        <div class="font-semibold">{status.title}</div>
+        <p class="mt-1 leading-relaxed text-muted-foreground">{status.detail}</p>
+        <dl class="mt-3 space-y-1.5 border-t border-white/10 pt-2.5 text-[11px]">
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-muted-foreground">League</dt>
+            <dd class:text-emerald-300={connected} class:text-amber-300={!connected}>
+              {connected ? "Connected" : "Unavailable"}
+            </dd>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-muted-foreground">Client state</dt>
+            <dd>{connected ? formatState(state) : "—"}</dd>
+          </div>
+        </dl>
+      </Popover.Content>
+    </Popover.Portal>
+  </Popover.Root>
   <div class="ml-auto flex items-center gap-1">
+    <button
+      type="button"
+      class="rounded-md px-2 py-1 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+      title="Opens the folder with reveal.log. Attach it when you report a bug."
+      on:click={openLogs}
+    >
+      Logs
+    </button>
     <a
       href={DISCORD_URL}
       target="_blank"

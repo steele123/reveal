@@ -14,13 +14,11 @@ use shaco::rest::RESTClient;
 use std::{
     collections::{HashMap, HashSet},
     future::Future,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager};
 
-/// How long to wait after a game, or after leaving a queue that ran long, before queueing.
-const REQUEUE_DELAY: Duration = Duration::from_secs(30);
 const QUEUE_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const DRAFT_POLL_INTERVAL: Duration = Duration::from_millis(200);
 /// "The last second": bans and picks happen once this little of your turn is left, so you get the
@@ -37,6 +35,8 @@ const LOBBY_WAIT: Duration = Duration::from_secs(10);
 static DRAFT_WATCH: AtomicBool = AtomicBool::new(false);
 static QUEUE_WATCH: AtomicBool = AtomicBool::new(false);
 static REQUEUE_WAIT: AtomicBool = AtomicBool::new(false);
+/// Counts pauses after a dodge, so a timer only ends the pause it was started for.
+static DODGE_PAUSES: AtomicU64 = AtomicU64::new(0);
 
 /// Starts the watcher for a phase the client just entered, unless one is already running.
 pub fn on_phase(phase: &str, app_handle: &AppHandle, remoting_client: &RESTClient) {
@@ -79,8 +79,27 @@ async fn phase(client: &RESTClient) -> Option<String> {
         .and_then(|value| value.as_str().map(str::to_string))
 }
 
+/// Waits `seconds` while the window counts down to the next queue. `after` says what the wait
+/// follows ("game", "queue" or "dodge"), so the window can drop the countdown if you move on
+/// first.
+async fn requeue_countdown(app_handle: &AppHandle, after: &'static str, seconds: u32) {
+    let delay = Duration::from_secs(u64::from(seconds));
+    if delay.is_zero() {
+        return;
+    }
+    let deadline = SystemTime::now() + delay;
+    let deadline_ms = deadline.duration_since(UNIX_EPOCH).map_or(0, |time| time.as_millis() as u64);
+    let _ = app_handle.emit_all("requeue_countdown", json!({ "deadline": deadline_ms, "after": after }));
+    tokio::time::sleep(delay).await;
+    let _ = app_handle.emit_all("requeue_countdown", serde_json::Value::Null);
+}
+
 async fn requeue_after_game(app_handle: AppHandle, client: RESTClient) {
-    tokio::time::sleep(REQUEUE_DELAY).await;
+    if !settings(&app_handle).await.auto_requeue {
+        return;
+    }
+    let seconds = settings(&app_handle).await.requeue_delay_seconds;
+    requeue_countdown(&app_handle, "game", seconds).await;
     if !settings(&app_handle).await.auto_requeue {
         return;
     }
@@ -106,6 +125,43 @@ async fn requeue_after_game(app_handle: AppHandle, client: RESTClient) {
         "Reveal started the same queue again after your game.",
     )
     .await;
+}
+
+/// Ends a pause after a dodge once the time you set has passed, and queues again. Does nothing
+/// when the pause lasts until you queue yourself.
+pub fn resume_after_dodge(app_handle: &AppHandle, client: &RESTClient) {
+    let (app_handle, client) = (app_handle.clone(), client.clone());
+    let pause_number = DODGE_PAUSES.fetch_add(1, Ordering::AcqRel) + 1;
+    tauri::async_runtime::spawn(async move {
+        let seconds = settings(&app_handle).await.dodge_pause_seconds;
+        if seconds == 0 {
+            return;
+        }
+        requeue_countdown(&app_handle, "dodge", seconds).await;
+        if DODGE_PAUSES.load(Ordering::Acquire) != pause_number {
+            return;
+        }
+        let ended = {
+            let pause = app_handle.state::<QueuePause>();
+            let mut pause = pause.0.lock().await;
+            // You queued yourself or turned the pause off in the meantime.
+            if !pause.paused() {
+                return;
+            }
+            pause.disable()
+        };
+        if let Some(paused) = ended {
+            let _ = app_handle.emit_all("queue_pause_update", paused);
+        }
+        log_info!("Pause after the dodge is over; queueing again");
+        start_search(
+            &app_handle,
+            &client,
+            "after the dodge pause",
+            "The pause after the dodge is over, so Reveal started the queue again.",
+        )
+        .await;
+    });
 }
 
 async fn wait_for_lobby(client: &RESTClient) {
@@ -194,7 +250,8 @@ async fn watch_queue(app_handle: AppHandle, client: RESTClient) {
             log_warn!("Couldn't leave the long queue: {error}");
             return;
         }
-        tokio::time::sleep(REQUEUE_DELAY).await;
+        let seconds = settings(&app_handle).await.long_queue_requeue_delay_seconds;
+        requeue_countdown(&app_handle, "queue", seconds).await;
         if !settings(&app_handle).await.requeue_past_estimate {
             return;
         }

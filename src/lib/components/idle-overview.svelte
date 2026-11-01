@@ -2,7 +2,6 @@
   import {
     championIconUrl,
     formatRank,
-    positionBadge,
     profileIconUrl,
   } from "$lib/champ_select";
   import type { Config } from "$lib/config";
@@ -53,15 +52,24 @@
     { label: "Flex", key: "flex" },
   ];
 
+  /** Shown until the rows are measured; then as many as fit the window's height. */
   const RECENT_LOBBIES = 3;
+  /** The gap between lobby rows (space-y-1). */
+  const ROW_GAP = 4;
   const BAN_ICONS = 4;
 
-  $: recent = history.slice(0, RECENT_LOBBIES);
+  let listHeight = 0;
+  let rowHeight = 0;
+  $: fits = rowHeight
+    ? Math.max(1, Math.floor((listHeight + ROW_GAP) / (rowHeight + ROW_GAP)))
+    : RECENT_LOBBIES;
+  $: recent = history.slice(0, fits);
   // Players in more than one stored lobby stand out, since spotting them is what history is for.
   $: appearances = seenBeforeIndex(history, null);
-  $: pickRoles = LANES.filter((lane) => config?.pickChampions[lane]?.length).map(
-    (lane) => `${positionBadge(lane)} ${config?.pickChampions[lane]?.length}`,
-  );
+  /** Every role's picks in lane order, each champion once. */
+  $: pickChampions = [
+    ...new Set(LANES.flatMap((lane) => config?.pickChampions[lane] ?? [])),
+  ];
   $: channels = config ? notificationChannels(config) : [];
 
   function outcome(entry: LobbyHistoryEntry): { label: string; tone: string } {
@@ -124,8 +132,89 @@
   </section>
 {/if}
 
-<div class="grid min-h-0 flex-1 grid-cols-2 gap-3">
-  <section class="reveal-panel flex min-h-0 flex-col p-3">
+<div class="flex min-h-0 flex-1 flex-col gap-3">
+  <section class="reveal-panel shrink-0 p-3">
+    <div class="flex items-center justify-between">
+      <h2 class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        Automation
+      </h2>
+      <button
+        type="button"
+        class="text-[10px] text-muted-foreground transition hover:text-foreground"
+        on:click={() => onOpenPage("auto")}>Change ›</button
+      >
+    </div>
+    <dl class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-[11px]">
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Accept matches</dt>
+        <dd class:text-emerald-300={config?.autoAccept}>
+          {#if config?.autoAccept}
+            {config.acceptDelay >= 9000
+              ? "Last second"
+              : config.acceptDelay > 0
+                ? `After ${Math.round(config.acceptDelay / 1000)} sec`
+                : "Right away"}
+          {:else}
+            Off
+          {/if}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Queue again after a game</dt>
+        <dd class:text-emerald-300={config?.autoRequeue}>
+          {#if config?.autoRequeue}
+            {config.requeueDelaySeconds > 0 ? `After ${config.requeueDelaySeconds} sec` : "Right away"}
+          {:else}
+            Off
+          {/if}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Pause after a dodge</dt>
+        <dd class:text-emerald-300={config?.pauseQueueAfterDodge}>
+          {config?.pauseQueueAfterDodge ? "On" : "Off"}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Ban</dt>
+        <dd class="flex items-center gap-1">
+          {#if config?.autoBan && config.banChampions.length}
+            {#each config.banChampions.slice(0, BAN_ICONS) as championId (championId)}
+              <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
+            {/each}
+            {#if config.banChampions.length > BAN_ICONS}
+              <span class="text-[10px] text-muted-foreground">+{config.banChampions.length - BAN_ICONS}</span>
+            {/if}
+          {:else}
+            <span>{config?.autoBan ? "On, no list yet" : "Off"}</span>
+          {/if}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Lock in</dt>
+        <dd class="flex items-center gap-1">
+          {#if config?.autoPick && pickChampions.length}
+            {#each pickChampions.slice(0, BAN_ICONS) as championId (championId)}
+              <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
+            {/each}
+            {#if pickChampions.length > BAN_ICONS}
+              <span class="text-[10px] text-muted-foreground">+{pickChampions.length - BAN_ICONS}</span>
+            {/if}
+          {:else}
+            <span>{config?.autoPick ? "On, no list yet" : "Off"}</span>
+          {/if}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-muted-foreground">Notifications</dt>
+        <dd class:text-emerald-300={channels.length > 0} class="truncate">
+          {channels.length ? channels.join(" · ") : "Off"}
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="reveal-panel flex min-h-0 flex-1 flex-col p-3">
     <div class="flex items-center justify-between">
       <h2 class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
         Recent lobbies
@@ -139,11 +228,12 @@
       {/if}
     </div>
     {#if recent.length}
-      <div class="reveal-scrollbar mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
+      <div bind:clientHeight={listHeight} class="mt-2 min-h-0 flex-1 space-y-1 overflow-hidden">
         {#each recent as entry (entry.id)}
           {@const result = outcome(entry)}
           <button
             type="button"
+            bind:offsetHeight={rowHeight}
             class="block w-full rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-left transition hover:border-white/15 hover:bg-white/[0.04]"
             on:click={() => onOpenPage("history")}
           >
@@ -171,69 +261,4 @@
     {/if}
   </section>
 
-  <section class="reveal-panel flex min-h-0 flex-col p-3">
-    <div class="flex items-center justify-between">
-      <h2 class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-        Automation
-      </h2>
-      <button
-        type="button"
-        class="text-[10px] text-muted-foreground transition hover:text-foreground"
-        on:click={() => onOpenPage("auto")}>Change ›</button
-      >
-    </div>
-    <dl class="mt-2 space-y-2 text-[11px]">
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Accept matches</dt>
-        <dd class:text-emerald-300={config?.autoAccept}>
-          {#if config?.autoAccept}
-            {config.acceptDelay > 0 ? `After ${Math.round(config.acceptDelay / 1000)} sec` : "Right away"}
-          {:else}
-            Off
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Queue again after a game</dt>
-        <dd class:text-emerald-300={config?.autoRequeue}>{config?.autoRequeue ? "On" : "Off"}</dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Pause after a dodge</dt>
-        <dd class:text-emerald-300={config?.pauseQueueAfterDodge}>
-          {config?.pauseQueueAfterDodge ? "On" : "Off"}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Ban</dt>
-        <dd class="flex items-center gap-1">
-          {#if config?.autoBan && config.banChampions.length}
-            {#each config.banChampions.slice(0, BAN_ICONS) as championId (championId)}
-              <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
-            {/each}
-            {#if config.banChampions.length > BAN_ICONS}
-              <span class="text-[10px] text-muted-foreground">+{config.banChampions.length - BAN_ICONS}</span>
-            {/if}
-          {:else}
-            <span>{config?.autoBan ? "On, no list yet" : "Off"}</span>
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Lock in</dt>
-        <dd class:text-emerald-300={config?.autoPick} class="truncate">
-          {#if config?.autoPick}
-            {pickRoles.length ? `Hover, then ${pickRoles.join(" · ")}` : "Your hover"}
-          {:else}
-            Off
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Notifications</dt>
-        <dd class:text-emerald-300={channels.length > 0} class="truncate">
-          {channels.length ? channels.join(" · ") : "Off"}
-        </dd>
-      </div>
-    </dl>
-  </section>
 </div>

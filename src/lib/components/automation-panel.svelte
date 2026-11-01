@@ -8,6 +8,7 @@
   import ChampionList from "./champion-list.svelte";
   import InfoTip from "./info-tip.svelte";
   import NotificationSettings from "./notification-settings.svelte";
+  import WaitSelect from "./wait-select.svelte";
   import { Label } from "./ui/label";
   import * as Select from "./ui/select";
   import { Switch } from "./ui/switch";
@@ -23,13 +24,13 @@
   /** How each setting decides what to do, for its info icon. */
   const TIPS = {
     autoAccept:
-      "When the ready check pops, Reveal waits the time you pick, then accepts it. If you accept or decline it yourself while it waits, Reveal leaves it alone. It also leaves it alone while the queue is paused after a dodge.",
+      "When the ready check pops, Reveal waits the time you pick (counted from League's own 10-second timer), then accepts it. Last second accepts at 9 seconds, leaving a second for the click to land. If you accept or decline it yourself while it waits, Reveal leaves it alone. It also leaves it alone while the queue is paused after a dodge.",
     autoRequeue:
-      "When the game ends and the client reaches the post-game screen, Reveal waits 30 seconds, clicks Play Again and starts the same queue. If by then you've queued yourself, left the lobby or the queue is paused after a dodge, it does nothing. Only the party leader can start a queue.",
+      "When the game ends and the client reaches the post-game screen, Reveal waits the time you pick (counting down at the top of the Reveal tab), clicks Play Again and starts the same queue. If by then you've queued yourself, left the lobby or the queue is paused after a dodge, it does nothing. Only the party leader can start a queue.",
     requeuePastEstimate:
-      "While you're in queue, Reveal compares your time in queue with League's estimated time every 2 seconds. Once you've waited half again as long as the estimate (and at least a minute past it), it checks once more that no match has been found, leaves the queue, waits 30 seconds and queues again. It never touches a match that's already been found or a ready check that's up.",
+      "While you're in queue, Reveal compares your time in queue with League's estimated time every 2 seconds. Once you've waited half again as long as the estimate (and at least a minute past it), it checks once more that no match has been found, leaves the queue, waits the time you pick and queues again. It never touches a match that's already been found or a ready check that's up.",
     pauseAfterDodge:
-      "If champ select ends without the game starting (someone dodged), Reveal stops League from queueing you again and keeps you in the lobby until you press Find Match yourself. The automatic queue options wait too.",
+      "If champ select ends without the game starting (someone dodged), Reveal stops League from queueing you again and keeps you in the lobby until you press Find Match yourself, or until the time you pick has passed, when Reveal queues again (counting down at the top of the Reveal tab). The automatic queue options wait too.",
     autoOpen:
       "In champ select, Reveal opens your multi-search site (set on the Reveal tab) with your teammates' names as soon as all five are revealed, or after the wait you pick here with whoever is known by then.",
     autoBan:
@@ -53,8 +54,30 @@
     { label: "After 4 sec", value: "4000" },
     { label: "After 6 sec", value: "6000" },
     { label: "After 8 sec", value: "8000" },
+    { label: "Last second", value: "9000" },
   ];
   $: acceptWait = String(config?.acceptDelay ?? 2000);
+
+  /** How long to wait before queueing again, in seconds. */
+  const requeueWaitOptions = [
+    { label: "Right away", value: "0" },
+    { label: "After 10 sec", value: "10" },
+    { label: "After 20 sec", value: "20" },
+    { label: "After 30 sec", value: "30" },
+    { label: "After 60 sec", value: "60" },
+  ];
+  $: requeueWait = config?.requeueDelaySeconds ?? 30;
+  $: longQueueWait = config?.longQueueRequeueDelaySeconds ?? 30;
+
+  /** How long a pause after a dodge lasts, in seconds; 0 waits for you. */
+  const dodgePauseOptions = [
+    { label: "Manual", value: "0" },
+    { label: "10 sec", value: "10" },
+    { label: "30 sec", value: "30" },
+    { label: "60 sec", value: "60" },
+    { label: "2 min", value: "120" },
+  ];
+  $: dodgePause = config?.dodgePauseSeconds ?? 0;
 
   /** When to ban or lock in, as seconds left on League's timer. */
   const secondsLeftOptions = [
@@ -132,9 +155,17 @@
       <Label for="auto-requeue" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Queue again after a game<InfoTip text={TIPS.autoRequeue} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          30 seconds after the game ends, back to the lobby and into the same queue
+          {requeueWait === 0 ? "Right after" : `${requeueWait} seconds after`} the game ends,
+          back to the lobby and into the same queue
         </span>
       </Label>
+      <WaitSelect
+        options={requeueWaitOptions}
+        seconds={requeueWait}
+        label="How long to wait after a game before queueing again"
+        disabled={!config?.autoRequeue}
+        onChange={(requeueDelaySeconds) => update({ requeueDelaySeconds })}
+      />
       <Switch
         id="auto-requeue"
         checked={config?.autoRequeue ?? false}
@@ -146,10 +177,17 @@
       <Label for="requeue-past-estimate" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Restart long queues<InfoTip text={TIPS.requeuePastEstimate} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          Once you've waited well past League's estimated time, leave the queue and rejoin 30
-          seconds later
+          Once you've waited well past League's estimated time, leave the queue and rejoin
+          {longQueueWait === 0 ? "right away" : `${longQueueWait} seconds later`}
         </span>
       </Label>
+      <WaitSelect
+        options={requeueWaitOptions}
+        seconds={longQueueWait}
+        label="How long to wait before rejoining a long queue"
+        disabled={!config?.requeuePastEstimate}
+        onChange={(longQueueRequeueDelaySeconds) => update({ longQueueRequeueDelaySeconds })}
+      />
       <Switch
         id="requeue-past-estimate"
         checked={config?.requeuePastEstimate ?? false}
@@ -161,9 +199,19 @@
       <Label for="pause-after-dodge" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Pause queue after a dodge<InfoTip text={TIPS.pauseAfterDodge} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          Return to the lobby until you queue again yourself; the automatic requeues wait too
+          {dodgePause === 0
+            ? "Return to the lobby until you queue again yourself"
+            : `Return to the lobby, then queue again ${dodgePause} seconds later unless you do`};
+          the automatic requeues wait too
         </span>
       </Label>
+      <WaitSelect
+        options={dodgePauseOptions}
+        seconds={dodgePause}
+        label="How long the pause after a dodge lasts"
+        disabled={!config?.pauseQueueAfterDodge}
+        onChange={(dodgePauseSeconds) => update({ dodgePauseSeconds })}
+      />
       <Switch
         id="pause-after-dodge"
         checked={config?.pauseQueueAfterDodge ?? false}

@@ -1,8 +1,6 @@
 <script lang="ts">
   import type { Config } from "$lib/config";
   import { MULTI_PROVIDERS, PLAYER_CLICK_ACTIONS } from "$lib/config";
-  import { logFrontendError, openLogFolder } from "$lib/logging";
-  import { isTauriRuntime } from "$lib/runtime";
   import { Label } from "./ui/label";
   import * as Select from "./ui/select";
 
@@ -16,11 +14,6 @@
   function updateConfig(patch: Partial<Config>) {
     if (!config) return;
     onChange({ ...config, ...patch });
-  }
-
-  function openLogs() {
-    if (!isTauriRuntime()) return;
-    openLogFolder().catch((error) => logFrontendError("Failed to open the log folder", error));
   }
 </script>
 
@@ -83,15 +76,6 @@
         {/each}
       </Select.Content>
     </Select.Root>
-
-    <button
-      type="button"
-      class="mt-2.5 text-[10px] text-muted-foreground underline-offset-2 transition hover:text-foreground hover:underline"
-      title="Opens the folder with reveal.log. Attach it when you report a bug."
-      on:click={openLogs}
-    >
-      Open logs folder
-    </button>
   </div>
 
 </section>

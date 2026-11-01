@@ -36,6 +36,8 @@
   let state = "Unknown";
   let connected = false;
   let queuePaused = false;
+  /** Reveal's countdown to queueing again, after a game or a queue that ran long. */
+  let requeue: { deadline: number; after: "game" | "queue" | "dodge" } | null = null;
   let champSelect: ChampSelect | null = null;
   let matchups: MatchupBoard | null = null;
   let config: Config | null = null;
@@ -226,6 +228,11 @@
           }),
         );
         listeners.push(
+          await listen<typeof requeue>("requeue_countdown", ({ payload }) => {
+            requeue = payload;
+          }),
+        );
+        listeners.push(
           await listen<boolean>("queue_pause_update", ({ payload }) => {
             queuePaused = payload;
           }),
@@ -331,6 +338,7 @@
           {activeLobbyId}
           {liveGame}
           {queueName}
+          {requeue}
           onConfigChange={setConfig}
           onOpenPage={navigate}
         />
@@ -356,7 +364,7 @@
       </div>
     {/if}
   </div>
-  <Footer {connected} inGame={liveGame !== null} />
+  <Footer {connected} {state} {queuePaused} inGame={liveGame !== null} />
   {#if showDiscordPrompt}
     <DiscordPrompt onClose={closeDiscordPrompt} />
   {/if}
