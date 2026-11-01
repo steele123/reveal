@@ -4,6 +4,14 @@
     formatRank,
     profileIconUrl,
   } from "$lib/champ_select";
+  import {
+    ACCEPT_TIMES,
+    DODGE_TIMES,
+    OPEN_TIMES,
+    REQUEUE_TIMES,
+    SECONDS_LEFT_TIMES,
+    shortTime,
+  } from "$lib/automation_times";
   import type { Config } from "$lib/config";
   import {
     formatTimeAgo,
@@ -56,7 +64,7 @@
   const RECENT_LOBBIES = 3;
   /** The gap between lobby rows (space-y-1). */
   const ROW_GAP = 4;
-  const BAN_ICONS = 4;
+  const CHAMPION_ICONS = 3;
 
   let listHeight = 0;
   let rowHeight = 0;
@@ -71,6 +79,40 @@
     ...new Set(LANES.flatMap((lane) => config?.pickChampions[lane] ?? [])),
   ];
   $: channels = config ? notificationChannels(config) : [];
+  /** Every on/off setting with a time, in the Settings tab's order. */
+  $: timedSettings = config
+    ? [
+        { label: "Accept matches", on: config.autoAccept, time: shortTime(ACCEPT_TIMES, config.acceptDelay) },
+        {
+          label: "Queue again after a game",
+          on: config.autoRequeue,
+          time: shortTime(REQUEUE_TIMES, config.requeueDelaySeconds),
+        },
+        {
+          label: "Restart long queues",
+          on: config.requeuePastEstimate,
+          time: shortTime(REQUEUE_TIMES, config.longQueueRequeueDelaySeconds),
+        },
+        {
+          label: "Pause after a dodge",
+          on: config.pauseQueueAfterDodge,
+          time: shortTime(DODGE_TIMES, config.dodgePauseSeconds),
+        },
+        { label: "Open lookup", on: config.autoOpen, time: shortTime(OPEN_TIMES, config.autoOpenDelaySeconds) },
+        {
+          label: "Ban",
+          on: config.autoBan,
+          time: shortTime(SECONDS_LEFT_TIMES, config.autoBanSecondsLeft),
+          champions: config.banChampions,
+        },
+        {
+          label: "Lock in",
+          on: config.autoPick,
+          time: shortTime(SECONDS_LEFT_TIMES, config.autoPickSecondsLeft),
+          champions: pickChampions,
+        },
+      ]
+    : [];
 
   function outcome(entry: LobbyHistoryEntry): { label: string; tone: string } {
     if (entry.gameStartedAt) return { label: "Played", tone: "text-emerald-300 bg-emerald-500/10" };
@@ -145,68 +187,24 @@
       >
     </div>
     <dl class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-[11px]">
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Accept matches</dt>
-        <dd class:text-emerald-300={config?.autoAccept}>
-          {#if config?.autoAccept}
-            {config.acceptDelay >= 9000
-              ? "Last second"
-              : config.acceptDelay > 0
-                ? `After ${Math.round(config.acceptDelay / 1000)} sec`
-                : "Right away"}
-          {:else}
-            Off
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Queue again after a game</dt>
-        <dd class:text-emerald-300={config?.autoRequeue}>
-          {#if config?.autoRequeue}
-            {config.requeueDelaySeconds > 0 ? `After ${config.requeueDelaySeconds} sec` : "Right away"}
-          {:else}
-            Off
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Pause after a dodge</dt>
-        <dd class:text-emerald-300={config?.pauseQueueAfterDodge}>
-          {config?.pauseQueueAfterDodge ? "On" : "Off"}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Ban</dt>
-        <dd class="flex items-center gap-1">
-          {#if config?.autoBan && config.banChampions.length}
-            {#each config.banChampions.slice(0, BAN_ICONS) as championId (championId)}
-              <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
-            {/each}
-            {#if config.banChampions.length > BAN_ICONS}
-              <span class="text-[10px] text-muted-foreground">+{config.banChampions.length - BAN_ICONS}</span>
+      {#each timedSettings as setting (setting.label)}
+        <div class="flex min-w-0 items-center justify-between gap-2">
+          <dt class="truncate text-muted-foreground">{setting.label}</dt>
+          <dd class="flex shrink-0 items-center gap-1" class:text-emerald-300={setting.on}>
+            {#if setting.on && setting.champions?.length}
+              {#each setting.champions.slice(0, CHAMPION_ICONS) as championId (championId)}
+                <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
+              {/each}
+              {#if setting.champions.length > CHAMPION_ICONS}
+                <span class="text-[10px] text-muted-foreground">+{setting.champions.length - CHAMPION_ICONS}</span>
+              {/if}
             {/if}
-          {:else}
-            <span>{config?.autoBan ? "On, no list yet" : "Off"}</span>
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Lock in</dt>
-        <dd class="flex items-center gap-1">
-          {#if config?.autoPick && pickChampions.length}
-            {#each pickChampions.slice(0, BAN_ICONS) as championId (championId)}
-              <img src={championIconUrl(championId)} alt="" class="h-5 w-5 rounded bg-white/5 object-cover" />
-            {/each}
-            {#if pickChampions.length > BAN_ICONS}
-              <span class="text-[10px] text-muted-foreground">+{pickChampions.length - BAN_ICONS}</span>
-            {/if}
-          {:else}
-            <span>{config?.autoPick ? "On, no list yet" : "Off"}</span>
-          {/if}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between gap-2">
-        <dt class="text-muted-foreground">Notifications</dt>
+            <span class="tabular-nums">{setting.on ? `On · ${setting.time}` : "Off"}</span>
+          </dd>
+        </div>
+      {/each}
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <dt class="truncate text-muted-foreground">Notifications</dt>
         <dd class:text-emerald-300={channels.length > 0} class="truncate">
           {channels.length ? channels.join(" · ") : "Off"}
         </dd>

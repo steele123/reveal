@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Config } from "$lib/config";
+  import {
+    ACCEPT_TIMES,
+    DODGE_TIMES,
+    OPEN_TIMES,
+    REQUEUE_TIMES,
+    SECONDS_LEFT_TIMES,
+  } from "$lib/automation_times";
   import { formatAssignedPosition } from "$lib/champ_select";
   import { loadChampionNames, type ChampionName } from "$lib/champions";
   import { logFrontendError } from "$lib/logging";
@@ -36,44 +43,6 @@
     autoPick:
       "In your pick turn, once only the time you set is left (the last second, by default) and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
   };
-
-  // Times for each on/off setting; `short` shows in the control, `label` in its menu.
-  const acceptTimes = [
-    { value: 0, label: "Right away", short: "0s" },
-    { value: 2000, label: "After 2 sec", short: "2s" },
-    { value: 4000, label: "After 4 sec", short: "4s" },
-    { value: 6000, label: "After 6 sec", short: "6s" },
-    { value: 8000, label: "After 8 sec", short: "8s" },
-    { value: 9000, label: "Last second", short: "Last" },
-  ];
-  const requeueTimes = [
-    { value: 0, label: "Right away", short: "0s" },
-    { value: 10, label: "After 10 sec", short: "10s" },
-    { value: 20, label: "After 20 sec", short: "20s" },
-    { value: 30, label: "After 30 sec", short: "30s" },
-    { value: 60, label: "After 60 sec", short: "60s" },
-  ];
-  const dodgeTimes = [
-    { value: 0, label: "Until I queue", short: "∞" },
-    { value: 10, label: "10 sec", short: "10s" },
-    { value: 30, label: "30 sec", short: "30s" },
-    { value: 60, label: "60 sec", short: "60s" },
-    { value: 120, label: "2 min", short: "2m" },
-  ];
-  const openTimes = [
-    { value: 0, label: "Now", short: "0s" },
-    { value: 4, label: "Up to 4 sec", short: "4s" },
-    { value: 6, label: "Up to 6 sec", short: "6s" },
-    { value: 10, label: "Up to 10 sec", short: "10s" },
-  ];
-
-  /** When to ban or lock in, as seconds left on League's timer. */
-  const secondsLeftTimes = [
-    { value: 1, label: "Last second", short: "Last" },
-    { value: 3, label: "3 sec left", short: "3s" },
-    { value: 5, label: "5 sec left", short: "5s" },
-    { value: 10, label: "10 sec left", short: "10s" },
-  ];
 
   onMount(() => {
     loadChampionNames()
@@ -112,7 +81,7 @@
         id="auto-accept"
         enabled={config?.autoAccept ?? false}
         value={config?.acceptDelay ?? 2000}
-        options={acceptTimes}
+        options={ACCEPT_TIMES}
         disabled={!config}
         onToggle={(autoAccept) => update({ autoAccept })}
         onChange={(acceptDelay) => update({ acceptDelay })}
@@ -130,7 +99,7 @@
         id="auto-requeue"
         enabled={config?.autoRequeue ?? false}
         value={config?.requeueDelaySeconds ?? 0}
-        options={requeueTimes}
+        options={REQUEUE_TIMES}
         disabled={!config}
         onToggle={(autoRequeue) => update({ autoRequeue })}
         onChange={(requeueDelaySeconds) => update({ requeueDelaySeconds })}
@@ -148,7 +117,7 @@
         id="requeue-past-estimate"
         enabled={config?.requeuePastEstimate ?? false}
         value={config?.longQueueRequeueDelaySeconds ?? 0}
-        options={requeueTimes}
+        options={REQUEUE_TIMES}
         disabled={!config}
         onToggle={(requeuePastEstimate) => update({ requeuePastEstimate })}
         onChange={(longQueueRequeueDelaySeconds) => update({ longQueueRequeueDelaySeconds })}
@@ -166,7 +135,7 @@
         id="pause-after-dodge"
         enabled={config?.pauseQueueAfterDodge ?? false}
         value={config?.dodgePauseSeconds ?? 0}
-        options={dodgeTimes}
+        options={DODGE_TIMES}
         disabled={!config}
         onToggle={(pauseQueueAfterDodge) => update({ pauseQueueAfterDodge })}
         onChange={(dodgePauseSeconds) => update({ dodgePauseSeconds })}
@@ -193,7 +162,7 @@
           id="auto-open"
           enabled={config?.autoOpen ?? false}
           value={config?.autoOpenDelaySeconds ?? 6}
-          options={openTimes}
+          options={OPEN_TIMES}
           disabled={!config}
           onToggle={(autoOpen) => update({ autoOpen })}
           onChange={(autoOpenDelaySeconds) => update({ autoOpenDelaySeconds })}
@@ -213,7 +182,7 @@
           label="Ban automatically"
           enabled={config?.autoBan ?? false}
           value={config?.autoBanSecondsLeft ?? 1}
-          options={secondsLeftTimes}
+          options={SECONDS_LEFT_TIMES}
           disabled={!config}
           onToggle={(autoBan) => update({ autoBan })}
           onChange={(autoBanSecondsLeft) => update({ autoBanSecondsLeft })}
@@ -241,7 +210,7 @@
           label="Lock in automatically"
           enabled={config?.autoPick ?? false}
           value={config?.autoPickSecondsLeft ?? 1}
-          options={secondsLeftTimes}
+          options={SECONDS_LEFT_TIMES}
           disabled={!config}
           onToggle={(autoPick) => update({ autoPick })}
           onChange={(autoPickSecondsLeft) => update({ autoPickSecondsLeft })}
