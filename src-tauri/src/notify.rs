@@ -354,6 +354,10 @@ mod tests {
             vec![Channel::Desktop]
         );
         assert!(channels(&settings, Alert::LobbyRevealed).is_empty());
+        assert!(
+            channels(&settings, Alert::AutoQueue).is_empty(),
+            "only match found, your turn and dodges start on"
+        );
         assert_eq!(channels(&settings, Alert::Test).len(), 3);
     }
 

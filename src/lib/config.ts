@@ -82,9 +82,9 @@ export const DEFAULT_CONFIG: Config = {
     pickChampions: {},
     notifications: {
         desktop: ["autoAction", "dodge"],
-        phone: ["autoQueue", "matchFound", "yourTurn", "dodge"],
+        phone: ["matchFound", "yourTurn", "dodge"],
         ntfyTopic: "",
-        discord: ["autoQueue", "matchFound", "yourTurn", "dodge"],
+        discord: ["matchFound", "yourTurn", "dodge"],
         discordWebhook: "",
     },
 };
