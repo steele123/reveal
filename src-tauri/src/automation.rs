@@ -246,23 +246,14 @@ async fn available_champions(client: &RESTClient, kind: &str) -> Option<HashSet<
     (!ids.is_empty()).then(|| ids.into_iter().collect())
 }
 
-/// Chooses the champion and locks the ban or pick in. Shaco has no PATCH, so this talks to the
-/// client directly; like the live game API, it only ever reaches 127.0.0.1.
+/// Chooses the champion and locks the ban or pick in.
 async fn complete_action(client: &RESTClient, action_id: i64, champion_id: i64) -> anyhow::Result<()> {
-    let info = &client.lcu_client_info;
-    reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .timeout(Duration::from_secs(3))
-        .build()?
-        .patch(format!(
-            "https://127.0.0.1:{}/lol-champ-select/v1/session/actions/{action_id}",
-            info.remoting_port
-        ))
-        .header("Authorization", format!("Basic {}", info.remoting_token))
-        .json(&json!({ "championId": champion_id, "completed": true }))
-        .send()
-        .await?
-        .error_for_status()?;
+    client
+        .patch(
+            format!("/lol-champ-select/v1/session/actions/{action_id}"),
+            json!({ "championId": champion_id, "completed": true }),
+        )
+        .await?;
     Ok(())
 }
 
