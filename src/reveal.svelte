@@ -332,6 +332,7 @@
           {liveGame}
           {queueName}
           onConfigChange={setConfig}
+          onOpenPage={navigate}
         />
       {/if}
     {:else}
