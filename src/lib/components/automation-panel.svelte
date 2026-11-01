@@ -31,9 +31,9 @@
     autoOpen:
       "In champ select, Reveal opens your multi-search site (set on the Reveal tab) with your teammates' names as soon as all five are revealed, or after the wait you pick here with whoever is known by then.",
     autoBan:
-      "In your ban turn, once only 3 seconds are left and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
+      "In your ban turn, in the last second or so and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
     autoPick:
-      "In your pick turn, once only 3 seconds are left and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
+      "In your pick turn, in the last second or so and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
   };
 
   const autoOpenWaitOptions = [

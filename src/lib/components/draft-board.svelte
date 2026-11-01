@@ -104,11 +104,21 @@
       .join(" · ");
   }
 
+  /** A lane matchup with this few games says nothing, so it gets a note instead of numbers. */
+  const MIN_LANE_GAMES = 20;
+
+  function shownStats(lane: DraftLane) {
+    const stats = lane.enemy?.ally?.stats ?? null;
+    return stats && stats.games >= MIN_LANE_GAMES ? stats : null;
+  }
+
   /** What the stat columns say when there are no numbers to show. */
   function statsNote(lane: DraftLane): string {
     if (!lane.enemy) return "";
     if (lane.enemy.loading) return "Loading…";
     if (!lane.enemy.ally) return "Waiting for your pick";
+    const games = lane.enemy.ally.stats?.games ?? 0;
+    if (games > 0) return `Only ${games} Master+ game${games === 1 ? "" : "s"}`;
     return "No Master+ games";
   }
 </script>
@@ -140,7 +150,7 @@
       {#each lanes as lane, index (lane.role ?? lane.player?.puuid ?? `enemy-${index}`)}
         {@const player = lane.player}
         {@const enemy = lane.enemy}
-        {@const stats = enemy?.ally?.stats ?? null}
+        {@const stats = shownStats(lane)}
         {@const offRole = player ? offRoleReason(player) : null}
         {@const seen = player ? seenBefore(player) : undefined}
         <div
