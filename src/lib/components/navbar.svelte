@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getVersion } from "@tauri-apps/api/app";
+  import { invoke } from "@tauri-apps/api/tauri";
   import { appWindow } from "@tauri-apps/api/window";
   import { isTauriRuntime } from "$lib/runtime";
 
@@ -19,8 +20,9 @@
     if (isTauriRuntime()) void appWindow.minimize();
   }
 
+  /** Reveal keeps running in the tray; quit it from the tray icon's menu. */
   function close() {
-    if (isTauriRuntime()) void appWindow.close();
+    if (isTauriRuntime()) void invoke("hide_to_tray");
   }
 </script>
 

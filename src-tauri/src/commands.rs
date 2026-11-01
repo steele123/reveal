@@ -268,3 +268,21 @@ pub fn write_frontend_log(level: String, message: String) {
         _ => log_info!("Frontend: {message}"),
     }
 }
+
+/// Hides the window instead of quitting, and says so, so Reveal doesn't seem to have closed.
+#[tauri::command]
+pub fn hide_to_tray(window: tauri::Window) {
+    if let Err(error) = window.hide() {
+        log_error!("Couldn't hide the window: {error}");
+        return;
+    }
+    log_info!("Window hidden; Reveal keeps running in the tray");
+    let identifier = &window.app_handle().config().tauri.bundle.identifier;
+    if let Err(error) = tauri::api::notification::Notification::new(identifier)
+        .title("Reveal is still running")
+        .body("It keeps watching League from the tray. Right-click the tray icon to quit.")
+        .show()
+    {
+        log_error!("Couldn't show the tray notice: {error}");
+    }
+}
