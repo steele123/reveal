@@ -44,7 +44,7 @@
     { value: 4000, label: "After 4 sec", short: "4s" },
     { value: 6000, label: "After 6 sec", short: "6s" },
     { value: 8000, label: "After 8 sec", short: "8s" },
-    { value: 9000, label: "Last second", short: "9s" },
+    { value: 9000, label: "Last second", short: "Last" },
   ];
   const requeueTimes = [
     { value: 0, label: "Right away", short: "0s" },
