@@ -34,7 +34,7 @@
   export let enemyPlayers: Participant[] = [];
   export let board: MatchupBoard | null = null;
   /** The saved choice; the board says which site its numbers are from. */
-  export let provider: CountersProvider = "ugg";
+  export let provider: CountersProvider = "lolalytics";
   export let onProviderChange: (provider: CountersProvider) => void = () => {};
   export let seenBefore: (participant: Participant) => SeenBefore | undefined = () => undefined;
   export let onSelectPlayer: (participant: Participant) => void = () => {};

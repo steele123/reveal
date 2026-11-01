@@ -27,11 +27,11 @@
   /** The enemy pick whose counters to list. */
   export let enemy: EnemyMatchups;
   /** The site the numbers came from. */
-  export let provider: CountersProvider = "ugg";
+  export let provider: CountersProvider = "lolalytics";
 
   const COLUMNS = "grid-cols-[minmax(0,1fr)_46px_46px_46px_38px_32px_42px_42px_24px]";
 
-  $: providerLabel = COUNTERS_PROVIDERS.find(({ value }) => value === provider)?.label ?? "U.GG";
+  $: providerLabel = COUNTERS_PROVIDERS.find(({ value }) => value === provider)?.label ?? "Lolalytics";
 
   function open(link: string) {
     openExternalLink(link).catch((error) =>

@@ -34,7 +34,7 @@
 
   export let champSelect: ChampSelect | null = null;
   export let matchups: MatchupBoard | null = null;
-  export let countersProvider: CountersProvider = "ugg";
+  export let countersProvider: CountersProvider = "lolalytics";
   export let onCountersProviderChange: (provider: CountersProvider) => void = () => {};
   export let clickAction: PlayerClickAction = "details";
   export let provider: MultiProvider = "opgg";

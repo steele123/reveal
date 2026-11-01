@@ -104,7 +104,7 @@
       <ChampSelectPanel
         {champSelect}
         {matchups}
-        countersProvider={config?.countersProvider ?? "ugg"}
+        countersProvider={config?.countersProvider ?? "lolalytics"}
         onCountersProviderChange={(countersProvider) => {
           if (config) void handleConfigChange({ ...config, countersProvider });
         }}

@@ -44,7 +44,7 @@
   /** The browser preview's sample board, shown as the chosen provider would. */
   let previewMatchups: MatchupBoard | null = null;
   $: if (previewMatchups) {
-    matchups = previewForProvider(previewMatchups, config?.countersProvider ?? "ugg");
+    matchups = previewForProvider(previewMatchups, config?.countersProvider ?? "lolalytics");
   }
   let history: LobbyHistoryEntry[] = [];
   let activeLobbyId: string | null = null;
