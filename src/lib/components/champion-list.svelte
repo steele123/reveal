@@ -31,9 +31,8 @@
   $: if (highlighted >= matches.length) highlighted = 0;
   $: if (!open) typed = "";
 
-  function nameOf(championId: number): string {
-    return names.get(championId) ?? `Champion ${championId}`;
-  }
+  // Reactive, so the tiles get their names once the list loads after them.
+  $: nameOf = (championId: number): string => names.get(championId) ?? `Champion ${championId}`;
 
   async function add(champion: ChampionName | undefined) {
     if (!champion || ids.includes(champion.id) || ids.length >= MAX_CHAMPIONS) return;
