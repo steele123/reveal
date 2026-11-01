@@ -43,6 +43,9 @@
         "all": false,
         "writeText": true
       },
+      "notification": {
+        "all": true
+      },
       "http": {
         "all": false,
         "request": true,
@@ -78,12 +81,15 @@
     "windows": [
       {
         "fullscreen": false,
-        "resizable": false,
+        "resizable": true,
         "title": "reveal",
-        "width": 600,
-        "height": 500,
+        "width": 680,
+        "height": 680,
+        "minWidth": 600,
+        "minHeight": 500,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "fileDropEnabled": false
       }
     ]
   }

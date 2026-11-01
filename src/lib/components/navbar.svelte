@@ -4,9 +4,9 @@
   import { appWindow } from "@tauri-apps/api/window";
   import { isTauriRuntime } from "$lib/runtime";
 
-  export let activePage: "reveal" | "history" = "reveal";
+  export let activePage: "reveal" | "history" | "auto" = "reveal";
   export let historyCount = 0;
-  export let onNavigate: (page: "reveal" | "history") => void = () => {};
+  export let onNavigate: (page: "reveal" | "history" | "auto") => void = () => {};
 
   let version = "Preview";
 
@@ -63,6 +63,15 @@
       {#if historyCount > 0}
         <span class="text-[9px] tabular-nums opacity-70">{historyCount}</span>
       {/if}
+    </button>
+    <button
+      class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
+        activePage === "auto" ? "bg-white/10 text-foreground" : ""
+      }`}
+      title="Automatic requeue, bans and picks"
+      on:click={() => onNavigate("auto")}
+    >
+      Auto
     </button>
   </nav>
 

@@ -23,6 +23,8 @@
   } from "$lib/link_actions";
   import type { MultiProvider, PlayerClickAction } from "$lib/config";
   import PlayerDetails from "./player-details.svelte";
+  import DraftBoard from "./draft-board.svelte";
+  import type { CountersProvider, MatchupBoard } from "$lib/matchups";
   import {
     describeSeenBefore,
     participantKey,
@@ -31,12 +33,19 @@
   } from "$lib/lobby_history";
 
   export let champSelect: ChampSelect | null = null;
+  export let matchups: MatchupBoard | null = null;
+  export let countersProvider: CountersProvider = "lolalytics";
+  export let onCountersProviderChange: (provider: CountersProvider) => void = () => {};
   export let clickAction: PlayerClickAction = "details";
   export let provider: MultiProvider = "opgg";
   export let queueName: string | null = null;
 
   $: allies = champSelect?.participants.filter((participant) => !participant.is_enemy) ?? [];
   $: enemies = champSelect?.participants.filter((participant) => participant.is_enemy) ?? [];
+  // Queues with lanes get the draft board, lined up by lane with counters below; the rest
+  // (ARAM, blind pick) keep the plain list.
+  $: hasLanes =
+    matchups !== null || allies.some((participant) => Boolean(participant.assigned_position));
   // Both teams side by side when the enemy team is visible (ranked 5-stacks).
   $: sections = enemies.length
     ? [
@@ -125,6 +134,17 @@
     </div>
   </div>
 
+  {#if champSelect && hasLanes}
+    <DraftBoard
+      {allies}
+      enemyPlayers={enemies}
+      board={matchups}
+      provider={countersProvider}
+      onProviderChange={onCountersProviderChange}
+      {seenBefore}
+      onSelectPlayer={selectPlayer}
+    />
+  {:else}
   <!-- Top to bottom in pick order, like the League client; enemies get their own column. -->
   <div class="reveal-scrollbar -mr-1 grid min-h-0 gap-2 overflow-y-auto pr-1 text-sm" class:grid-cols-2={enemies.length > 0}>
     {#if champSelect}
@@ -256,6 +276,7 @@
       {/each}
     {/if}
   </div>
+  {/if}
 
   <div class="mt-auto flex gap-2">
     <Button

@@ -1,7 +1,8 @@
 use crate::{
     app_state::QueuePause,
     champ_select::{handle_champ_select_start, PollingGuard},
-    config::AppConfig,
+    config::{AppConfig, Config},
+    notify::{Alert, Notice},
 };
 use shaco::rest::RESTClient;
 use tauri::{AppHandle, Manager};
@@ -52,6 +53,15 @@ pub async fn handle_client_state(
         });
     }
 
+    if phase_update.ready_check_generation.is_some() {
+        crate::notify::send(app_handle, match_found_notice(&cfg));
+    }
+    if phase_update.dodged {
+        crate::notify::send(app_handle, dodge_notice(&cfg, &client_state));
+    }
+
+    crate::automation::on_phase(&client_state, app_handle, remoting_client);
+
     match client_state.as_str() {
         "ChampSelect" => {
             let Some(polling_guard) = PollingGuard::acquire() else {
@@ -88,10 +98,7 @@ pub async fn handle_client_state(
                 let app_handle = app_handle.clone();
                 let remoting_client = remoting_client.clone();
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(
-                        u64::from(cfg.accept_delay).saturating_sub(1_000),
-                    ))
-                    .await;
+                    tokio::time::sleep(accept_wait(&cfg)).await;
 
                     let ready_check_is_current = {
                         let pause = app_handle.state::<QueuePause>();
@@ -117,6 +124,14 @@ pub async fn handle_client_state(
                         log_info!("Skipping stale or paused ready-check auto-accept");
                         return;
                     }
+                    // The wait is there so you can decline; whatever you chose stands.
+                    let ready_check = remoting_client
+                        .get("/lol-matchmaking/v1/ready-check".to_string())
+                        .await;
+                    if ready_check.as_ref().is_ok_and(answered_yourself) {
+                        log_info!("Skipping auto-accept: you answered the ready check yourself");
+                        return;
+                    }
 
                     if let Err(error) = remoting_client
                         .post(
@@ -136,6 +151,78 @@ pub async fn handle_client_state(
     }
 
     emit_client_state(app_handle, client_state);
+}
+
+/// The ready check lasts about 10 seconds, so a longer wait would let it run out.
+const MAX_ACCEPT_WAIT: std::time::Duration = std::time::Duration::from_secs(8);
+
+/// How long auto accept waits after the ready check pops, so you can still decline.
+fn accept_wait(cfg: &Config) -> std::time::Duration {
+    std::time::Duration::from_millis(u64::from(cfg.accept_delay)).min(MAX_ACCEPT_WAIT)
+}
+
+/// Whether you already accepted or declined the ready check in League.
+fn answered_yourself(ready_check: &serde_json::Value) -> bool {
+    matches!(
+        ready_check["playerResponse"].as_str(),
+        Some("Accepted" | "Declined")
+    )
+}
+
+fn match_found_notice(cfg: &Config) -> Notice {
+    let seconds = accept_wait(cfg).as_secs();
+    let body = if !cfg.auto_accept {
+        "Accept it in League before the timer runs out.".to_string()
+    } else if seconds == 0 {
+        "Reveal accepts it right away.".to_string()
+    } else {
+        format!("Reveal accepts it in {seconds} seconds unless you answer first.")
+    };
+    Notice::new(Alert::MatchFound, "Match found", body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn waits_as_long_as_set_but_never_past_the_ready_check() {
+        let wait = |accept_delay| accept_wait(&Config { accept_delay, ..Config::default() });
+        assert_eq!(wait(0).as_secs(), 0);
+        assert_eq!(wait(4_000).as_secs(), 4);
+        assert_eq!(wait(60_000), MAX_ACCEPT_WAIT);
+    }
+
+    #[test]
+    fn leaves_ready_checks_you_answered() {
+        assert!(!answered_yourself(&json!({ "playerResponse": "None", "state": "InProgress" })));
+        assert!(answered_yourself(&json!({ "playerResponse": "Declined" })));
+        assert!(answered_yourself(&json!({ "playerResponse": "Accepted" })));
+        assert!(!answered_yourself(&json!({})));
+    }
+
+    #[test]
+    fn says_when_reveal_will_accept() {
+        let notice = |auto_accept, accept_delay| {
+            match_found_notice(&Config { auto_accept, accept_delay, ..Config::default() }).body
+        };
+        assert_eq!(notice(true, 4_000), "Reveal accepts it in 4 seconds unless you answer first.");
+        assert_eq!(notice(true, 0), "Reveal accepts it right away.");
+        assert_eq!(notice(false, 4_000), "Accept it in League before the timer runs out.");
+    }
+}
+
+/// `phase` is where the client went after Champ Select.
+fn dodge_notice(cfg: &Config, phase: &str) -> Notice {
+    let body = if cfg.pause_queue_after_dodge {
+        "Reveal paused your queue until you start it again."
+    } else if phase == "Matchmaking" {
+        "You're back in queue."
+    } else {
+        "You're back in the lobby."
+    };
+    Notice::new(Alert::Dodge, "Champ Select ended without a game", body)
 }
 
 fn emit_client_state(app_handle: &AppHandle, client_state: String) {

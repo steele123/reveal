@@ -1,6 +1,12 @@
 use crate::{
-    analytics, champions, config::Config, lobby, lookup::Lookup, ranked, region::RegionInfo, roles,
-    summoner, utils::display_champ_select,
+    analytics, champions,
+    config::{AppConfig, Config},
+    lobby,
+    lookup::Lookup,
+    matchups, ranked,
+    region::RegionInfo,
+    roles, summoner,
+    utils::display_champ_select,
 };
 use serde::Deserialize;
 use shaco::rest::RESTClient;
@@ -12,7 +18,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 const EXPECTED_PARTICIPANT_COUNT: usize = 5;
 const PARTICIPANT_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -121,6 +127,10 @@ pub async fn handle_champ_select_start(
     let mut first_participant_seen_at: Option<Instant> = None;
     let mut session_warning_logged = false;
     let mut players = PlayerCache::default();
+    let mut matchup_lookups = matchups::MatchupLookups::default();
+    // Lanes dragged around last Champ Select are about other picks.
+    matchups::clear_role_overrides();
+    let mut last_matchups: Option<matchups::MatchupBoard> = None;
     let queue_name = crate::queue::current_queue_name(remoting_client).await;
     crate::events::emit(app_handle, "queue_name", &queue_name);
     let mut analytics_sent = false;
@@ -147,6 +157,40 @@ pub async fn handle_champ_select_start(
             break;
         }
 
+        let session = match get_champ_select_session(remoting_client).await {
+            Ok(session) => {
+                session_warning_logged = false;
+                Some(session)
+            }
+            Err(error) => {
+                if !session_warning_logged {
+                    log_warn!(
+                        "Champ Select slot information is not available yet; names will still be revealed: {error}"
+                    );
+                    session_warning_logged = true;
+                }
+                None
+            }
+        };
+
+        // Picks come from the session alone, so counters don't wait for chat.
+        if let Some(session) = &session {
+            let mut picks = draft_picks(session);
+            matchups::apply_role_overrides(&mut picks);
+            // Read every time, so switching the main site applies right away.
+            let provider = {
+                let config = app_handle.state::<AppConfig>();
+                let setting = config.0.lock().await.counters_provider.clone();
+                matchups::Provider::from_setting(&setting)
+            };
+            matchup_lookups.fetch_missing(remoting_client, &picks).await;
+            let board = matchup_lookups.board(&picks, provider);
+            if board != last_matchups {
+                crate::events::emit(app_handle, "champ_select_matchups", &board);
+                last_matchups = board;
+            }
+        }
+
         // This will return an error if we aren't connected to chat
         let mut team = match lobby::get_lobby_info(app_client).await {
             Ok(team) => team,
@@ -161,25 +205,12 @@ pub async fn handle_champ_select_start(
             participant.region = region.to_string();
         }
 
-        let session = match get_champ_select_session(remoting_client).await {
-            Ok(session) => {
-                session_warning_logged = false;
-                apply_champ_select_context(&mut team, &session.my_team);
-                mark_local_player(&mut team, &session.my_team, session.local_player_cell_id);
-                add_visible_enemies(&mut team, &session.their_team);
-                mark_enemies(&mut team, &session.my_team, &session.their_team);
-                Some(session)
-            }
-            Err(error) => {
-                if !session_warning_logged {
-                    log_warn!(
-                        "Champ Select slot information is not available yet; names will still be revealed: {error}"
-                    );
-                    session_warning_logged = true;
-                }
-                None
-            }
-        };
+        if let Some(session) = &session {
+            apply_champ_select_context(&mut team, &session.my_team);
+            mark_local_player(&mut team, &session.my_team, session.local_player_cell_id);
+            add_visible_enemies(&mut team, &session.their_team);
+            mark_enemies(&mut team, &session.my_team, &session.their_team);
+        }
         players.fetch_missing(remoting_client, &team).await;
         players.apply(&mut team);
         if let Some(session) = &session {
@@ -363,6 +394,34 @@ async fn get_champ_select_session(
         .get("/lol-champ-select/v1/session".to_string())
         .await?;
     Ok(serde_json::from_value(session)?)
+}
+
+/// Both teams' picks, for counters and lane matchups. Your team's slots show roles and hovers;
+/// the enemy team's show locked picks, usually without roles.
+fn draft_picks(session: &ChampSelectSession) -> matchups::DraftPicks {
+    let is_self =
+        |member: &ChampSelectTeamMember| i64::from(member.cell_id) == session.local_player_cell_id;
+    let pick = |member: &ChampSelectTeamMember| {
+        member.champion().map(|champion_id| matchups::Pick {
+            champion_id,
+            role: matchups::Role::from_position(&member.assigned_position),
+            is_self: is_self(member),
+        })
+    };
+    matchups::DraftPicks {
+        // Modes without lanes (ARAM, blind pick) leave every position empty.
+        has_roles: session
+            .my_team
+            .iter()
+            .any(|member| !member.assigned_position.is_empty()),
+        self_role: session
+            .my_team
+            .iter()
+            .find(|&member| is_self(member))
+            .and_then(|member| matchups::Role::from_position(&member.assigned_position)),
+        allies: session.my_team.iter().filter_map(pick).collect(),
+        enemies: session.their_team.iter().filter_map(pick).collect(),
+    }
 }
 
 /// A slot's place in the team's pick order. League reports `pickTurn` as 0 for every slot in
@@ -1016,6 +1075,87 @@ mod tests {
         cache.apply(&mut team);
         assert_eq!(team.participants[1].profile_icon_id, Some(7085));
         assert!(!cache.ranks.start_attempt("found"));
+    }
+
+    #[test]
+    fn reads_both_teams_picks_for_matchups() {
+        let session = ChampSelectSession {
+            local_player_cell_id: 1,
+            my_team: vec![
+                ChampSelectTeamMember {
+                    assigned_position: "top".to_string(),
+                    cell_id: 0,
+                    champion_id: 122,
+                    ..member_defaults()
+                },
+                ChampSelectTeamMember {
+                    assigned_position: "jungle".to_string(),
+                    cell_id: 1,
+                    champion_pick_intent: 64,
+                    ..member_defaults()
+                },
+                ChampSelectTeamMember {
+                    assigned_position: "middle".to_string(),
+                    cell_id: 2,
+                    ..member_defaults()
+                },
+            ],
+            their_team: vec![
+                ChampSelectTeamMember {
+                    cell_id: 5,
+                    champion_id: 421,
+                    ..member_defaults()
+                },
+                ChampSelectTeamMember {
+                    cell_id: 6,
+                    ..member_defaults()
+                },
+            ],
+        };
+
+        let picks = draft_picks(&session);
+
+        assert!(picks.has_roles);
+        assert_eq!(picks.self_role, Some(matchups::Role::Jungle));
+        assert_eq!(
+            picks.allies,
+            vec![
+                matchups::Pick {
+                    champion_id: 122,
+                    role: Some(matchups::Role::Top),
+                    is_self: false,
+                },
+                matchups::Pick {
+                    champion_id: 64,
+                    role: Some(matchups::Role::Jungle),
+                    is_self: true,
+                },
+            ],
+            "hovers count for your own team; empty slots don't"
+        );
+        assert_eq!(
+            picks.enemies,
+            vec![matchups::Pick {
+                champion_id: 421,
+                role: None,
+                is_self: false,
+            }]
+        );
+    }
+
+    #[test]
+    fn modes_without_positions_have_no_roles_for_matchups() {
+        let session = ChampSelectSession {
+            local_player_cell_id: 0,
+            my_team: vec![ChampSelectTeamMember {
+                cell_id: 0,
+                champion_id: 1,
+                ..member_defaults()
+            }],
+            their_team: vec![],
+        };
+
+        assert!(!draft_picks(&session).has_roles);
     }
 
     #[test]

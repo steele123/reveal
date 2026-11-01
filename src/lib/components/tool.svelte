@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { MULTI_PROVIDERS, updateConfig, type Config } from "$lib/config";
+  import {
+    MULTI_PROVIDERS,
+    PLAYER_CLICK_ACTIONS,
+    updateConfig,
+    type Config,
+  } from "$lib/config";
   import { fade } from "svelte/transition";
   import RevealCount from "./reveal-count.svelte";
   import type { ChampSelect } from "$lib/champ_select";
@@ -7,12 +12,16 @@
   import LiveGamePanel from "./live-game-panel.svelte";
   import type { LiveGame } from "$lib/live_game";
   import SettingsPanel from "./settings-panel.svelte";
+  import IdleOverview from "./idle-overview.svelte";
   import { logFrontendError } from "$lib/logging";
+  import { isTauriRuntime } from "$lib/runtime";
   import type { LobbyHistoryEntry } from "$lib/lobby_history";
+  import type { MatchupBoard } from "$lib/matchups";
 
   export let config: Config | null = null;
   export let state = "Unknown";
   export let champSelect: ChampSelect | null = null;
+  export let matchups: MatchupBoard | null = null;
   export let connected = false;
   export let queuePaused = false;
   export let history: LobbyHistoryEntry[] = [];
@@ -20,10 +29,13 @@
   export let liveGame: LiveGame | null = null;
   export let queueName: string | null = null;
   export let onConfigChange: (config: Config) => void = () => {};
+  export let onOpenPage: (page: "history" | "auto") => void = () => {};
 
   async function handleConfigChange(nextConfig: Config) {
     const previousConfig = config;
     onConfigChange(nextConfig);
+    // The browser preview has no backend to save to.
+    if (!isTauriRuntime()) return;
 
     try {
       await updateConfig(nextConfig);
@@ -43,8 +55,8 @@
   $: settingsSummary = config
     ? [
         MULTI_PROVIDERS.find(({ value }) => value === config?.multiProvider)?.label ?? "OP.GG",
-        `Auto-open ${config.autoOpen ? "on" : "off"}`,
-        `Auto-accept ${config.autoAccept ? "on" : "off"}`,
+        PLAYER_CLICK_ACTIONS.find(({ value }) => value === config?.playerClickAction)?.label ??
+          "Show details",
       ].join(" · ")
     : "";
 
@@ -91,6 +103,11 @@
     <div in:fade class="flex min-h-0 flex-1 flex-col">
       <ChampSelectPanel
         {champSelect}
+        {matchups}
+        countersProvider={config?.countersProvider ?? "lolalytics"}
+        onCountersProviderChange={(countersProvider) => {
+          if (config) void handleConfigChange({ ...config, countersProvider });
+        }}
         {history}
         {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
@@ -130,10 +147,7 @@
       </div>
     </div>
 
-    <div
-      in:fade
-      class="reveal-panel flex min-h-0 flex-1 items-center px-5 py-4"
-    >
+    <div in:fade class="reveal-panel shrink-0 px-4 py-3">
       <div class="flex items-center gap-4">
         <div
           class={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
@@ -180,5 +194,7 @@
         </div>
       </div>
     </div>
+
+    <IdleOverview {history} {config} {connected} {onOpenPage} />
   {/if}
 </div>

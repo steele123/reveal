@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/tauri";
+import type { CountersProvider, Role } from "$lib/matchups";
 
 export type MultiProvider =
     | "opgg"
@@ -37,6 +38,34 @@ export interface Config {
     multiProvider: MultiProvider;
     discordPromptSeen: boolean;
     playerClickAction: PlayerClickAction;
+    countersProvider: CountersProvider;
+    /** Queue again 30 seconds after a game ends. */
+    autoRequeue: boolean;
+    /** Leave and rejoin the queue once the wait passes League's estimate. */
+    requeuePastEstimate: boolean;
+    /** Ban the first available of `banChampions` in your ban's last seconds, if you haven't. */
+    autoBan: boolean;
+    banChampions: number[];
+    /** Seconds before the ban timer runs out to ban; 1 is the last second. */
+    autoBanSecondsLeft: number;
+    /** Lock in your hover, or else your role's first available pick, in your pick's last seconds. */
+    autoPick: boolean;
+    pickChampions: Partial<Record<Role, number[]>>;
+    /** Seconds before the pick timer runs out to lock in; 1 is the last second. */
+    autoPickSecondsLeft: number;
+    notifications: NotificationSettings;
+}
+
+/** Which alerts go where, by `NotificationAlert`. */
+export interface NotificationSettings {
+    /** Windows notifications. */
+    desktop: string[];
+    /** Sent to `ntfyTopic` on ntfy.sh, for the ntfy phone app. */
+    phone: string[];
+    ntfyTopic: string;
+    /** Posted to the channel of `discordWebhook`. */
+    discord: string[];
+    discordWebhook: string;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -48,6 +77,22 @@ export const DEFAULT_CONFIG: Config = {
     multiProvider: "opgg",
     discordPromptSeen: false,
     playerClickAction: "details",
+    countersProvider: "lolalytics",
+    autoRequeue: false,
+    requeuePastEstimate: false,
+    autoBan: false,
+    banChampions: [],
+    autoBanSecondsLeft: 1,
+    autoPick: false,
+    pickChampions: {},
+    autoPickSecondsLeft: 1,
+    notifications: {
+        desktop: ["autoAction", "dodge"],
+        phone: ["matchFound", "yourTurn", "dodge"],
+        ntfyTopic: "",
+        discord: ["matchFound", "yourTurn", "dodge"],
+        discordWebhook: "",
+    },
 };
 
 export async function updateConfig(config: Config): Promise<void> {
