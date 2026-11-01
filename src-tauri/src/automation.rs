@@ -23,8 +23,8 @@ use tauri::{AppHandle, Manager};
 const REQUEUE_DELAY: Duration = Duration::from_secs(30);
 const QUEUE_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const DRAFT_POLL_INTERVAL: Duration = Duration::from_millis(200);
-/// Bans and picks happen once this little of your turn is left, so you get the rest of it. It
-/// leaves room for one missed poll and League's round trip.
+/// "The last second": bans and picks happen once this little of your turn is left, so you get the
+/// rest of it. It leaves room for one missed poll and League's round trip. Earlier is a setting.
 const LAST_SECONDS_MS: f64 = 1_200.0;
 /// A ban or pick League turns down (or that times out) is tried again on the next poll, up to this
 /// many times, while the turn lasts.
@@ -258,7 +258,7 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
         if !automatic {
             continue;
         }
-        let Some(turn) = due_turn(&session, now) else {
+        let Some(turn) = due_turn(&session, now, &settings) else {
             continue;
         };
         if attempts.is_finished(turn.id) {
@@ -305,7 +305,7 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
                     Notice::new(
                         Alert::AutoAction,
                         format!("{done} {name}"),
-                        format!("Reveal did it with your {} timer almost out.", turn.kind),
+                        format!("Reveal did it {}.", describe_when(&settings, &turn.kind)),
                     ),
                 );
             }
@@ -356,18 +356,43 @@ impl TurnAttempts {
     }
 }
 
+/// How much of the turn is left when Reveal bans or locks in, in milliseconds.
+fn act_at_ms(settings: &Config, kind: &str) -> f64 {
+    let seconds = if kind == "ban" {
+        settings.auto_ban_seconds_left
+    } else {
+        settings.auto_pick_seconds_left
+    };
+    (f64::from(seconds) * 1_000.0).max(LAST_SECONDS_MS)
+}
+
+/// "in the last second" or "with 5 seconds left".
+fn describe_when(settings: &Config, kind: &str) -> String {
+    let seconds = if kind == "ban" {
+        settings.auto_ban_seconds_left
+    } else {
+        settings.auto_pick_seconds_left
+    };
+    if seconds <= 1 {
+        "in the last second".to_string()
+    } else {
+        format!("with {seconds} seconds left")
+    }
+}
+
 /// "Your turn to pick", with the time left and whether Reveal will step in.
 fn turn_notice(session: &DraftSession, turn: &DraftAction, settings: &Config, now_ms: f64) -> Notice {
     let seconds = (time_left_ms(session, now_ms) / 1_000.0).round().max(0.0);
+    let when = describe_when(settings, &turn.kind);
     let (automatic, fallback) = if turn.kind == "ban" {
-        (settings.auto_ban, "Reveal bans from your list in the last second if you don't.")
+        (settings.auto_ban, format!("Reveal bans from your list {when} if you don't."))
     } else {
-        (settings.auto_pick, "Reveal locks in your hover or list in the last second if you don't.")
+        (settings.auto_pick, format!("Reveal locks in your hover or list {when} if you don't."))
     };
     let mut body = format!("{seconds:.0} seconds left.");
     if automatic {
         body.push(' ');
-        body.push_str(fallback);
+        body.push_str(&fallback);
     }
     Notice::new(Alert::YourTurn, format!("Your turn to {}", turn.kind), body)
 }
@@ -497,12 +522,10 @@ fn time_left_ms(session: &DraftSession, now_ms: f64) -> f64 {
     timer.adjusted_time_left_in_phase - since
 }
 
-/// Your unfinished ban or pick, once only its last seconds are left.
-fn due_turn(session: &DraftSession, now_ms: f64) -> Option<&DraftAction> {
-    if time_left_ms(session, now_ms) > LAST_SECONDS_MS {
-        return None;
-    }
-    current_turn(session)
+/// Your unfinished ban or pick, once only the time you set is left of it.
+fn due_turn<'a>(session: &'a DraftSession, now_ms: f64, settings: &Config) -> Option<&'a DraftAction> {
+    let turn = current_turn(session)?;
+    (time_left_ms(session, now_ms) <= act_at_ms(settings, &turn.kind)).then_some(turn)
 }
 
 /// What to lock in: what you already chose, or else the first available of your list. Champions
@@ -618,21 +641,21 @@ mod tests {
     #[test]
     fn waits_for_the_last_seconds_of_your_own_turn() {
         let early = session(10_000.0, vec![action(7, 1, "pick", 0)]);
-        assert!(due_turn(&early, NOW).is_none());
-        assert!(due_turn(&early, NOW + 8_000.0).is_none(), "2 seconds left is still early");
+        assert!(due_turn(&early, NOW, &Config::default()).is_none());
+        assert!(due_turn(&early, NOW + 8_000.0, &Config::default()).is_none(), "2 seconds left is still early");
         // The session was measured 9 seconds ago, so only 1 is left now.
-        assert_eq!(due_turn(&early, NOW + 9_000.0).map(|turn| turn.id), Some(7));
+        assert_eq!(due_turn(&early, NOW + 9_000.0, &Config::default()).map(|turn| turn.id), Some(7));
 
         let teammate = session(1_000.0, vec![action(8, 2, "pick", 0)]);
-        assert!(due_turn(&teammate, NOW).is_none());
+        assert!(due_turn(&teammate, NOW, &Config::default()).is_none());
 
         let mut done = action(9, 1, "ban", 64);
         done.completed = true;
-        assert!(due_turn(&session(1_000.0, vec![done]), NOW).is_none());
+        assert!(due_turn(&session(1_000.0, vec![done]), NOW, &Config::default()).is_none());
 
         let mut planning = session(1_000.0, vec![action(10, 1, "pick", 0)]);
         planning.timer.phase = "PLANNING".to_string();
-        assert!(due_turn(&planning, NOW).is_none());
+        assert!(due_turn(&planning, NOW, &Config::default()).is_none());
     }
 
     #[test]
@@ -716,7 +739,7 @@ mod tests {
     fn announces_your_turn_as_soon_as_it_starts() {
         let draft = session(27_400.0, vec![action(7, 1, "pick", 0)]);
         let turn = current_turn(&draft).expect("your pick is under way");
-        assert!(due_turn(&draft, NOW).is_none(), "too early to lock in");
+        assert!(due_turn(&draft, NOW, &Config::default()).is_none(), "too early to lock in");
 
         let manual = Config::default();
         let notice = turn_notice(&draft, turn, &manual, NOW + 400.0);
@@ -724,6 +747,34 @@ mod tests {
         assert_eq!(notice.body, "27 seconds left.");
         let notice = turn_notice(&draft, turn, &settings(), NOW);
         assert!(notice.body.ends_with("in the last second if you don't."));
+        let early = Config {
+            auto_pick_seconds_left: 5,
+            ..settings()
+        };
+        let notice = turn_notice(&draft, turn, &early, NOW);
+        assert!(notice.body.ends_with("with 5 seconds left if you don't."));
+    }
+
+    #[test]
+    fn acts_as_early_as_set_for_bans_and_picks_separately() {
+        let early = Config {
+            auto_ban_seconds_left: 10,
+            auto_pick_seconds_left: 3,
+            ..Config::default()
+        };
+        let ban = session(9_500.0, vec![action(4, 1, "ban", 0)]);
+        assert!(due_turn(&ban, NOW, &Config::default()).is_none(), "last second by default");
+        assert_eq!(due_turn(&ban, NOW, &early).map(|turn| turn.id), Some(4));
+
+        let pick = session(4_000.0, vec![action(7, 1, "pick", 0)]);
+        assert!(due_turn(&pick, NOW, &early).is_none(), "4 seconds left, set to 3");
+        assert_eq!(due_turn(&pick, NOW + 1_000.0, &early).map(|turn| turn.id), Some(7));
+
+        let zero = Config {
+            auto_pick_seconds_left: 0,
+            ..Config::default()
+        };
+        assert_eq!(act_at_ms(&zero, "pick"), LAST_SECONDS_MS, "never later than the last second");
     }
 
     #[test]
@@ -757,6 +808,6 @@ mod tests {
             "theirTeam": []
         }))
         .unwrap();
-        assert_eq!(due_turn(&session, 1_000.0).map(|turn| turn.id), Some(1));
+        assert_eq!(due_turn(&session, 1_000.0, &Config::default()).map(|turn| turn.id), Some(1));
     }
 }

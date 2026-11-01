@@ -44,6 +44,9 @@ pub struct Config {
     pub auto_ban: bool,
     #[serde(default)]
     pub ban_champions: Vec<i64>,
+    /// How many seconds before the ban timer runs out to ban; 1 means the last second.
+    #[serde(default = "default_seconds_left")]
+    pub auto_ban_seconds_left: u32,
     /// In the last seconds of your pick, lock in your hover, or else the first available of
     /// your role's `pick_champions`.
     #[serde(default)]
@@ -51,6 +54,9 @@ pub struct Config {
     /// Champion ids in order of preference, by League position ("top" ... "utility").
     #[serde(default)]
     pub pick_champions: HashMap<String, Vec<i64>>,
+    /// How many seconds before the pick timer runs out to lock in; 1 means the last second.
+    #[serde(default = "default_seconds_left")]
+    pub auto_pick_seconds_left: u32,
     #[serde(default)]
     pub notifications: NotificationSettings,
 }
@@ -117,8 +123,10 @@ impl Default for Config {
             requeue_past_estimate: false,
             auto_ban: false,
             ban_champions: Vec::new(),
+            auto_ban_seconds_left: default_seconds_left(),
             auto_pick: false,
             pick_champions: HashMap::new(),
+            auto_pick_seconds_left: default_seconds_left(),
             notifications: NotificationSettings::default(),
         }
     }
@@ -145,6 +153,10 @@ fn default_player_click_action() -> String {
 
 fn default_provider() -> String {
     "opgg".to_string()
+}
+
+fn default_seconds_left() -> u32 {
+    1
 }
 
 fn default_counters_provider() -> String {

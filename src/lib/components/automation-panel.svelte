@@ -33,9 +33,9 @@
     autoOpen:
       "In champ select, Reveal opens your multi-search site (set on the Reveal tab) with your teammates' names as soon as all five are revealed, or after the wait you pick here with whoever is known by then.",
     autoBan:
-      "In your ban turn, in the last second or so and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
+      "In your ban turn, once only the time you set is left (the last second, by default) and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
     autoPick:
-      "In your pick turn, in the last second or so and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
+      "In your pick turn, once only the time you set is left (the last second, by default) and you haven't locked in: Reveal locks in your hover (or the champion you declared during planning), or else the first champion from your assigned role's list that you own and that isn't banned, picked or hovered by a teammate. If none qualifies, it does nothing and League's own timer runs out.",
   };
 
   const autoOpenWaitOptions = [
@@ -45,6 +45,19 @@
     { label: "10 sec", value: "10" },
   ];
   $: autoOpenWait = String(config?.autoOpenDelaySeconds ?? 6);
+
+  /** When to ban or lock in, as seconds left on League's timer. */
+  const secondsLeftOptions = [
+    { label: "Last second", value: "1" },
+    { label: "3 sec left", value: "3" },
+    { label: "5 sec left", value: "5" },
+    { label: "10 sec left", value: "10" },
+  ];
+
+  function secondsLeftLabel(seconds: number | undefined): string {
+    const value = String(seconds ?? 1);
+    return secondsLeftOptions.find((option) => option.value === value)?.label ?? `${value} sec left`;
+  }
 
   onMount(() => {
     loadChampionNames()
@@ -180,6 +193,25 @@
             Your hover, or else the first available champion from this list
           </span>
         </Label>
+        <Select.Root
+          type="single"
+          disabled={!config?.autoBan}
+          items={secondsLeftOptions}
+          value={String(config?.autoBanSecondsLeft ?? 1)}
+          onValueChange={(value) => update({ autoBanSecondsLeft: Number(value) })}
+        >
+          <Select.Trigger
+            aria-label="When to ban"
+            class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
+          >
+            {secondsLeftLabel(config?.autoBanSecondsLeft)}
+          </Select.Trigger>
+          <Select.Content>
+            {#each secondsLeftOptions as option}
+              <Select.Item value={option.value} label={option.label} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
         <Switch
           id="auto-ban"
           checked={config?.autoBan ?? false}
@@ -204,6 +236,25 @@
             Your hover, or else the first available champion for the role you got
           </span>
         </Label>
+        <Select.Root
+          type="single"
+          disabled={!config?.autoPick}
+          items={secondsLeftOptions}
+          value={String(config?.autoPickSecondsLeft ?? 1)}
+          onValueChange={(value) => update({ autoPickSecondsLeft: Number(value) })}
+        >
+          <Select.Trigger
+            aria-label="When to lock in"
+            class="h-7 w-[92px] border-white/10 bg-white/[0.035] px-2 text-[10px] shadow-none"
+          >
+            {secondsLeftLabel(config?.autoPickSecondsLeft)}
+          </Select.Trigger>
+          <Select.Content>
+            {#each secondsLeftOptions as option}
+              <Select.Item value={option.value} label={option.label} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
         <Switch
           id="auto-pick"
           checked={config?.autoPick ?? false}

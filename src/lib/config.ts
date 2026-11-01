@@ -46,9 +46,13 @@ export interface Config {
     /** Ban the first available of `banChampions` in your ban's last seconds, if you haven't. */
     autoBan: boolean;
     banChampions: number[];
+    /** Seconds before the ban timer runs out to ban; 1 is the last second. */
+    autoBanSecondsLeft: number;
     /** Lock in your hover, or else your role's first available pick, in your pick's last seconds. */
     autoPick: boolean;
     pickChampions: Partial<Record<Role, number[]>>;
+    /** Seconds before the pick timer runs out to lock in; 1 is the last second. */
+    autoPickSecondsLeft: number;
     notifications: NotificationSettings;
 }
 
@@ -78,8 +82,10 @@ export const DEFAULT_CONFIG: Config = {
     requeuePastEstimate: false,
     autoBan: false,
     banChampions: [],
+    autoBanSecondsLeft: 1,
     autoPick: false,
     pickChampions: {},
+    autoPickSecondsLeft: 1,
     notifications: {
         desktop: ["autoAction", "dodge"],
         phone: ["matchFound", "yourTurn", "dodge"],
