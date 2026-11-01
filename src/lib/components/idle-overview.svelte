@@ -93,7 +93,7 @@
   <section class="reveal-panel flex min-h-0 flex-col p-3">
     <div class="flex items-center justify-between">
       <h2 class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-        Reveal does for you
+        Automation
       </h2>
       <button
         type="button"
