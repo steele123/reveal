@@ -192,6 +192,31 @@ pub fn set_enemy_role(champion_id: i64, role: String) -> CommandResult<()> {
     Ok(())
 }
 
+/// Sends a sample alert to one channel ("desktop", "phone" or "discord") with the settings on
+/// screen.
+#[tauri::command]
+pub async fn send_test_notification(
+    app_handle: AppHandle,
+    channel: String,
+    settings: crate::config::NotificationSettings,
+) -> CommandResult<()> {
+    let channel = crate::notify::Channel::from_setting(&channel)
+        .ok_or_else(|| format!("Unknown notification channel {channel}"))?;
+    log_info!("Sending a test notification to {channel:?}");
+    crate::notify::send_test(&app_handle, channel, &settings)
+        .await
+        .map_err(|error| format!("{error:#}"))
+}
+
+/// The window's summary of a revealed team (it knows who was seen before), as an alert.
+#[tauri::command]
+pub fn notify_lobby_revealed(app_handle: AppHandle, body: String) {
+    crate::notify::send(
+        &app_handle,
+        crate::notify::Notice::new(crate::notify::Alert::LobbyRevealed, "Your team is revealed", body),
+    );
+}
+
 #[tauri::command]
 pub fn write_frontend_log(level: String, message: String) {
     let message = crate::logging::sanitize_frontend_message(&message);

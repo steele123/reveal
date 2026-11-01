@@ -26,8 +26,10 @@
     markLobbyDodged,
     markLobbyGameStarted,
     recordLobbyReveal,
+    seenBeforeIndex,
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
+  import { lobbyNotice, notifyLobbyRevealed } from "$lib/notifications";
   import { logFrontendError, logFrontendInfo } from "$lib/logging";
 
   let state = "Unknown";
@@ -45,6 +47,32 @@
   }
   let history: LobbyHistoryEntry[] = [];
   let activeLobbyId: string | null = null;
+  /** The lobby the "team revealed" alert went out for, so each gets one. */
+  let notifiedLobbyId: string | null = null;
+  let lobbyNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Gives off-role checks, which read match history, time to finish before the alert. */
+  const LOBBY_NOTICE_DELAY_MS = 5_000;
+
+  /** Once all five teammates are in, sends the "team revealed" alert if it's turned on. */
+  function scheduleLobbyNotice() {
+    const lobbyId = activeLobbyId;
+    const team = champSelect?.participants.filter((participant) => !participant.is_enemy) ?? [];
+    const notifications = config?.notifications;
+    const wanted = notifications
+      ? [notifications.desktop, notifications.phone, notifications.discord].some((alerts) =>
+          alerts.includes("lobbyRevealed"),
+        )
+      : false;
+    if (!lobbyId || !wanted || team.length < 5 || notifiedLobbyId === lobbyId) return;
+    notifiedLobbyId = lobbyId;
+    lobbyNoticeTimer = setTimeout(() => {
+      if (activeLobbyId !== lobbyId || !champSelect) return;
+      const body = lobbyNotice(champSelect.participants, seenBeforeIndex(history, lobbyId));
+      notifyLobbyRevealed(body).catch((error) =>
+        logFrontendError("Failed to send the team revealed alert", error),
+      );
+    }, LOBBY_NOTICE_DELAY_MS);
+  }
   let legacyInstall: { version: string } | null = null;
   let liveGame: LiveGame | null = null;
   let queueName: string | null = null;
@@ -208,6 +236,7 @@
               ...payload,
               participants: payload.participants.filter((participant) => !participant.is_enemy),
             });
+            scheduleLobbyNotice();
           }),
         );
 
@@ -249,6 +278,7 @@
 
     return () => {
       stopScaling();
+      clearTimeout(lobbyNoticeTimer);
       disposed = true;
       unlisten.forEach((stopListening) => stopListening());
     };

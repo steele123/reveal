@@ -11,6 +11,8 @@ pub struct PhaseUpdate {
     pub pause_changed: Option<bool>,
     pub cancel_search: bool,
     pub ready_check_generation: Option<u64>,
+    /// Champ Select just ended without a game, whether or not the queue gets paused for it.
+    pub dodged: bool,
 }
 
 impl QueuePauseState {
@@ -50,6 +52,9 @@ impl QueuePauseState {
     pub fn observe_phase(&mut self, phase: &str, enabled: bool) -> PhaseUpdate {
         let previous = self.last_phase.as_deref();
         let entered_ready_check = phase == "ReadyCheck" && previous != Some("ReadyCheck");
+        // A game that goes ahead moves on to GameStart; anything else means someone left.
+        let dodged = previous == Some("ChampSelect")
+            && matches!(phase, "None" | "Lobby" | "Matchmaking" | "ReadyCheck");
         let was_paused = self.paused;
         let mut cancel_search = false;
 
@@ -95,6 +100,7 @@ impl QueuePauseState {
             pause_changed: (self.paused != was_paused).then_some(self.paused),
             cancel_search,
             ready_check_generation: entered_ready_check.then_some(self.phase_generation),
+            dodged,
         }
     }
 }
@@ -158,6 +164,21 @@ mod tests {
 
         let update = state.observe_phase("Matchmaking", true);
         assert!(update.cancel_search);
+    }
+
+    #[test]
+    fn reports_each_dodge_once_even_with_the_pause_off() {
+        let mut state = QueuePauseState::default();
+        state.observe_phase("ChampSelect", false);
+        assert!(state.observe_phase("Matchmaking", false).dodged);
+        assert!(!state.observe_phase("ReadyCheck", false).dodged);
+
+        state.observe_phase("ChampSelect", false);
+        assert!(state.observe_phase("None", false).dodged);
+        assert!(!state.observe_phase("Lobby", false).dodged, "the same dodge");
+
+        state.observe_phase("ChampSelect", false);
+        assert!(!state.observe_phase("GameStart", false).dodged);
     }
 
     #[test]

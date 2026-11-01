@@ -7,6 +7,7 @@
   import { LANES, type Role } from "$lib/matchups";
   import ChampionList from "./champion-list.svelte";
   import InfoTip from "./info-tip.svelte";
+  import NotificationSettings from "./notification-settings.svelte";
   import { Label } from "./ui/label";
   import * as Select from "./ui/select";
   import { Switch } from "./ui/switch";
@@ -250,6 +251,8 @@
       {/key}
     </div>
   </section>
+
+  <NotificationSettings {config} {onChange} />
 
   {#if championsFailed}
     <div class="text-[10px] text-red-300">

@@ -43,6 +43,9 @@
         "all": false,
         "writeText": true
       },
+      "notification": {
+        "all": true
+      },
       "http": {
         "all": false,
         "request": true,

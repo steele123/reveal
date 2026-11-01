@@ -51,6 +51,54 @@ pub struct Config {
     /// Champion ids in order of preference, by League position ("top" ... "utility").
     #[serde(default)]
     pub pick_champions: HashMap<String, Vec<i64>>,
+    #[serde(default)]
+    pub notifications: NotificationSettings,
+}
+
+/// Which alerts go where. Alerts are listed by `notify::Alert::key`, kept as strings so a config
+/// written by a newer Reveal with more alerts still loads.
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NotificationSettings {
+    /// Shown as Windows notifications.
+    pub desktop: Vec<String>,
+    /// Sent to `ntfy_topic` on ntfy.sh, for the ntfy phone app.
+    pub phone: Vec<String>,
+    pub ntfy_topic: String,
+    /// Posted to the channel of `discord_webhook`.
+    pub discord: Vec<String>,
+    pub discord_webhook: String,
+}
+
+impl Default for NotificationSettings {
+    fn default() -> Self {
+        use crate::notify::Alert;
+        let keys = |alerts: &[Alert]| alerts.iter().map(|alert| alert.key().to_string()).collect();
+        // League already alerts on this PC when a match is found, so only away-from-PC channels
+        // start with it. Phone and Discord stay off until a topic or webhook is set.
+        let away = keys(&[Alert::MatchFound, Alert::YourTurn, Alert::Dodge]);
+        Self {
+            desktop: keys(&[Alert::AutoAction, Alert::Dodge]),
+            phone: away.clone(),
+            ntfy_topic: String::new(),
+            discord: away,
+            discord_webhook: String::new(),
+        }
+    }
+}
+
+/// Leaves the topic and webhook out: anyone who has either can read or post the alerts.
+impl std::fmt::Debug for NotificationSettings {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("NotificationSettings")
+            .field("desktop", &self.desktop)
+            .field("phone", &self.phone)
+            .field("ntfy_topic_set", &!self.ntfy_topic.is_empty())
+            .field("discord", &self.discord)
+            .field("discord_webhook_set", &!self.discord_webhook.is_empty())
+            .finish()
+    }
 }
 
 impl Default for Config {
@@ -71,6 +119,7 @@ impl Default for Config {
             ban_champions: Vec::new(),
             auto_pick: false,
             pick_champions: HashMap::new(),
+            notifications: NotificationSettings::default(),
         }
     }
 }

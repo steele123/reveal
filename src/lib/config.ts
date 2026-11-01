@@ -49,6 +49,19 @@ export interface Config {
     /** Lock in your hover, or else your role's first available pick, in your pick's last seconds. */
     autoPick: boolean;
     pickChampions: Partial<Record<Role, number[]>>;
+    notifications: NotificationSettings;
+}
+
+/** Which alerts go where, by `NotificationAlert`. */
+export interface NotificationSettings {
+    /** Windows notifications. */
+    desktop: string[];
+    /** Sent to `ntfyTopic` on ntfy.sh, for the ntfy phone app. */
+    phone: string[];
+    ntfyTopic: string;
+    /** Posted to the channel of `discordWebhook`. */
+    discord: string[];
+    discordWebhook: string;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -67,6 +80,13 @@ export const DEFAULT_CONFIG: Config = {
     banChampions: [],
     autoPick: false,
     pickChampions: {},
+    notifications: {
+        desktop: ["autoAction", "dodge"],
+        phone: ["matchFound", "yourTurn", "dodge"],
+        ntfyTopic: "",
+        discord: ["matchFound", "yourTurn", "dodge"],
+        discordWebhook: "",
+    },
 };
 
 export async function updateConfig(config: Config): Promise<void> {

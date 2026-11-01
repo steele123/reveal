@@ -6,6 +6,7 @@
 use crate::{
     app_state::QueuePause,
     config::{AppConfig, Config},
+    notify::{self, Alert, Notice},
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -173,16 +174,20 @@ fn past_estimate(waited: f64, estimate: f64) -> bool {
     estimate > 0.0 && waited > estimate
 }
 
-/// Bans and locks in during the last seconds of your turns, if you haven't yet.
+/// Announces your ban and pick turns, and bans and locks in during their last seconds if you
+/// haven't yet.
 async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
     let mut attempted: HashSet<i64> = HashSet::new();
+    let mut announced: HashSet<i64> = HashSet::new();
     loop {
         tokio::time::sleep(DRAFT_POLL_INTERVAL).await;
         if phase(&client).await.as_deref() != Some("ChampSelect") {
             return;
         }
         let settings = settings(&app_handle).await;
-        if !settings.auto_ban && !settings.auto_pick {
+        let automatic = settings.auto_ban || settings.auto_pick;
+        let announce = notify::wanted(&settings.notifications, Alert::YourTurn);
+        if !automatic && !announce {
             continue;
         }
         let Ok(value) = client
@@ -194,7 +199,18 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
         let Ok(session) = serde_json::from_value::<DraftSession>(value) else {
             continue;
         };
-        let Some(turn) = due_turn(&session, now_ms()) else {
+        let now = now_ms();
+        if announce {
+            if let Some(turn) = current_turn(&session) {
+                if announced.insert(turn.id) {
+                    notify::send(&app_handle, turn_notice(&session, turn, &settings, now));
+                }
+            }
+        }
+        if !automatic {
+            continue;
+        }
+        let Some(turn) = due_turn(&session, now) else {
             continue;
         };
         if !attempted.insert(turn.id) {
@@ -212,13 +228,71 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
                 settings.ban_champions,
                 settings.pick_champions
             );
+            let enabled = if turn.kind == "ban" { settings.auto_ban } else { settings.auto_pick };
+            if enabled {
+                let list = if turn.kind == "ban" { "ban list" } else { "picks for your role" };
+                notify::send(
+                    &app_handle,
+                    Notice::new(
+                        Alert::AutoAction,
+                        format!("Nothing to {} automatically", turn.kind),
+                        format!("None of your {list} was available, so League's timer ran out."),
+                    ),
+                );
+            }
             continue;
         };
         match complete_action(&client, turn.id, champion_id).await {
-            Ok(()) => log_info!("Automatic {} of champion {champion_id}", turn.kind),
-            Err(error) => log_warn!("Automatic {} failed: {error}", turn.kind),
+            Ok(()) => {
+                log_info!("Automatic {} of champion {champion_id}", turn.kind);
+                let name = champion_name(&client, champion_id).await;
+                let done = if turn.kind == "ban" { "Banned" } else { "Locked in" };
+                notify::send(
+                    &app_handle,
+                    Notice::new(
+                        Alert::AutoAction,
+                        format!("{done} {name}"),
+                        format!("Reveal did it with your {} timer almost out.", turn.kind),
+                    ),
+                );
+            }
+            Err(error) => {
+                log_warn!("Automatic {} failed: {error}", turn.kind);
+                notify::send(
+                    &app_handle,
+                    Notice::new(
+                        Alert::AutoAction,
+                        format!("Automatic {} failed", turn.kind),
+                        "League turned it down; the log has the details.",
+                    ),
+                );
+            }
         }
     }
+}
+
+/// "Your turn to pick", with the time left and whether Reveal will step in.
+fn turn_notice(session: &DraftSession, turn: &DraftAction, settings: &Config, now_ms: f64) -> Notice {
+    let seconds = (time_left_ms(session, now_ms) / 1_000.0).round().max(0.0);
+    let (automatic, fallback) = if turn.kind == "ban" {
+        (settings.auto_ban, "Reveal bans from your list in the last second if you don't.")
+    } else {
+        (settings.auto_pick, "Reveal locks in your hover or list in the last second if you don't.")
+    };
+    let mut body = format!("{seconds:.0} seconds left.");
+    if automatic {
+        body.push(' ');
+        body.push_str(fallback);
+    }
+    Notice::new(Alert::YourTurn, format!("Your turn to {}", turn.kind), body)
+}
+
+async fn champion_name(client: &RESTClient, champion_id: i64) -> String {
+    let names = crate::champions::get_champion_names(client).await.ok();
+    i32::try_from(champion_id)
+        .ok()
+        .and_then(|id| names?.remove(&id))
+        .unwrap_or_else(|| format!("champion {champion_id}"))
 }
 
 fn now_ms() -> f64 {
@@ -313,19 +387,9 @@ struct DraftMember {
     champion_pick_intent: i64,
 }
 
-/// Your unfinished ban or pick, once only its last seconds are left.
-fn due_turn(session: &DraftSession, now_ms: f64) -> Option<&DraftAction> {
-    let timer = &session.timer;
-    if timer.phase != "BAN_PICK" {
-        return None;
-    }
-    // The session only changes on events, so count the time since League measured it.
-    let since = if timer.internal_now_in_epoch_ms > 0.0 {
-        (now_ms - timer.internal_now_in_epoch_ms).max(0.0)
-    } else {
-        0.0
-    };
-    if timer.adjusted_time_left_in_phase - since > LAST_SECONDS_MS {
+/// Your ban or pick that's under way and not done yet.
+fn current_turn(session: &DraftSession) -> Option<&DraftAction> {
+    if session.timer.phase != "BAN_PICK" {
         return None;
     }
     session.actions.iter().flatten().find(|action| {
@@ -334,6 +398,26 @@ fn due_turn(session: &DraftSession, now_ms: f64) -> Option<&DraftAction> {
             && !action.completed
             && matches!(action.kind.as_str(), "ban" | "pick")
     })
+}
+
+/// The time left in the current turn, in milliseconds.
+fn time_left_ms(session: &DraftSession, now_ms: f64) -> f64 {
+    let timer = &session.timer;
+    // The session only changes on events, so count the time since League measured it.
+    let since = if timer.internal_now_in_epoch_ms > 0.0 {
+        (now_ms - timer.internal_now_in_epoch_ms).max(0.0)
+    } else {
+        0.0
+    };
+    timer.adjusted_time_left_in_phase - since
+}
+
+/// Your unfinished ban or pick, once only its last seconds are left.
+fn due_turn(session: &DraftSession, now_ms: f64) -> Option<&DraftAction> {
+    if time_left_ms(session, now_ms) > LAST_SECONDS_MS {
+        return None;
+    }
+    current_turn(session)
 }
 
 /// What to lock in: what you already chose, or else the first available of your list. Champions
@@ -527,6 +611,20 @@ mod tests {
             choose_champion(&draft, &draft.actions[0][0], &settings(), Some(&bannable)),
             Some(421)
         );
+    }
+
+    #[test]
+    fn announces_your_turn_as_soon_as_it_starts() {
+        let draft = session(27_400.0, vec![action(7, 1, "pick", 0)]);
+        let turn = current_turn(&draft).expect("your pick is under way");
+        assert!(due_turn(&draft, NOW).is_none(), "too early to lock in");
+
+        let manual = Config::default();
+        let notice = turn_notice(&draft, turn, &manual, NOW + 400.0);
+        assert_eq!(notice.title, "Your turn to pick");
+        assert_eq!(notice.body, "27 seconds left.");
+        let notice = turn_notice(&draft, turn, &settings(), NOW);
+        assert!(notice.body.ends_with("in the last second if you don't."));
     }
 
     #[test]

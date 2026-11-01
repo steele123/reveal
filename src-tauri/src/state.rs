@@ -1,7 +1,8 @@
 use crate::{
     app_state::QueuePause,
     champ_select::{handle_champ_select_start, PollingGuard},
-    config::AppConfig,
+    config::{AppConfig, Config},
+    notify::{Alert, Notice},
 };
 use shaco::rest::RESTClient;
 use tauri::{AppHandle, Manager};
@@ -50,6 +51,13 @@ pub async fn handle_client_state(
         tauri::async_runtime::spawn(async move {
             stop_matchmaking_after_dodge(&app_handle, &remoting_client).await;
         });
+    }
+
+    if phase_update.ready_check_generation.is_some() {
+        crate::notify::send(app_handle, match_found_notice(&cfg));
+    }
+    if phase_update.dodged {
+        crate::notify::send(app_handle, dodge_notice(&cfg, &client_state));
     }
 
     crate::automation::on_phase(&client_state, app_handle, remoting_client);
@@ -138,6 +146,30 @@ pub async fn handle_client_state(
     }
 
     emit_client_state(app_handle, client_state);
+}
+
+fn match_found_notice(cfg: &Config) -> Notice {
+    let body = if cfg.auto_accept {
+        format!(
+            "Reveal accepts it in {} seconds.",
+            (cfg.accept_delay.saturating_sub(1_000) / 1_000).max(1)
+        )
+    } else {
+        "Accept it in League before the timer runs out.".to_string()
+    };
+    Notice::new(Alert::MatchFound, "Match found", body)
+}
+
+/// `phase` is where the client went after Champ Select.
+fn dodge_notice(cfg: &Config, phase: &str) -> Notice {
+    let body = if cfg.pause_queue_after_dodge {
+        "Reveal paused your queue until you start it again."
+    } else if phase == "Matchmaking" {
+        "You're back in queue."
+    } else {
+        "You're back in the lobby."
+    };
+    Notice::new(Alert::Dodge, "Champ Select ended without a game", body)
 }
 
 fn emit_client_state(app_handle: &AppHandle, client_state: String) {
