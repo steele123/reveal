@@ -27,7 +27,7 @@
     autoRequeue:
       "When the game ends and the client reaches the post-game screen, Reveal waits 30 seconds, clicks Play Again and starts the same queue. If by then you've queued yourself, left the lobby or the queue is paused after a dodge, it does nothing. Only the party leader can start a queue.",
     requeuePastEstimate:
-      "While you're in queue, Reveal compares your time in queue with League's estimated time every 2 seconds. Once you've waited longer than the estimate, it leaves the queue, waits 30 seconds and queues again. It never touches a match that's already been found.",
+      "While you're in queue, Reveal compares your time in queue with League's estimated time every 2 seconds. Once you've waited half again as long as the estimate (and at least a minute past it), it checks once more that no match has been found, leaves the queue, waits 30 seconds and queues again. It never touches a match that's already been found or a ready check that's up.",
     pauseAfterDodge:
       "If champ select ends without the game starting (someone dodged), Reveal stops League from queueing you again and keeps you in the lobby until you press Find Match yourself. The automatic queue options wait too.",
     autoOpen:
@@ -103,8 +103,8 @@
       <Label for="requeue-past-estimate" class="min-w-0 flex-1 cursor-pointer">
         <span class="block text-xs font-medium">Restart long queues<InfoTip text={TIPS.requeuePastEstimate} /></span>
         <span class="mt-0.5 block text-[10px] text-muted-foreground">
-          Once you've waited past League's estimated time, leave the queue and rejoin 30 seconds
-          later
+          Once you've waited well past League's estimated time, leave the queue and rejoin 30
+          seconds later
         </span>
       </Label>
       <Switch

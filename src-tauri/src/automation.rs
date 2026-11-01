@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde_json::json;
 use shaco::rest::RESTClient;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     future::Future,
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -26,6 +26,12 @@ const DRAFT_POLL_INTERVAL: Duration = Duration::from_millis(200);
 /// Bans and picks happen once this little of your turn is left, so you get the rest of it. It
 /// leaves room for one missed poll and League's round trip.
 const LAST_SECONDS_MS: f64 = 1_200.0;
+/// A ban or pick League turns down (or that times out) is tried again on the next poll, up to this
+/// many times, while the turn lasts.
+const MAX_ACTION_ATTEMPTS: u32 = 3;
+/// With nothing to choose, Reveal keeps checking (a hover may still come in) and only says it
+/// couldn't once this little of the turn is left.
+const NOTHING_TO_CHOOSE_MS: f64 = 300.0;
 const LOBBY_WAIT: Duration = Duration::from_secs(10);
 
 static DRAFT_WATCH: AtomicBool = AtomicBool::new(false);
@@ -149,7 +155,7 @@ async fn start_search(app_handle: &AppHandle, client: &RESTClient, reason: &str,
     }
 }
 
-/// Leaves and rejoins the queue whenever the wait passes League's estimate.
+/// Leaves and rejoins the queue once the wait runs well past League's estimate.
 async fn watch_queue(app_handle: AppHandle, client: RESTClient) {
     loop {
         tokio::time::sleep(QUEUE_POLL_INTERVAL).await;
@@ -168,12 +174,19 @@ async fn watch_queue(app_handle: AppHandle, client: RESTClient) {
         ) else {
             continue;
         };
-        if search["searchState"].as_str() != Some("Searching") || !past_estimate(waited, estimate)
+        if !still_searching(&search) || !past_estimate(waited, estimate) {
+            continue;
+        }
+        // Leaving the queue while a match pops would decline its ready check, so look once more
+        // right before leaving.
+        let latest = client.get("/lol-matchmaking/v1/search".to_string()).await;
+        if !latest.as_ref().is_ok_and(still_searching)
+            || phase(&client).await.as_deref() != Some("Matchmaking")
         {
             continue;
         }
 
-        log_info!("Queue ran past its {estimate:.0}s estimate ({waited:.0}s); restarting it");
+        log_info!("Queue ran well past its {estimate:.0}s estimate ({waited:.0}s); restarting it");
         if let Err(error) = client
             .delete("/lol-lobby/v2/lobby/matchmaking/search".to_string())
             .await
@@ -196,14 +209,23 @@ async fn watch_queue(app_handle: AppHandle, client: RESTClient) {
     }
 }
 
+/// Still looking for a match: none found and no ready check up.
+fn still_searching(search: &serde_json::Value) -> bool {
+    search["searchState"].as_str() == Some("Searching")
+        // "Invalid" is League's word for no ready check; any other state means one is up.
+        && matches!(search["readyCheck"]["state"].as_str(), None | Some("Invalid"))
+}
+
+/// League's estimates run short, so only restart once the wait is half again as long, and at
+/// least a minute past it; restarting throws away the time already waited.
 fn past_estimate(waited: f64, estimate: f64) -> bool {
-    estimate > 0.0 && waited > estimate
+    estimate > 0.0 && waited > (estimate * 1.5).max(estimate + 60.0)
 }
 
 /// Announces your ban and pick turns, and bans and locks in during their last seconds if you
 /// haven't yet.
 async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
-    let mut attempted: HashSet<i64> = HashSet::new();
+    let mut attempts = TurnAttempts::default();
     let mut announced: HashSet<i64> = HashSet::new();
     loop {
         tokio::time::sleep(DRAFT_POLL_INTERVAL).await;
@@ -239,13 +261,17 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
         let Some(turn) = due_turn(&session, now) else {
             continue;
         };
-        if !attempted.insert(turn.id) {
+        if attempts.is_finished(turn.id) {
             continue;
         }
 
         let available = available_champions(&client, &turn.kind).await;
         let Some(champion_id) = choose_champion(&session, turn, &settings, available.as_ref())
         else {
+            // A hover may still come in, so keep looking until the very end of the turn.
+            if time_left_ms(&session, now) > NOTHING_TO_CHOOSE_MS || !attempts.give_up(turn.id) {
+                continue;
+            }
             log_info!(
                 "No champion to {} automatically: hovering {}, {} champions available, ban list {:?}, picks {:?}",
                 turn.kind,
@@ -270,6 +296,7 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
         };
         match complete_action(&client, turn.id, champion_id).await {
             Ok(()) => {
+                attempts.give_up(turn.id);
                 log_info!("Automatic {} of champion {champion_id}", turn.kind);
                 let name = champion_name(&client, champion_id).await;
                 let done = if turn.kind == "ban" { "Banned" } else { "Locked in" };
@@ -282,8 +309,11 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
                     ),
                 );
             }
+            Err(error) if !attempts.failed(turn.id) => {
+                log_info!("Automatic {} failed, trying again: {error}", turn.kind);
+            }
             Err(error) => {
-                log_warn!("Automatic {} failed: {error}", turn.kind);
+                log_warn!("Automatic {} failed {MAX_ACTION_ATTEMPTS} times: {error}", turn.kind);
                 notify::send(
                     &app_handle,
                     Notice::new(
@@ -294,6 +324,35 @@ async fn watch_draft(app_handle: AppHandle, client: RESTClient) {
                 );
             }
         }
+    }
+}
+
+/// What's been tried for each ban or pick, so a failed one is retried while its turn lasts.
+#[derive(Default)]
+struct TurnAttempts {
+    finished: HashSet<i64>,
+    failures: HashMap<i64, u32>,
+}
+
+impl TurnAttempts {
+    fn is_finished(&self, action_id: i64) -> bool {
+        self.finished.contains(&action_id)
+    }
+
+    /// Stops trying this turn (done, or nothing to do). False if it was already stopped.
+    fn give_up(&mut self, action_id: i64) -> bool {
+        self.finished.insert(action_id)
+    }
+
+    /// Counts a failed try. False once that was the last one, and the turn is given up.
+    fn failed(&mut self, action_id: i64) -> bool {
+        let failures = self.failures.entry(action_id).or_default();
+        *failures += 1;
+        if *failures < MAX_ACTION_ATTEMPTS {
+            return true;
+        }
+        self.give_up(action_id);
+        false
     }
 }
 
@@ -640,6 +699,20 @@ mod tests {
     }
 
     #[test]
+    fn retries_a_failed_ban_or_pick_a_few_times() {
+        let mut attempts = TurnAttempts::default();
+        assert!(!attempts.is_finished(7));
+        assert!(attempts.failed(7), "first failure: try again");
+        assert!(attempts.failed(7), "second failure: try again");
+        assert!(!attempts.failed(7), "third failure: give up");
+        assert!(attempts.is_finished(7));
+        assert!(!attempts.is_finished(8), "other turns are separate");
+
+        assert!(attempts.give_up(8));
+        assert!(!attempts.give_up(8), "already given up");
+    }
+
+    #[test]
     fn announces_your_turn_as_soon_as_it_starts() {
         let draft = session(27_400.0, vec![action(7, 1, "pick", 0)]);
         let turn = current_turn(&draft).expect("your pick is under way");
@@ -655,9 +728,21 @@ mod tests {
 
     #[test]
     fn restarts_only_queues_past_a_real_estimate() {
-        assert!(past_estimate(95.0, 94.0));
-        assert!(!past_estimate(60.0, 94.0));
+        assert!(!past_estimate(95.0, 94.0), "just past the estimate is normal");
+        assert!(!past_estimate(150.0, 94.0), "under a minute past it");
+        assert!(past_estimate(155.0, 94.0));
+        assert!(!past_estimate(400.0, 300.0), "under half again as long");
+        assert!(past_estimate(451.0, 300.0));
         assert!(!past_estimate(60.0, 0.0), "no estimate yet");
+    }
+
+    #[test]
+    fn never_leaves_a_queue_that_found_a_match() {
+        assert!(still_searching(&json!({ "searchState": "Searching", "readyCheck": { "state": "Invalid" } })));
+        assert!(!still_searching(&json!({ "searchState": "Found", "readyCheck": { "state": "Invalid" } })));
+        assert!(!still_searching(&json!({ "searchState": "Searching", "readyCheck": { "state": "InProgress" } })));
+        assert!(!still_searching(&json!({ "searchState": "Searching", "readyCheck": { "state": "EveryoneReady" } })));
+        assert!(!still_searching(&json!({})));
     }
 
     #[test]
