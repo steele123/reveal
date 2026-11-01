@@ -23,7 +23,7 @@
     { key: "discord", label: "Discord" },
   ];
   const TIP =
-    "This PC shows Windows notifications. Phone sends to the free ntfy app (ntfy.sh) on a topic only you know. Discord posts to a channel through a webhook. Alerts never include Riot IDs, since phone and Discord alerts leave your PC.";
+    "This PC shows Windows notifications. Phone sends to the free ntfy app (ntfy.sh) on a topic only you know. Discord posts to a channel through a webhook. Only Team revealed names players: on the phone and in Discord it lists your team's Riot IDs, ranks and roles, with a link to their multi-search.";
 
   const BUTTON =
     "h-7 shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] font-medium text-muted-foreground transition hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-foreground disabled:opacity-50";

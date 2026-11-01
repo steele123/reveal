@@ -6,6 +6,7 @@ import {
   isDiscordWebhook,
   isNtfyTopic,
   lobbyNotice,
+  lobbyPlayers,
   ntfyTopicLink,
 } from "$lib/notifications";
 
@@ -49,6 +50,27 @@ describe("team revealed alert", () => {
       "2 teammates you've seen before, 1 of them in a dodged lobby. 1 likely off-role or autofilled.",
     );
     expect(body).not.toContain("Kindred");
+  });
+
+  it("lists your team with role, rank, meetings and off-role flags for phone and Discord", () => {
+    const lobby = [
+      player("Me", { is_self: true, assigned_position: "middle" }),
+      player("Paper Lantern", {
+        assigned_position: "top",
+        rank: { tier: "DIAMOND", division: "II", leaguePoints: 45, wins: 30, losses: 0, provisional: false },
+      }),
+      player("Kindred Spirit", { assigned_position: "jungle", autofilled: true }),
+      player("Enemy", { is_enemy: true }),
+    ];
+    const index = new Map([
+      [participantKey(lobby[0]), seen(0)],
+      [participantKey(lobby[2]), seen(1)],
+    ]);
+    expect(lobbyPlayers(lobby, index)).toEqual([
+      { name: "Me#NA1 (you)", detail: "Mid" },
+      { name: "Paper Lantern#NA1", detail: "Top · Diamond II 45 LP" },
+      { name: "Kindred Spirit#NA1", detail: "Jungle · Seen 2× (1 dodged) · Autofilled" },
+    ]);
   });
 
   it("says so when nobody is familiar", () => {

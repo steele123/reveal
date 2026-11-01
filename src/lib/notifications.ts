@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { offRoleReason, type Participant } from "$lib/champ_select";
+import {
+  formatAssignedPosition,
+  formatRank,
+  offRoleReason,
+  type Participant,
+} from "$lib/champ_select";
 import type { NotificationSettings } from "$lib/config";
 import { participantKey, type SeenBefore } from "$lib/lobby_history";
 
@@ -12,6 +17,11 @@ export const NOTIFICATION_ALERTS: ReadonlyArray<{
   label: string;
   description: string;
 }> = [
+  {
+    key: "autoQueue",
+    label: "Queued again",
+    description: "Reveal started the queue for you, after a game or a long wait",
+  },
   {
     key: "matchFound",
     label: "Match found",
@@ -35,7 +45,7 @@ export const NOTIFICATION_ALERTS: ReadonlyArray<{
   {
     key: "lobbyRevealed",
     label: "Team revealed",
-    description: "How many teammates you've seen before, and who's likely off-role",
+    description: "Who's on your team, who you've seen before and who's likely off-role",
   },
 ];
 
@@ -67,8 +77,9 @@ export function isDiscordWebhook(webhook: string): boolean {
 }
 
 /**
- * The "team revealed" alert, without Riot IDs since it can leave this PC: how many teammates
- * you've met before (and dodged with), and how many are likely off their usual role.
+ * The "team revealed" alert's summary: how many teammates you've met before (and dodged with),
+ * and how many are likely off their usual role. Names go in `lobbyPlayers`, which only the phone
+ * and Discord alerts list.
  */
 export function lobbyNotice(participants: Participant[], seen: Map<string, SeenBefore>): string {
   const teammates = participants.filter((participant) => !participant.is_enemy && !participant.is_self);
@@ -86,6 +97,38 @@ export function lobbyNotice(participants: Participant[], seen: Map<string, SeenB
   return parts.filter(Boolean).join(" ");
 }
 
+/** One player in an alert, as the backend lists them. */
+export interface NoticePlayer {
+  name: string;
+  detail: string;
+}
+
+/**
+ * Your team for the phone and Discord alerts, in pick order: Riot ID, then role, rank, how often
+ * you've met them and whether they're likely off-role, e.g. "Jungle · Diamond II 45 LP · Seen 3×".
+ */
+export function lobbyPlayers(
+  participants: Participant[],
+  seen: Map<string, SeenBefore>,
+): NoticePlayer[] {
+  return participants
+    .filter((participant) => !participant.is_enemy && participant.game_name)
+    .map((participant) => {
+      const rank = participant.rank && formatRank(participant.rank, participant.recent);
+      const met = participant.is_self ? undefined : seen.get(participantKey(participant));
+      const detail = [
+        participant.assigned_position && formatAssignedPosition(participant.assigned_position),
+        rank && [rank.tier, rank.details[0]].filter(Boolean).join(" "),
+        met && `Seen ${met.lobbies}×${met.dodges ? ` (${met.dodges} dodged)` : ""}`,
+        offRoleReason(participant),
+      ];
+      return {
+        name: `${participant.game_name}#${participant.game_tag}${participant.is_self ? " (you)" : ""}`,
+        detail: detail.filter(Boolean).join(" · "),
+      };
+    });
+}
+
 /** Sends a sample alert with the settings as they are on screen, saved or not. */
 export async function sendTestNotification(
   channel: NotificationChannel,
@@ -94,6 +137,11 @@ export async function sendTestNotification(
   await invoke("send_test_notification", { channel, settings });
 }
 
-export async function notifyLobbyRevealed(body: string): Promise<void> {
-  await invoke("notify_lobby_revealed", { body });
+/** `link` opens the team's multi-search from the phone alert or the Discord message. */
+export async function notifyLobbyRevealed(
+  body: string,
+  players: NoticePlayer[],
+  link: string | null,
+): Promise<void> {
+  await invoke("notify_lobby_revealed", { body, players, link });
 }

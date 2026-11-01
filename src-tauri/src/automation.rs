@@ -93,7 +93,13 @@ async fn requeue_after_game(app_handle: AppHandle, client: RESTClient) {
         // Already queued, or gone somewhere else.
         _ => return,
     }
-    start_search(&app_handle, &client, "after the game").await;
+    start_search(
+        &app_handle,
+        &client,
+        "after the game",
+        "Reveal started the same queue again after your game.",
+    )
+    .await;
 }
 
 async fn wait_for_lobby(client: &RESTClient) {
@@ -106,8 +112,9 @@ async fn wait_for_lobby(client: &RESTClient) {
     }
 }
 
-/// Starts matchmaking from the lobby, unless the queue is paused after a dodge.
-async fn start_search(app_handle: &AppHandle, client: &RESTClient, reason: &str) {
+/// Starts matchmaking from the lobby, unless the queue is paused after a dodge. `reason` is for
+/// the log, `explanation` for the alert.
+async fn start_search(app_handle: &AppHandle, client: &RESTClient, reason: &str, explanation: &str) {
     if phase(client).await.as_deref() != Some("Lobby") {
         return;
     }
@@ -124,8 +131,21 @@ async fn start_search(app_handle: &AppHandle, client: &RESTClient, reason: &str)
         .post_no_body("/lol-lobby/v2/lobby/matchmaking/search".to_string())
         .await
     {
-        Ok(_) => log_info!("Queued again {reason}"),
-        Err(error) => log_warn!("Couldn't queue again {reason}: {error}"),
+        Ok(_) => {
+            log_info!("Queued again {reason}");
+            notify::send(app_handle, Notice::new(Alert::AutoQueue, "Queued again", explanation));
+        }
+        Err(error) => {
+            log_warn!("Couldn't queue again {reason}: {error}");
+            notify::send(
+                app_handle,
+                Notice::new(
+                    Alert::AutoQueue,
+                    "Couldn't queue again",
+                    "League turned it down. In a party, only the leader can start the queue.",
+                ),
+            );
+        }
     }
 }
 
@@ -166,7 +186,13 @@ async fn watch_queue(app_handle: AppHandle, client: RESTClient) {
             return;
         }
         // Keep watching the new search; the loop ends if it didn't start.
-        start_search(&app_handle, &client, "after a long queue").await;
+        start_search(
+            &app_handle,
+            &client,
+            "after a long queue",
+            "Your wait ran past League's estimate, so Reveal restarted the queue.",
+        )
+        .await;
     }
 }
 

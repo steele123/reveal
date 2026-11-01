@@ -29,7 +29,8 @@
     seenBeforeIndex,
     type LobbyHistoryEntry,
   } from "$lib/lobby_history";
-  import { lobbyNotice, notifyLobbyRevealed } from "$lib/notifications";
+  import { lobbyNotice, lobbyPlayers, notifyLobbyRevealed } from "$lib/notifications";
+  import { createMultiSearchLink } from "$lib/link_actions";
   import { logFrontendError, logFrontendInfo } from "$lib/logging";
 
   let state = "Unknown";
@@ -67,8 +68,15 @@
     notifiedLobbyId = lobbyId;
     lobbyNoticeTimer = setTimeout(() => {
       if (activeLobbyId !== lobbyId || !champSelect) return;
-      const body = lobbyNotice(champSelect.participants, seenBeforeIndex(history, lobbyId));
-      notifyLobbyRevealed(body).catch((error) =>
+      const participants = champSelect.participants;
+      const seen = seenBeforeIndex(history, lobbyId);
+      const team = participants.filter((participant) => !participant.is_enemy);
+      const link = config ? createMultiSearchLink(team, config.multiProvider) : null;
+      notifyLobbyRevealed(
+        lobbyNotice(participants, seen),
+        lobbyPlayers(participants, seen),
+        link,
+      ).catch((error) =>
         logFrontendError("Failed to send the team revealed alert", error),
       );
     }, LOBBY_NOTICE_DELAY_MS);

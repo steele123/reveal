@@ -208,13 +208,23 @@ pub async fn send_test_notification(
         .map_err(|error| format!("{error:#}"))
 }
 
-/// The window's summary of a revealed team (it knows who was seen before), as an alert.
+/// The window's summary of a revealed team (it knows who was seen before), as an alert. The
+/// phone and Discord alerts list `players` and link to the team's multi-search.
 #[tauri::command]
-pub fn notify_lobby_revealed(app_handle: AppHandle, body: String) {
-    crate::notify::send(
-        &app_handle,
-        crate::notify::Notice::new(crate::notify::Alert::LobbyRevealed, "Your team is revealed", body),
-    );
+pub fn notify_lobby_revealed(
+    app_handle: AppHandle,
+    body: String,
+    players: Vec<crate::notify::NoticePlayer>,
+    link: Option<String>,
+) {
+    let notice = crate::notify::Notice::new(
+        crate::notify::Alert::LobbyRevealed,
+        "Your team is revealed",
+        body,
+    )
+    .with_players(players)
+    .with_link(link);
+    crate::notify::send(&app_handle, notice);
 }
 
 #[tauri::command]

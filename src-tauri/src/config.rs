@@ -76,7 +76,12 @@ impl Default for NotificationSettings {
         let keys = |alerts: &[Alert]| alerts.iter().map(|alert| alert.key().to_string()).collect();
         // League already alerts on this PC when a match is found, so only away-from-PC channels
         // start with it. Phone and Discord stay off until a topic or webhook is set.
-        let away = keys(&[Alert::MatchFound, Alert::YourTurn, Alert::Dodge]);
+        let away = keys(&[
+            Alert::AutoQueue,
+            Alert::MatchFound,
+            Alert::YourTurn,
+            Alert::Dodge,
+        ]);
         Self {
             desktop: keys(&[Alert::AutoAction, Alert::Dodge]),
             phone: away.clone(),

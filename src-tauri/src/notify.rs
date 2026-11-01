@@ -1,10 +1,11 @@
 //! Alerts for things that happen while you might not be watching: on this PC (Windows
 //! notifications), on your phone (the ntfy app) and in a Discord channel (a webhook). Each alert
-//! is turned on per channel in the settings. Alerts never include Riot IDs, since phone and
-//! Discord alerts leave this PC.
+//! is turned on per channel in the settings. Only the "team revealed" alert names players: it
+//! lists your team on the phone and in Discord, so turning it on there is the opt-in.
 
 use crate::config::{AppConfig, NotificationSettings};
 use anyhow::Context;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{sync::OnceLock, time::Duration};
 use tauri::{AppHandle, Manager};
@@ -20,6 +21,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Alert {
+    AutoQueue,
     MatchFound,
     YourTurn,
     AutoAction,
@@ -33,6 +35,7 @@ impl Alert {
     /// The name the settings list it under.
     pub fn key(self) -> &'static str {
         match self {
+            Alert::AutoQueue => "autoQueue",
             Alert::MatchFound => "matchFound",
             Alert::YourTurn => "yourTurn",
             Alert::AutoAction => "autoAction",
@@ -45,6 +48,7 @@ impl Alert {
     /// ntfy shows the first tag that names an emoji next to the title.
     fn ntfy_tag(self) -> &'static str {
         match self {
+            Alert::AutoQueue => "repeat",
             Alert::MatchFound => "crossed_swords",
             Alert::YourTurn => "hourglass_flowing_sand",
             Alert::AutoAction => "robot",
@@ -61,6 +65,7 @@ impl Alert {
 
     fn discord_color(self) -> u32 {
         match self {
+            Alert::AutoQueue => 0x06b6d4,
             Alert::MatchFound => 0x3b82f6,
             Alert::YourTurn => 0xf59e0b,
             Alert::AutoAction => 0x10b981,
@@ -94,6 +99,17 @@ pub struct Notice {
     pub alert: Alert,
     pub title: String,
     pub body: String,
+    /// Listed on the phone and in Discord, but not in the short Windows notification.
+    pub players: Vec<NoticePlayer>,
+    /// Opened by tapping the phone alert or the Discord title.
+    pub link: Option<String>,
+}
+
+/// One player in an alert: their Riot ID and what to know about them.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct NoticePlayer {
+    pub name: String,
+    pub detail: String,
 }
 
 impl Notice {
@@ -102,9 +118,25 @@ impl Notice {
             alert,
             title: title.into(),
             body: body.into(),
+            players: Vec::new(),
+            link: None,
         }
     }
+
+    pub fn with_players(mut self, players: Vec<NoticePlayer>) -> Self {
+        self.players = players;
+        self
+    }
+
+    /// Only web links are kept, so an alert can't open anything else.
+    pub fn with_link(mut self, link: Option<String>) -> Self {
+        self.link = link.filter(|link| link.starts_with("https://"));
+        self
+    }
 }
+
+/// Discord allows 25 fields per embed; a lobby never comes close.
+const MAX_DISCORD_FIELDS: usize = 25;
 
 /// The channels `alert` goes to: those it's turned on for, once they're set up.
 pub fn channels(settings: &NotificationSettings, alert: Alert) -> Vec<Channel> {
@@ -206,13 +238,29 @@ fn ntfy_topic(topic: &str) -> anyhow::Result<&str> {
 }
 
 fn ntfy_message(topic: &str, notice: &Notice) -> Value {
-    json!({
+    let mut message = notice.body.clone();
+    if !notice.players.is_empty() {
+        message.push('\n');
+        for player in &notice.players {
+            message.push('\n');
+            message.push_str(&player.name);
+            if !player.detail.is_empty() {
+                message.push_str(" · ");
+                message.push_str(&player.detail);
+            }
+        }
+    }
+    let mut published = json!({
         "topic": topic,
         "title": notice.title,
-        "message": notice.body,
+        "message": message,
         "tags": [notice.alert.ntfy_tag()],
         "priority": if notice.alert.urgent() { 4 } else { 3 },
-    })
+    });
+    if let Some(link) = &notice.link {
+        published["click"] = json!(link);
+    }
+    published
 }
 
 /// A Discord webhook URL, from a channel's Integrations settings. Only Discord's own hosts are
@@ -230,15 +278,30 @@ fn discord_webhook(webhook: &str) -> anyhow::Result<reqwest::Url> {
 }
 
 fn discord_message(notice: &Notice) -> Value {
+    let fields: Vec<Value> = notice
+        .players
+        .iter()
+        .take(MAX_DISCORD_FIELDS)
+        .map(|player| {
+            // Discord turns down empty field values; a zero-width space shows nothing.
+            let value = if player.detail.is_empty() { "\u{200b}" } else { player.detail.as_str() };
+            json!({ "name": player.name, "value": value, "inline": true })
+        })
+        .collect();
+    let mut embed = json!({
+        "title": notice.title,
+        "description": notice.body,
+        "color": notice.alert.discord_color(),
+        "fields": fields,
+    });
+    if let Some(link) = &notice.link {
+        embed["url"] = json!(link);
+    }
     json!({
         "username": "Reveal",
         // Alerts never ping anyone, whatever their text says.
         "allowed_mentions": { "parse": [] },
-        "embeds": [{
-            "title": notice.title,
-            "description": notice.body,
-            "color": notice.alert.discord_color(),
-        }],
+        "embeds": [embed],
     })
 }
 
@@ -341,7 +404,11 @@ mod tests {
     fn live_ntfy_delivers_alerts() {
         tauri::async_runtime::block_on(async {
             let topic = format!("reveal-test-{}", std::process::id());
-            let notice = Notice::new(Alert::Test, "Reveal notifications work", "Test from cargo test");
+            let notice = Notice::new(Alert::Test, "Reveal notifications work", "Test from cargo test")
+                .with_players(vec![NoticePlayer {
+                    name: "Paper Lantern#NA1".to_string(),
+                    detail: "Top · Diamond II".to_string(),
+                }]);
             let published: Value = http()
                 .post(NTFY_URL)
                 .json(&ntfy_message(&topic, &notice))
@@ -356,7 +423,47 @@ mod tests {
             assert_eq!(published["topic"], topic.as_str());
             assert_eq!(published["title"], "Reveal notifications work");
             assert_eq!(published["tags"][0], "bell");
+            assert!(published["message"]
+                .as_str()
+                .unwrap()
+                .ends_with("Paper Lantern#NA1 · Top · Diamond II"));
         });
+    }
+
+    #[test]
+    fn lists_the_lobby_on_the_phone_and_in_discord() {
+        let link = "https://op.gg/lol/multisearch/na?summoners=a";
+        let notice = Notice::new(Alert::LobbyRevealed, "Your team is revealed", "Nobody new.")
+            .with_players(vec![
+                NoticePlayer {
+                    name: "Paper Lantern#NA1".to_string(),
+                    detail: "Top · Diamond II".to_string(),
+                },
+                NoticePlayer {
+                    name: "River Walker#SUP".to_string(),
+                    detail: String::new(),
+                },
+            ])
+            .with_link(Some(link.to_string()));
+
+        let ntfy = ntfy_message("topic", &notice);
+        assert_eq!(
+            ntfy["message"],
+            "Nobody new.\n\nPaper Lantern#NA1 · Top · Diamond II\nRiver Walker#SUP"
+        );
+        assert_eq!(ntfy["click"], link);
+
+        let embed = &discord_message(&notice)["embeds"][0];
+        assert_eq!(embed["fields"][0]["name"], "Paper Lantern#NA1");
+        assert_eq!(embed["fields"][0]["value"], "Top · Diamond II");
+        assert_eq!(embed["fields"][1]["value"], "\u{200b}");
+        assert_eq!(embed["url"], link);
+
+        let plain = Notice::new(Alert::Dodge, "Dodge", "Back in queue.")
+            .with_link(Some("file:///C:/Windows".to_string()));
+        assert_eq!(plain.link, None, "only web links");
+        assert!(discord_message(&plain)["embeds"][0].get("url").is_none());
+        assert!(ntfy_message("topic", &plain).get("click").is_none());
     }
 
     #[test]
