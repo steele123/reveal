@@ -29,7 +29,7 @@
 
 <header
     data-tauri-drag-region
-    class="flex h-12 w-full shrink-0 select-none items-center border-b border-white/10 px-4"
+    class="relative flex h-12 w-full shrink-0 select-none items-center border-b border-white/10 px-4"
 >
   <div data-tauri-drag-region class="flex min-w-0 items-center gap-2.5">
     <div
@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <nav class="ml-5 flex items-center rounded-lg border border-white/[0.07] bg-white/[0.025] p-0.5">
+  <nav class="absolute left-1/2 flex -translate-x-1/2 items-center rounded-lg border border-white/[0.07] bg-white/[0.025] p-0.5">
     <button
       class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
         activePage === "reveal" ? "bg-white/10 text-foreground" : ""
