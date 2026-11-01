@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Config } from "$lib/config";
-  import { formatAssignedPosition, positionBadge } from "$lib/champ_select";
+  import { formatAssignedPosition } from "$lib/champ_select";
   import { loadChampionNames, type ChampionName } from "$lib/champions";
   import { logFrontendError } from "$lib/logging";
   import { LANES, type Role } from "$lib/matchups";
@@ -16,7 +16,8 @@
 
   let champions: ChampionName[] = [];
   let championsFailed = false;
-  let role: Role = "jungle";
+  /** Opens on the first role with picks, which is usually the one you play. */
+  let role: Role = LANES.find((lane) => config?.pickChampions[lane]?.length) ?? LANES[0];
 
   /** How each setting decides what to do, for its info icon. */
   const TIPS = {
@@ -175,7 +176,7 @@
         <Label for="auto-ban" class="min-w-0 flex-1 cursor-pointer">
           <span class="block text-xs font-medium">Ban automatically<InfoTip text={TIPS.autoBan} /></span>
           <span class="mt-0.5 block text-[10px] text-muted-foreground">
-            The first available champion from this list
+            Your hover, or else the first available champion from this list
           </span>
         </Label>
         <Switch
@@ -190,7 +191,7 @@
         ids={config?.banChampions ?? []}
         {champions}
         disabled={!config?.autoBan}
-        placeholder="Add a ban"
+        placeholder="Add bans"
         onChange={(banChampions) => update({ banChampions })}
       />
     </div>
@@ -209,20 +210,31 @@
           onCheckedChange={(autoPick) => update({ autoPick })}
         />
       </div>
-      <div class="flex items-center gap-1" role="tablist" aria-label="Role">
+      <div
+        class="grid grid-cols-5 gap-0.5 rounded-lg border border-white/10 bg-white/[0.025] p-0.5"
+        role="tablist"
+        aria-label="Role"
+      >
         {#each LANES as lane (lane)}
           {@const count = config?.pickChampions[lane]?.length ?? 0}
           <button
             type="button"
             role="tab"
             aria-selected={role === lane}
-            title={formatAssignedPosition(lane)}
-            class="rounded-md px-2 py-0.5 text-[10px] font-semibold transition {role === lane
-              ? 'bg-blue-500/15 text-blue-300'
-              : 'text-muted-foreground hover:text-foreground'}"
+            class="flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-medium transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 {role ===
+            lane
+              ? 'bg-blue-500/15 text-blue-200 shadow-sm'
+              : 'text-muted-foreground hover:bg-white/[0.04] hover:text-foreground'}"
             on:click={() => (role = lane)}
           >
-            {positionBadge(lane)}{#if count}<span class="ml-1 opacity-60">{count}</span>{/if}
+            {formatAssignedPosition(lane)}
+            <span
+              class="min-w-[16px] rounded-full px-1 text-[9px] tabular-nums leading-[14px] {count
+                ? 'bg-white/10 text-foreground'
+                : 'text-muted-foreground/60'}"
+            >
+              {count}
+            </span>
           </button>
         {/each}
       </div>
@@ -232,7 +244,7 @@
           ids={config?.pickChampions[role] ?? []}
           {champions}
           disabled={!config?.autoPick}
-          placeholder={`Add a ${formatAssignedPosition(role)} pick`}
+          placeholder={`Add ${formatAssignedPosition(role)} picks`}
           onChange={setPicks}
         />
       {/key}

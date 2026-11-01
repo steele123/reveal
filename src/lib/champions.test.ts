@@ -34,4 +34,9 @@ describe("searchChampions", () => {
     expect(searchChampions(champions, "will").map((champion) => champion.id)).toEqual([20]);
     expect(searchChampions(champions, " ")).toEqual([]);
   });
+
+  it("stops at the limit it's given", () => {
+    expect(searchChampions(champions, "a", 1)).toHaveLength(1);
+    expect(searchChampions(champions, "a", Infinity).length).toBeGreaterThan(1);
+  });
 });

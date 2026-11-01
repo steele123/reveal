@@ -36,7 +36,11 @@ const MAX_MATCHES = 12;
 
 /** Champions whose names start with what's typed, then ones that contain it, ignoring case,
  * spaces and punctuation. */
-export function searchChampions(champions: ChampionName[], typed: string): ChampionName[] {
+export function searchChampions(
+  champions: ChampionName[],
+  typed: string,
+  limit = MAX_MATCHES,
+): ChampionName[] {
   const wanted = normalize(typed);
   if (!wanted) return [];
   const starts: ChampionName[] = [];
@@ -46,7 +50,7 @@ export function searchChampions(champions: ChampionName[], typed: string): Champ
     if (name.startsWith(wanted)) starts.push(champion);
     else if (name.includes(wanted)) contains.push(champion);
   }
-  return [...starts, ...contains].slice(0, MAX_MATCHES);
+  return [...starts, ...contains].slice(0, limit);
 }
 
 /** The champion typed in, ignoring case, spaces and punctuation ("kaisa" finds Kai'Sa). */
