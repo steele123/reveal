@@ -42,6 +42,9 @@ pub async fn handle_client_state(
         if let Err(error) = app_handle.emit_all("queue_pause_update", paused) {
             log_error!("Failed to emit queue pause state: {error}");
         }
+        if paused {
+            crate::automation::resume_after_dodge(app_handle, remoting_client);
+        }
     }
 
     if phase_update.cancel_search {
@@ -98,7 +101,7 @@ pub async fn handle_client_state(
                 let app_handle = app_handle.clone();
                 let remoting_client = remoting_client.clone();
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(accept_wait(&cfg)).await;
+                    wait_until_accept_time(&remoting_client, accept_wait(&cfg)).await;
 
                     let ready_check_is_current = {
                         let pause = app_handle.state::<QueuePause>();
@@ -153,8 +156,29 @@ pub async fn handle_client_state(
     emit_client_state(app_handle, client_state);
 }
 
-/// The ready check lasts about 10 seconds, so a longer wait would let it run out.
-const MAX_ACCEPT_WAIT: std::time::Duration = std::time::Duration::from_secs(8);
+/// The ready check lasts 10 seconds; accepting at 9 leaves a second for the request to land.
+const MAX_ACCEPT_WAIT: std::time::Duration = std::time::Duration::from_secs(9);
+
+/// Waits until the ready check has been up for `wait`. League's own timer counts from the
+/// pop, which was before Reveal heard of it, so whichever clock is further along wins.
+async fn wait_until_accept_time(remoting_client: &RESTClient, wait: std::time::Duration) {
+    const POLL: std::time::Duration = std::time::Duration::from_millis(200);
+    let started = std::time::Instant::now();
+    loop {
+        let league_elapsed = remoting_client
+            .get("/lol-matchmaking/v1/ready-check".to_string())
+            .await
+            .ok()
+            .and_then(|ready_check| ready_check["timer"].as_f64())
+            .map(std::time::Duration::from_secs_f64)
+            .unwrap_or_default();
+        let elapsed = started.elapsed().max(league_elapsed);
+        if elapsed >= wait {
+            return;
+        }
+        tokio::time::sleep((wait - elapsed).min(POLL)).await;
+    }
+}
 
 /// How long auto accept waits after the ready check pops, so you can still decline.
 fn accept_wait(cfg: &Config) -> std::time::Duration {
@@ -170,9 +194,12 @@ fn answered_yourself(ready_check: &serde_json::Value) -> bool {
 }
 
 fn match_found_notice(cfg: &Config) -> Notice {
-    let seconds = accept_wait(cfg).as_secs();
+    let wait = accept_wait(cfg);
+    let seconds = wait.as_secs();
     let body = if !cfg.auto_accept {
         "Accept it in League before the timer runs out.".to_string()
+    } else if wait == MAX_ACCEPT_WAIT {
+        "Reveal accepts it in the last second unless you answer first.".to_string()
     } else if seconds == 0 {
         "Reveal accepts it right away.".to_string()
     } else {
@@ -209,6 +236,7 @@ mod tests {
         };
         assert_eq!(notice(true, 4_000), "Reveal accepts it in 4 seconds unless you answer first.");
         assert_eq!(notice(true, 0), "Reveal accepts it right away.");
+        assert_eq!(notice(true, 9_000), "Reveal accepts it in the last second unless you answer first.");
         assert_eq!(notice(false, 4_000), "Accept it in League before the timer runs out.");
     }
 }

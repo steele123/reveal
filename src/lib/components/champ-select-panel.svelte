@@ -35,7 +35,6 @@
   export let champSelect: ChampSelect | null = null;
   export let matchups: MatchupBoard | null = null;
   export let countersProvider: CountersProvider = "lolalytics";
-  export let onCountersProviderChange: (provider: CountersProvider) => void = () => {};
   export let clickAction: PlayerClickAction = "details";
   export let provider: MultiProvider = "opgg";
   export let queueName: string | null = null;
@@ -140,7 +139,6 @@
       enemyPlayers={enemies}
       board={matchups}
       provider={countersProvider}
-      onProviderChange={onCountersProviderChange}
       {seenBefore}
       onSelectPlayer={selectPlayer}
     />

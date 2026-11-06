@@ -39,10 +39,16 @@ export interface Config {
     discordPromptSeen: boolean;
     playerClickAction: PlayerClickAction;
     countersProvider: CountersProvider;
-    /** Queue again 30 seconds after a game ends. */
+    /** Queue again `requeueDelaySeconds` after a game ends. */
     autoRequeue: boolean;
+    /** Wait before queueing again after a game; 0 is right away. */
+    requeueDelaySeconds: number;
     /** Leave and rejoin the queue once the wait passes League's estimate. */
     requeuePastEstimate: boolean;
+    /** Wait between leaving a long queue and joining it again; 0 is right away. */
+    longQueueRequeueDelaySeconds: number;
+    /** How long a pause after a dodge lasts before Reveal queues again; 0 waits for you. */
+    dodgePauseSeconds: number;
     /** Ban the first available of `banChampions` in your ban's last seconds, if you haven't. */
     autoBan: boolean;
     banChampions: number[];
@@ -79,6 +85,9 @@ export const DEFAULT_CONFIG: Config = {
     playerClickAction: "details",
     countersProvider: "lolalytics",
     autoRequeue: false,
+    requeueDelaySeconds: 30,
+    longQueueRequeueDelaySeconds: 30,
+    dodgePauseSeconds: 0,
     requeuePastEstimate: false,
     autoBan: false,
     banChampions: [],

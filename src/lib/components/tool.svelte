@@ -6,13 +6,13 @@
     type Config,
   } from "$lib/config";
   import { fade } from "svelte/transition";
-  import RevealCount from "./reveal-count.svelte";
   import type { ChampSelect } from "$lib/champ_select";
   import ChampSelectPanel from "./champ-select-panel.svelte";
   import LiveGamePanel from "./live-game-panel.svelte";
   import type { LiveGame } from "$lib/live_game";
   import SettingsPanel from "./settings-panel.svelte";
   import IdleOverview from "./idle-overview.svelte";
+  import RequeueCountdown from "./requeue-countdown.svelte";
   import { logFrontendError } from "$lib/logging";
   import { isTauriRuntime } from "$lib/runtime";
   import type { LobbyHistoryEntry } from "$lib/lobby_history";
@@ -28,6 +28,7 @@
   export let activeLobbyId: string | null = null;
   export let liveGame: LiveGame | null = null;
   export let queueName: string | null = null;
+  export let requeue: { deadline: number; after: "game" | "queue" | "dodge" } | null = null;
   export let onConfigChange: (config: Config) => void = () => {};
   export let onOpenPage: (page: "history" | "auto") => void = () => {};
 
@@ -60,15 +61,15 @@
       ].join(" · ")
     : "";
 
-  function formatState(value: string): string {
-    if (value === "InProgress") return "In game";
-    if (value === "ChampSelect") return "Champ Select";
-    if (value === "Unknown") return "Not connected";
-    return value.replace(/([a-z])([A-Z])/g, "$1 $2");
-  }
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-2">
+  <!-- Dropped once you leave the post-game screen, or queue after a dodge, yourself. -->
+  {#if requeue && (requeue.after === "queue" || (requeue.after === "game" ? state === "EndOfGame" : queuePaused))}
+    {#key requeue.deadline}
+      <RequeueCountdown deadline={requeue.deadline} after={requeue.after} />
+    {/key}
+  {/if}
   {#if inChampSelect}
     <button
       type="button"
@@ -105,9 +106,6 @@
         {champSelect}
         {matchups}
         countersProvider={config?.countersProvider ?? "lolalytics"}
-        onCountersProviderChange={(countersProvider) => {
-          if (config) void handleConfigChange({ ...config, countersProvider });
-        }}
         {history}
         {activeLobbyId}
         clickAction={config?.playerClickAction ?? "details"}
@@ -120,81 +118,6 @@
       <LiveGamePanel game={liveGame} {history} provider={config?.multiProvider ?? "opgg"} />
     </div>
   {:else}
-    <div class="grid grid-cols-2 gap-3">
-      <div class="reveal-panel px-3.5 py-3">
-        <div
-          class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
-        >
-          Client state
-        </div>
-        <div class="mt-1.5 flex items-center gap-2 text-sm font-semibold">
-          <span
-            class="h-1.5 w-1.5 rounded-full"
-            class:bg-blue-400={connected}
-            class:bg-amber-400={!connected}></span>
-          {formatState(state)}
-        </div>
-      </div>
-      <div class="reveal-panel px-3.5 py-3">
-        <div
-          class="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
-        >
-          Revealed lobbies
-        </div>
-        <div class="mt-1.5 text-sm font-semibold tabular-nums">
-          <RevealCount />
-        </div>
-      </div>
-    </div>
-
-    <div in:fade class="reveal-panel shrink-0 px-4 py-3">
-      <div class="flex items-center gap-4">
-        <div
-          class={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
-            connected
-              ? "border-blue-400/20 bg-blue-500/10 text-blue-300"
-              : "border-amber-400/20 bg-amber-500/10 text-amber-300"
-          }`}
-        >
-          {#if state === "InProgress"}
-            <svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true">
-              <path d="M7 5.5 13 10l-6 4.5v-9Z" fill="currentColor" />
-            </svg>
-          {:else}
-            <span class="relative flex h-3 w-3">
-              <span
-                class="absolute h-full w-full animate-ping rounded-full bg-current opacity-30"></span>
-              <span class="relative h-3 w-3 rounded-full bg-current"></span>
-            </span>
-          {/if}
-        </div>
-        <div>
-          <div class="text-sm font-semibold">
-            {#if state === "InProgress"}
-              Game in progress
-            {:else if !connected}
-              Looking for League
-            {:else if queuePaused}
-              Queue paused after a dodge
-            {:else}
-              Ready for Champ Select
-            {/if}
-          </div>
-          <div class="mt-1 max-w-[360px] text-xs leading-relaxed text-muted-foreground">
-            {#if state === "InProgress"}
-              Reveal is standing by and will be ready for your next lobby.
-            {:else if !connected}
-              Start League, or restart it and run Reveal as administrator if it is already open.
-            {:else if queuePaused}
-              Reveal stopped the next search. Queue again in League when you're ready.
-            {:else}
-              Join a lobby and queue normally. Teammate names will appear here automatically.
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
-
     <IdleOverview {history} {config} {connected} {onOpenPage} />
   {/if}
 </div>

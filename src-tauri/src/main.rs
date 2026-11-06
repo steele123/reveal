@@ -36,8 +36,11 @@ use commands::{
     open_log_folder, open_opgg_link, remove_legacy_install, send_test_notification, set_config,
     set_enemy_role, write_frontend_log,
 };
+use commands::hide_to_tray;
 use config::AppConfig;
-use tauri::Manager;
+use tauri::{
+    AppHandle, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, WindowEvent,
+};
 
 fn main() {
     match logging::init() {
@@ -51,14 +54,19 @@ fn main() {
     #[cfg(all(windows, not(debug_assertions)))]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
         log_info!("Reveal was launched again; showing the running window");
-        if let Some(window) = app.get_window("main") {
-            let _ = window.unminimize();
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
+        show_main_window(app);
     }));
 
     let result = builder
+        .system_tray(tray())
+        .on_system_tray_event(on_tray_event)
+        // Closing the window only hides it, so Reveal keeps watching League from the tray.
+        .on_window_event(|event| {
+            if let WindowEvent::CloseRequested { api, .. } = event.event() {
+                api.prevent_close();
+                commands::hide_to_tray(event.window().clone());
+            }
+        })
         .manage(Lcu::default())
         .manage(QueuePause::default())
         .setup(|app| {
@@ -98,6 +106,7 @@ fn main() {
             remove_legacy_install,
             write_frontend_log,
             set_enemy_role,
+            hide_to_tray,
             send_test_notification,
             notify_lobby_revealed,
             get_own_profile,
@@ -111,6 +120,33 @@ fn main() {
             log_error!("Fatal Tauri runtime error: {error}");
             show_startup_error(&error.to_string());
         }
+    }
+}
+
+fn tray() -> SystemTray {
+    let menu = SystemTrayMenu::new()
+        .add_item(CustomMenuItem::new("show", "Open Reveal"))
+        .add_item(CustomMenuItem::new("quit", "Quit Reveal"));
+    SystemTray::new().with_menu(menu).with_tooltip("Reveal")
+}
+
+fn on_tray_event(app: &AppHandle, event: SystemTrayEvent) {
+    match event {
+        SystemTrayEvent::LeftClick { .. } => show_main_window(app),
+        SystemTrayEvent::MenuItemClick { id, .. } if id == "show" => show_main_window(app),
+        SystemTrayEvent::MenuItemClick { id, .. } if id == "quit" => {
+            log_info!("Quit chosen from the tray");
+            app.exit(0);
+        }
+        _ => {}
+    }
+}
+
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
     }
 }
 

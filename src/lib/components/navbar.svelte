@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getVersion } from "@tauri-apps/api/app";
+  import { invoke } from "@tauri-apps/api/tauri";
   import { appWindow } from "@tauri-apps/api/window";
   import { isTauriRuntime } from "$lib/runtime";
 
@@ -8,7 +9,8 @@
   export let historyCount = 0;
   export let onNavigate: (page: "reveal" | "history" | "auto") => void = () => {};
 
-  let version = "Preview";
+  /** Empty in the browser preview, which has no app version. */
+  let version = "";
 
   onMount(() => {
     if (!isTauriRuntime()) return;
@@ -19,14 +21,15 @@
     if (isTauriRuntime()) void appWindow.minimize();
   }
 
+  /** Reveal keeps running in the tray; quit it from the tray icon's menu. */
   function close() {
-    if (isTauriRuntime()) void appWindow.close();
+    if (isTauriRuntime()) void invoke("hide_to_tray");
   }
 </script>
 
 <header
     data-tauri-drag-region
-    class="flex h-12 w-full shrink-0 select-none items-center border-b border-white/10 px-4"
+    class="relative flex h-12 w-full shrink-0 select-none items-center border-b border-white/10 px-4"
 >
   <div data-tauri-drag-region class="flex min-w-0 items-center gap-2.5">
     <div
@@ -36,15 +39,17 @@
     </div>
     <div data-tauri-drag-region class="flex items-baseline gap-2">
       <div class="text-sm font-semibold tracking-tight">Reveal</div>
-      <div
-        class="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-      >
-        {version}
-      </div>
+      {#if version}
+        <div
+          class="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >
+          {version}
+        </div>
+      {/if}
     </div>
   </div>
 
-  <nav class="ml-5 flex items-center rounded-lg border border-white/[0.07] bg-white/[0.025] p-0.5">
+  <nav class="absolute left-1/2 flex -translate-x-1/2 items-center rounded-lg border border-white/[0.07] bg-white/[0.025] p-0.5">
     <button
       class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
         activePage === "reveal" ? "bg-white/10 text-foreground" : ""
@@ -68,10 +73,10 @@
       class={`rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:text-foreground ${
         activePage === "auto" ? "bg-white/10 text-foreground" : ""
       }`}
-      title="Automatic requeue, bans and picks"
+      title="Queue, champ select and alert settings"
       on:click={() => onNavigate("auto")}
     >
-      Auto
+      Settings
     </button>
   </nav>
 

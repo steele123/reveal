@@ -11,7 +11,6 @@
   import { describeSeenBefore, type SeenBefore } from "$lib/lobby_history";
   import { logFrontendError } from "$lib/logging";
   import {
-    COUNTERS_PROVIDERS,
     csLead,
     describeMatchup,
     draftLanes,
@@ -35,7 +34,6 @@
   export let board: MatchupBoard | null = null;
   /** The saved choice; the board says which site its numbers are from. */
   export let provider: CountersProvider = "lolalytics";
-  export let onProviderChange: (provider: CountersProvider) => void = () => {};
   export let seenBefore: (participant: Participant) => SeenBefore | undefined = () => undefined;
   export let onSelectPlayer: (participant: Participant) => void = () => {};
 
@@ -308,34 +306,13 @@
 
     {#if focused}
       <CountersTable enemy={focused} provider={shownProvider} />
-    {:else}
-      <div class="shrink-0 px-1 text-[10px] text-muted-foreground">
-        As the enemy team locks in, each lane fills in with how your teammate fares, and the best
-        Master+ counters to the enemy pick show up here.
-      </div>
     {/if}
 
-    <div class="flex shrink-0 items-center justify-end gap-3 px-1 pb-0.5">
-      {#if board?.patch}
-        <span class="text-[9px] text-muted-foreground">Master+ · Patch {board.patch}</span>
-      {/if}
-      <div class="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
-        <span title="Both sites are always read; this picks whose win rate is shown first">Main</span>
-        <div class="flex rounded-full border border-white/10 bg-white/[0.03] p-0.5" role="radiogroup">
-          {#each COUNTERS_PROVIDERS as option (option.value)}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={provider === option.value}
-              class="rounded-full px-2 py-0.5 font-medium transition {provider === option.value
-                ? 'bg-blue-500/15 text-blue-300'
-                : 'hover:text-foreground'}"
-              title={`Show ${option.label}'s win rates first`}
-              on:click={() => onProviderChange(option.value)}>{option.label}</button
-            >
-          {/each}
-        </div>
+    <!-- Shown from the first enemy pick, with the stats it dates. -->
+    {#if board?.enemies.length && board.patch}
+      <div class="shrink-0 px-1 pb-0.5 text-right text-[9px] text-muted-foreground">
+        Master+ · Patch {board.patch}
       </div>
-    </div>
+    {/if}
   </div>
 </div>
