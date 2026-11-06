@@ -37,6 +37,8 @@ export interface Config {
     pauseQueueAfterDodge: boolean;
     multiProvider: MultiProvider;
     discordPromptSeen: boolean;
+    /** Closing the window hides Reveal to a tray icon instead of quitting. */
+    closeToTray: boolean;
     playerClickAction: PlayerClickAction;
     countersProvider: CountersProvider;
     /** Queue again `requeueDelaySeconds` after a game ends. */
@@ -82,6 +84,7 @@ export const DEFAULT_CONFIG: Config = {
     pauseQueueAfterDodge: false,
     multiProvider: "opgg",
     discordPromptSeen: false,
+    closeToTray: false,
     playerClickAction: "details",
     countersProvider: "lolalytics",
     autoRequeue: false,

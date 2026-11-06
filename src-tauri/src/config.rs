@@ -25,6 +25,9 @@ pub struct Config {
     /// Set once the user has answered the one-time "join our Discord" prompt.
     #[serde(default)]
     pub discord_prompt_seen: bool,
+    /// Closing the window hides Reveal to a tray icon instead of quitting.
+    #[serde(default)]
+    pub close_to_tray: bool,
     /// What clicking a teammate does: "details" (Reveal popup) or "opgg" (open their profile).
     #[serde(default = "default_player_click_action")]
     pub player_click_action: String,
@@ -126,6 +129,7 @@ impl Default for Config {
             pause_queue_after_dodge: false,
             multi_provider: default_provider(),
             discord_prompt_seen: false,
+            close_to_tray: false,
             player_click_action: default_player_click_action(),
             counters_provider: default_counters_provider(),
             auto_requeue: false,
@@ -279,6 +283,7 @@ mod tests {
         );
         assert!(!config.pause_queue_after_dodge);
         assert!(!config.discord_prompt_seen);
+        assert!(!config.close_to_tray);
         assert_eq!(config.player_click_action, "details");
         assert_eq!(config.counters_provider, "lolalytics");
         assert!(!config.auto_requeue && !config.requeue_past_estimate);

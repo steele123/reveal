@@ -38,6 +38,8 @@
       "If champ select ends without the game starting (someone dodged), Reveal stops League from queueing you again and keeps you in the lobby until you press Find Match yourself, or until the time you pick has passed, when Reveal queues again (counting down at the top of the Reveal tab). The automatic queue options wait too.",
     autoOpen:
       "In champ select, Reveal opens your multi-search site (set on the Reveal tab) with your teammates' names as soon as all five are revealed, or after the wait you pick here with whoever is known by then.",
+    closeToTray:
+      "When this is on, Reveal adds a tray icon, and the window's X and Alt+F4 hide Reveal there instead of quitting. Auto accept, requeue, the dodge pause and the draft board keep working. Click the tray icon to open Reveal again, or right-click it and choose Quit Reveal. When it's off, closing the window quits Reveal.",
     autoBan:
       "In your ban turn, once only the time you set is left (the last second, by default) and you haven't banned: the champion you're hovering is banned, or else the first champion from this list that's still bannable and isn't hovered or picked by a teammate. If none qualifies, Reveal does nothing.",
     autoPick:
@@ -258,6 +260,38 @@
   </section>
 
   <NotificationSettings {config} {onChange} />
+
+  <section class="reveal-panel shrink-0 divide-y divide-white/10 p-1">
+    <div class="px-3 pb-1.5 pt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+      App
+    </div>
+    <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <Label for="close-to-tray" class="min-w-0 flex-1 cursor-pointer">
+        <span class="block text-xs font-medium">Close to tray<InfoTip text={TIPS.closeToTray} /></span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">
+          Closing the window keeps Reveal running in the tray instead of quitting
+        </span>
+      </Label>
+      <button
+        id="close-to-tray"
+        type="button"
+        role="switch"
+        aria-checked={config?.closeToTray ?? false}
+        disabled={!config}
+        class="flex h-7 w-[83px] shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] pl-[9px] text-[11px] font-medium transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 disabled:pointer-events-none {config?.closeToTray
+          ? 'text-foreground'
+          : 'text-muted-foreground/50'}"
+        on:click={() => update({ closeToTray: !config?.closeToTray })}
+      >
+        <span
+          class="h-2 w-2 rounded-full transition {config?.closeToTray
+            ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+            : 'bg-white/20'}"
+        ></span>
+        {config?.closeToTray ? "On" : "Off"}
+      </button>
+    </div>
+  </section>
 
   {#if championsFailed}
     <div class="text-[10px] text-red-300">
