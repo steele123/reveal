@@ -32,7 +32,7 @@ mod utils;
 use app_state::{Lcu, QueuePause};
 use commands::{
     app_ready, get_champion_list, get_config, get_lcu_info, get_lcu_state, get_legacy_install,
-    get_own_profile,
+    get_own_profile, hover_champion,
     notify_lobby_revealed,
     open_log_folder, open_opgg_link, remove_legacy_install, send_test_notification, set_config,
     set_enemy_role, write_frontend_log,
@@ -107,6 +107,7 @@ fn main() {
             remove_legacy_install,
             write_frontend_log,
             set_enemy_role,
+            hover_champion,
             send_test_notification,
             notify_lobby_revealed,
             get_own_profile,
