@@ -16,12 +16,14 @@
     MIN_RELIABLE_GAMES,
     uggCountersLink,
     type ChampionRef,
+    type Counter,
     type CountersProvider,
     type EnemyMatchups,
     type MatchupStats,
     type SourceStats,
   } from "$lib/matchups";
 
+  import CounterDetails from "./counter-details.svelte";
   import InfoTip from "./info-tip.svelte";
 
   /** The enemy pick whose counters to list. */
@@ -39,10 +41,17 @@
     );
   }
 
+  /** The counter whose popup is open, kept by id so its numbers stay current. It closes when
+   * the list no longer has it, as for another enemy. */
+  let selectedId: number | null = null;
+  let selected: Counter | null = null;
+  $: selected = enemy.counters.find(({ champion }) => champion.id === selectedId) ?? null;
+
   /** The matchup's page where its numbers came from, when the client gave both names. */
-  function openMatchup(champion: ChampionRef) {
-    if (!enemy.role || !champion.slug || !enemy.champion.slug) return;
-    open(matchupLink(provider, champion, enemy.champion, enemy.role));
+  function matchupOpener(champion: ChampionRef): (() => void) | null {
+    const role = enemy.role;
+    if (!role || !champion.slug || !enemy.champion.slug) return null;
+    return () => open(matchupLink(provider, champion, enemy.champion, role));
   }
 
   /** One site's win rate, green or red by its own Δ. */
@@ -138,7 +147,7 @@
     <span class="text-center"
       ><InfoTip
         align="right"
-        text={`Sorted by how often each pick wins this matchup, averaged over Lolalytics, U.GG and LadderEye, with small samples pulled towards what both champions usually win. ✓✓ marks real counters: they win it more than their overall strength predicts on every site. Lola, U.GG and Ladder are each site's win rate (LadderEye only lists each enemy's 40 most common opponents); kills, CS and gold are U.GG's leads at 15 minutes; faded rows have under ${MIN_RELIABLE_GAMES} games. Click a pick for its matchup page.`}
+        text={`Sorted by how often each pick wins this matchup, averaged over Lolalytics, U.GG and LadderEye, with small samples pulled towards what both champions usually win. ✓✓ marks real counters: they win it more than their overall strength predicts on every site. Lola, U.GG and Ladder are each site's win rate (LadderEye only lists each enemy's 40 most common opponents); kills, CS and gold are U.GG's leads at 15 minutes; faded rows have under ${MIN_RELIABLE_GAMES} games. Click a pick to hover it in League or open its matchup page.`}
       /></span
     >
   </div>
@@ -150,8 +159,8 @@
         type="button"
         class="grid w-full {COLUMNS} items-center gap-x-1.5 border-t border-white/[0.04] px-2 py-[2px] text-left text-[11px] transition hover:bg-white/[0.05]"
         class:opacity-60={stats.games < MIN_RELIABLE_GAMES}
-        title={`${describeMatchup(stats, counter.champion, enemy.champion)}\nClick for the matchup on ${providerLabel}`}
-        on:click={() => openMatchup(counter.champion)}
+        title={`${describeMatchup(stats, counter.champion, enemy.champion)}\nClick to hover it in League or see the matchup`}
+        on:click={() => (selectedId = counter.champion.id)}
       >
         <span class="flex min-w-0 items-center gap-1.5">
           <img
@@ -208,3 +217,13 @@
     </div>
   {/if}
 </div>
+
+{#if selected}
+  <CounterDetails
+    counter={selected}
+    {enemy}
+    {providerLabel}
+    onOpenMatchup={matchupOpener(selected.champion)}
+    onClose={() => (selectedId = null)}
+  />
+{/if}

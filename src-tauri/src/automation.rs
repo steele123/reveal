@@ -498,6 +498,79 @@ async fn complete_action(client: &RESTClient, action_id: i64, champion_id: i64) 
     Ok(())
 }
 
+/// Shows a champion as your pick in League without locking it in, for the counters list. The
+/// error is a sentence for the window.
+pub async fn hover(client: &RESTClient, champion_id: i64) -> Result<(), String> {
+    let session = client
+        .get("/lol-champ-select/v1/session".to_string())
+        .await
+        .map_err(|_| "You're not in champ select.".to_string())?;
+    let session = serde_json::from_value::<DraftSession>(session).map_err(|error| {
+        log_warn!("Couldn't read champ select to hover a champion: {error}");
+        "Reveal couldn't read champ select.".to_string()
+    })?;
+    let available = available_champions(client, "pick").await;
+    let action_id = match hover_action(&session, champion_id, available.as_ref()) {
+        Ok(action_id) => action_id,
+        Err(refusal) => {
+            let name = champion_name(client, champion_id).await;
+            return Err(match refusal {
+                HoverRefusal::NoPick => "There's no pick to hover in this mode.".to_string(),
+                HoverRefusal::LockedIn => "You've already locked in.".to_string(),
+                HoverRefusal::Taken => format!("{name} is already banned or picked."),
+                HoverRefusal::Unavailable => format!("You can't pick {name}: you don't own it, or it's banned."),
+            });
+        }
+    };
+    if let Err(error) = client
+        .patch(
+            format!("/lol-champ-select/v1/session/actions/{action_id}"),
+            json!({ "championId": champion_id }),
+        )
+        .await
+    {
+        log_warn!("League turned down hovering champion {champion_id}: {error}");
+        return Err("League turned the hover down. Try again on your pick turn.".to_string());
+    }
+    log_info!("Hovered champion {champion_id} from the counters");
+    Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+enum HoverRefusal {
+    NoPick,
+    LockedIn,
+    Taken,
+    Unavailable,
+}
+
+/// Your pick that a hover goes on, unless the champion can't be hovered. A teammate's hover
+/// doesn't stop yours, as in League itself.
+fn hover_action(
+    session: &DraftSession,
+    champion_id: i64,
+    available: Option<&HashSet<i64>>,
+) -> Result<i64, HoverRefusal> {
+    let actions = || session.actions.iter().flatten();
+    let mine = |action: &&DraftAction| {
+        action.actor_cell_id == session.local_player_cell_id && action.kind == "pick"
+    };
+    let Some(pick) = actions().filter(mine).find(|action| !action.completed) else {
+        return Err(if actions().filter(mine).next().is_some() {
+            HoverRefusal::LockedIn
+        } else {
+            HoverRefusal::NoPick
+        });
+    };
+    if actions().any(|action| action.completed && action.champion_id == champion_id) {
+        return Err(HoverRefusal::Taken);
+    }
+    if available.is_some_and(|ids| !ids.contains(&champion_id)) {
+        return Err(HoverRefusal::Unavailable);
+    }
+    Ok(pick.id)
+}
+
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DraftSession {
@@ -693,6 +766,41 @@ mod tests {
             pick_champions: HashMap::from([("jungle".to_string(), vec![59, 104])]),
             ..Config::default()
         }
+    }
+
+    #[test]
+    fn hovers_on_your_next_pick_before_or_during_your_turn() {
+        let mut later = action(7, 1, "pick", 0);
+        later.is_in_progress = false;
+        let mut planning = session(30_000.0, vec![action(3, 1, "ban", 0), later]);
+        planning.timer.phase = "PLANNING".to_string();
+        assert_eq!(hover_action(&planning, 59, None), Ok(7));
+
+        // A teammate hovering it doesn't stop you; only locked-in picks and bans do.
+        let busy = session(20_000.0, vec![action(8, 2, "pick", 59), action(9, 1, "pick", 0)]);
+        assert_eq!(hover_action(&busy, 59, None), Ok(9));
+    }
+
+    #[test]
+    fn says_why_a_champion_cannot_be_hovered() {
+        let mut banned = action(3, 2, "ban", 59);
+        banned.completed = true;
+        let draft = session(20_000.0, vec![banned, action(7, 1, "pick", 0)]);
+        assert_eq!(hover_action(&draft, 59, None), Err(HoverRefusal::Taken));
+        let owned = HashSet::from([104]);
+        assert_eq!(hover_action(&draft, 64, Some(&owned)), Err(HoverRefusal::Unavailable));
+        assert_eq!(hover_action(&draft, 104, Some(&owned)), Ok(7));
+
+        let mut done = action(7, 1, "pick", 104);
+        done.completed = true;
+        assert_eq!(
+            hover_action(&session(20_000.0, vec![done]), 59, None),
+            Err(HoverRefusal::LockedIn)
+        );
+        assert_eq!(
+            hover_action(&session(20_000.0, vec![action(8, 2, "pick", 0)]), 59, None),
+            Err(HoverRefusal::NoPick)
+        );
     }
 
     #[test]

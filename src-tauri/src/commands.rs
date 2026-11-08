@@ -152,6 +152,14 @@ pub async fn get_champion_list(app_handle: AppHandle) -> CommandResult<Vec<Champ
     Ok(champions)
 }
 
+/// Shows a champion as your pick in League without locking it in.
+#[tauri::command]
+pub async fn hover_champion(app_handle: AppHandle, champion_id: i64) -> CommandResult<()> {
+    let lcu_info = current_lcu_info(&app_handle).await?;
+    let remoting_client = RESTClient::new(lcu_info, true).map_err(|error| error.to_string())?;
+    crate::automation::hover(&remoting_client, champion_id).await
+}
+
 #[derive(serde::Serialize)]
 pub struct ChampionName {
     id: i32,
