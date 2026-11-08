@@ -27,6 +27,7 @@ mod roles;
 mod state;
 mod summoner;
 mod tray;
+mod window_state;
 mod utils;
 
 use app_state::{Lcu, QueuePause};
@@ -59,13 +60,17 @@ fn main() {
         .on_system_tray_event(tray::on_event)
         // With "Close to tray" on, closing the window only hides it, so Reveal keeps watching
         // League from the tray. Otherwise it quits.
-        .on_window_event(|event| {
-            if let WindowEvent::CloseRequested { api, .. } = event.event() {
+        .on_window_event(|event| match event.event() {
+            WindowEvent::CloseRequested { api, .. } => {
                 if tray::closes_to_tray() {
                     api.prevent_close();
                     tray::hide_window(event.window());
                 }
             }
+            WindowEvent::Resized(_) | WindowEvent::Moved(_) => {
+                window_state::changed(event.window());
+            }
+            _ => {}
         })
         .manage(Lcu::default())
         .manage(QueuePause::default())
@@ -75,6 +80,13 @@ fn main() {
                 "Tauri setup started for Reveal v{}",
                 app.package_info().version
             );
+            // The window starts hidden so it opens at its saved size instead of jumping to it.
+            if let Some(window) = app.get_window("main") {
+                window_state::restore(&window);
+                if let Err(error) = window.show() {
+                    log_error!("Couldn't show the window: {error}");
+                }
+            }
 
             let loaded_config = config::load(&app_handle).map_err(|error| {
                 log_error!("Startup config load failed: {error:#}");

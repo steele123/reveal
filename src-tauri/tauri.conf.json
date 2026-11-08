@@ -84,6 +84,7 @@
     "windows": [
       {
         "fullscreen": false,
+        "visible": false,
         "resizable": true,
         "title": "reveal",
         "width": 680,
